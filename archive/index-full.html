@@ -1,0 +1,2213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高一学生职业技能培训课程体系</title>
+    <link href="css/tailwind.min.css" rel="stylesheet">
+    <link href="css/fontawesome.min.css" rel="stylesheet">
+    <script src="js/marked.min.js"></script>
+    <script src="js/purify.min.js"></script>
+    <style>
+        @import url('fonts/inter.css');
+        @import url('fonts/noto-sans-sc.css');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+            background-size: 200% 200%;
+            animation: gradientShift 15s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .card-hover {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-hover::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.6s;
+        }
+
+        .card-hover:hover::before {
+            left: 100%;
+        }
+
+        .card-hover:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .badge-primary {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .badge-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.6s;
+        }
+
+        .badge-primary:hover::before {
+            left: 100%;
+        }
+
+        .tab-active {
+            border-bottom: 3px solid #6366f1;
+            color: #6366f1;
+            position: relative;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .skill-bar {
+            transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .scroll-smooth {
+            scroll-behavior: smooth;
+        }
+
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+        }
+
+        /* 表格美化 */
+        .table-hover tbody tr {
+            transition: all 0.3s ease;
+        }
+
+        .table-hover tbody tr:hover {
+            background: linear-gradient(90deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+            transform: scale(1.01);
+        }
+
+        /* 按钮美化 */
+        .btn-glow {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .btn-glow::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn-glow:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        /* 文字渐变 */
+        .text-gradient {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* 脉冲动画 */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .pulse-hover:hover {
+            animation: pulse 2s infinite;
+        }
+
+        /* 浮动动画 */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .float-animation {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        /* 渐入延迟动画 */
+        .stagger-fade-in > * {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeIn 0.6s forwards;
+        }
+
+        .stagger-fade-in > *:nth-child(1) { animation-delay: 0.1s; }
+        .stagger-fade-in > *:nth-child(2) { animation-delay: 0.2s; }
+        .stagger-fade-in > *:nth-child(3) { animation-delay: 0.3s; }
+        .stagger-fade-in > *:nth-child(4) { animation-delay: 0.4s; }
+        .stagger-fade-in > *:nth-child(5) { animation-delay: 0.5s; }
+        .stagger-fade-in > *:nth-child(6) { animation-delay: 0.6s; }
+
+        /* 星级评分动画 */
+        .star-rating i {
+            transition: all 0.3s ease;
+        }
+
+        .star-rating i:hover {
+            transform: scale(1.2) rotate(72deg);
+            color: #fbbf24;
+        }
+
+        /* 阴影层次 */
+        .shadow-elevation-1 {
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .shadow-elevation-2 {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .shadow-elevation-3 {
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+        }
+
+        .shadow-elevation-4 {
+            box-shadow: 0 16px 32px rgba(0,0,0,0.2);
+        }
+
+        /* Markdown 内容样式 */
+        .markdown-content {
+            background: white;
+            border-radius: 0;
+            padding: 0.5rem 1.5rem 1rem 1.5rem;
+            box-shadow: none;
+            max-width: none;
+            margin: 0;
+            line-height: 1.6;
+            font-size: 0.9rem;
+        }
+
+        .markdown-content h1,
+        .markdown-content h2,
+        .markdown-content h3,
+        .markdown-content h4,
+        .markdown-content h5,
+        .markdown-content h6 {
+            color: #2d3748;
+            font-weight: 700;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            line-height: 1.3;
+        }
+
+        .markdown-content h1 {
+            font-size: 1.8rem;
+            border-bottom: 2px solid #4299e1;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+            margin-top: 0;
+        }
+
+        /* 确保第一个元素从顶部开始 */
+        .markdown-content > :first-child {
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+        }
+
+        .markdown-content > h1:first-child,
+        .markdown-content > h2:first-child,
+        .markdown-content > h3:first-child,
+        .markdown-content > p:first-child {
+            margin-top: 0 !important;
+            padding-top: 0.25rem !important;
+        }
+
+        .markdown-content > h1:first-child {
+            padding-top: 0.5rem !important;
+        }
+
+        .markdown-content h2 {
+            font-size: 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 0.3rem;
+            margin-top: 1.5rem;
+        }
+
+        .markdown-content h3 {
+            font-size: 1.3rem;
+            color: #4a5568;
+            margin-top: 1rem;
+        }
+
+        .markdown-content h4 {
+            font-size: 1.1rem;
+            color: #4a5568;
+            margin-top: 1rem;
+        }
+
+        .markdown-content p {
+            margin-bottom: 1rem;
+            color: #4a5568;
+            text-align: justify;
+        }
+
+        .markdown-content ul,
+        .markdown-content ol {
+            margin-bottom: 1rem;
+            padding-left: 2rem;
+        }
+
+        .markdown-content li {
+            margin-bottom: 0.5rem;
+            color: #4a5568;
+        }
+
+        .markdown-content ul li {
+            list-style-type: none;
+            position: relative;
+        }
+
+        .markdown-content ul li::before {
+            content: "▶";
+            color: #4299e1;
+            font-size: 0.8rem;
+            position: absolute;
+            left: -1.2rem;
+            top: 0.2rem;
+        }
+
+        .markdown-content ol li {
+            color: #4a5568;
+        }
+
+        .markdown-content blockquote {
+            border-left: 4px solid #4299e1;
+            background: linear-gradient(90deg, #ebf8ff 0%, #ffffff 100%);
+            padding: 1rem 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 8px 8px 0;
+            font-style: italic;
+            color: #2b6cb0;
+        }
+
+        .markdown-content code {
+            background: #f7fafc;
+            color: #e53e3e;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            border: 1px solid #e2e8f0;
+        }
+
+        .markdown-content pre {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .markdown-content pre code {
+            background: none;
+            color: inherit;
+            padding: 0;
+            border: none;
+            font-size: 0.9rem;
+        }
+
+        .markdown-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .markdown-content th,
+        .markdown-content td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .markdown-content th {
+            background: linear-gradient(90deg, #4299e1 0%, #3182ce 100%);
+            color: white;
+            font-weight: 600;
+        }
+
+        .markdown-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+
+        .markdown-content tr:hover {
+            background: #ebf8ff;
+            transition: background-color 0.2s ease;
+        }
+
+        .markdown-content a {
+            color: #3182ce;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .markdown-content a:hover {
+            color: #2c5282;
+            border-bottom-color: #3182ce;
+        }
+
+        .markdown-content strong,
+        .markdown-content b {
+            color: #2d3748;
+            font-weight: 700;
+        }
+
+        .markdown-content em,
+        .markdown-content i {
+            color: #4a5568;
+            font-style: italic;
+        }
+
+        .markdown-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent 0%, #4299e1 50%, transparent 100%);
+            margin: 2rem 0;
+        }
+
+        .markdown-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 1rem 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 模态框样式 */
+        .markdown-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .markdown-modal.active {
+            display: flex;
+        }
+
+        .markdown-modal-content {
+            background: white;
+            border-radius: 16px;
+            max-width: 1200px;
+            max-height: 95vh;
+            width: 95%;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .markdown-modal-header {
+            background: linear-gradient(90deg, #4299e1 0%, #3182ce 100%);
+            color: white;
+            padding: 1.5rem 2rem;
+            border-radius: 16px 16px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .markdown-modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .markdown-modal-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .markdown-modal-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        .markdown-modal-body {
+            padding: 0;
+            overflow-y: auto;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .markdown-modal-body .markdown-content {
+            flex: 1;
+            min-height: 0;
+        }
+
+        .markdown-loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: #718096;
+        }
+
+        .markdown-loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e2e8f0;
+            border-top: 4px solid #4299e1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .markdown-error {
+            text-align: center;
+            padding: 2rem;
+            color: #e53e3e;
+        }
+
+        .markdown-error i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        /* 响应式模态框优化 */
+        @media (min-width: 1400px) {
+            .markdown-modal-content {
+                max-width: 1400px;
+                width: 90%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .markdown-modal {
+                padding: 0.5rem;
+            }
+
+            .markdown-modal-content {
+                width: 100%;
+                max-height: 98vh;
+                border-radius: 12px;
+            }
+
+            .markdown-modal-header {
+                padding: 1rem 1.5rem;
+            }
+
+            .markdown-modal-title {
+                font-size: 1.25rem;
+            }
+
+            .markdown-modal-body {
+                padding: 0;
+            }
+
+            .markdown-content {
+                padding: 0.75rem 1rem;
+                font-size: 0.8rem;
+            }
+
+            .markdown-content h1 {
+                font-size: 1.5rem;
+            }
+
+            .markdown-content h2 {
+                font-size: 1.3rem;
+            }
+        }
+
+        /* 高对比度模式支持 */
+        @media (prefers-contrast: high) {
+            .gradient-bg {
+                background: #000;
+            }
+            .card-hover {
+                border: 2px solid #000;
+            }
+        }
+
+        /* 减少动画模式支持 */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+
+            .float-animation {
+                animation: none;
+            }
+        }
+
+        /* 文件列表样式 */
+        .file-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin: 8px 0;
+            background: #f8fafc;
+            border-radius: 8px;
+            transition: all 0.3s;
+            border: 1px solid #e5e7eb;
+        }
+
+        .file-item:hover {
+            background: #e0e7ff;
+            transform: translateX(4px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .file-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            margin-right: 12px;
+        }
+
+        .file-icon.pdf { background: #fee2e2; color: #dc2626; }
+        .file-icon.doc { background: #dbeafe; color: #2563eb; }
+        .file-icon.zip { background: #fef3c7; color: #d97706; }
+        .file-icon.mp4 { background: #ede9fe; color: #7c3aed; }
+        .file-icon.js { background: #f0fdf4; color: #16a34a; }
+        .file-icon.md { background: #f0f9ff; color: #0284c7; }
+        .file-icon.default { background: #e5e7eb; color: #6b7280; }
+
+        /* 深色模式 */
+        .dark-mode {
+            background: #1a202c;
+            color: #e2e8f0;
+        }
+
+        .dark-mode .bg-white {
+            background: #2d3748 !important;
+        }
+
+        .dark-mode .text-gray-800 {
+            color: #e2e8f0 !important;
+        }
+
+        .dark-mode .text-gray-600 {
+            color: #cbd5e0 !important;
+        }
+
+        .dark-mode .bg-gray-50 {
+            background: #2d3748 !important;
+        }
+
+        /* 加载动画 */
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #6366f1;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        /* 统计卡片 */
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+            transition: all 0.3s;
+            border: 1px solid #e5e7eb;
+        }
+
+        .stat-card:hover {
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .badge-new {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #ef4444;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+            z-index: 10;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 scroll-smooth">
+    <!-- 导航栏 -->
+    <nav class="gradient-bg text-white sticky top-0 z-50 shadow-lg">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-graduation-cap text-2xl"></i>
+                    <h1 class="text-xl font-bold">高一职业技能培训课程体系</h1>
+                </div>
+                <div class="hidden md:flex space-x-6">
+                    <a href="#overview" class="hover:text-blue-200 transition">课程概览</a>
+                    <a href="#projects" class="hover:text-blue-200 transition">项目详情</a>
+                    <a href="#skills" class="hover:text-blue-200 transition">能力培养</a>
+                    <a href="downloads.html" class="hover:text-blue-200 transition">资源下载</a>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button id="darkModeToggle" class="bg-white bg-opacity-20 p-2 rounded-lg hover:bg-opacity-30 transition" title="深色模式">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <button id="mobileMenuBtn" class="md:hidden">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- 移动端菜单 -->
+        <div id="mobileMenu" class="hidden md:hidden bg-purple-800">
+            <div class="px-4 py-2 space-y-2">
+                <a href="#overview" class="block py-2 hover:text-blue-200">课程概览</a>
+                <a href="#projects" class="block py-2 hover:text-blue-200">项目详情</a>
+                <a href="#skills" class="block py-2 hover:text-blue-200">能力培养</a>
+                <a href="downloads.html" class="block py-2 hover:text-blue-200">资源下载</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主页横幅 -->
+    <section class="gradient-bg text-white py-20 relative overflow-hidden">
+        <div class="gradient-decoration">
+            <div class="container mx-auto px-4 text-center relative z-10">
+                <div class="float-animation mb-8">
+                    <i class="fas fa-graduation-cap text-6xl md:text-8xl opacity-20"></i>
+                </div>
+                <h1 class="text-4xl md:text-6xl font-bold mb-6 fade-in">
+                    <span class="text-gradient text-white">AI时代的新一代工程师培养</span>
+                </h1>
+                <p class="text-xl md:text-2xl mb-12 opacity-90 fade-in max-w-3xl mx-auto text-white">
+                    让高一学生用AI工具，<strong class="text-yellow-300 font-bold">6次课程</strong>体验<strong class="text-yellow-300 font-bold">6种职业</strong>，完成<strong class="text-yellow-300 font-bold">6个真实作品</strong>
+                </p>
+                <div class="flex flex-wrap justify-center gap-6 fade-in">
+                    <div class="bg-white bg-opacity-90 backdrop-blur-md rounded-2xl px-8 py-6 card-hover micro-interaction shadow-elevation-2">
+                        <i class="fas fa-robot text-3xl mb-3 text-blue-600"></i>
+                        <div class="font-bold text-lg text-gray-800">AI Coding能力</div>
+                        <div class="text-sm text-gray-600 font-medium">人机协作新时代</div>
+                    </div>
+                    <div class="bg-white bg-opacity-90 backdrop-blur-md rounded-2xl px-8 py-6 card-hover micro-interaction shadow-elevation-2">
+                        <i class="fas fa-gamepad text-3xl mb-3 text-green-600"></i>
+                        <div class="font-bold text-lg text-gray-800">6个项目作品</div>
+                        <div class="text-sm text-gray-600 font-medium">从想法到现实</div>
+                    </div>
+                    <div class="bg-white bg-opacity-90 backdrop-blur-md rounded-2xl px-8 py-6 card-hover micro-interaction shadow-elevation-2">
+                        <i class="fas fa-users text-3xl mb-3 text-purple-600"></i>
+                        <div class="font-bold text-lg text-gray-800">6种职业体验</div>
+                        <div class="text-sm text-gray-600 font-medium">发现未来方向</div>
+                    </div>
+                </div>
+                <div class="mt-12 fade-in">
+                    <a href="#overview" class="inline-flex items-center bg-white text-indigo-600 px-8 py-4 rounded-full font-bold text-lg hover:bg-opacity-90 transition-all duration-300 btn-glow shadow-elevation-3">
+                        <i class="fas fa-compass mr-2"></i>
+                        开始探索课程体系
+                        <i class="fas fa-arrow-down ml-2"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        <!-- 装饰性元素 -->
+        <div class="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-gray-50 to-transparent"></div>
+        <div class="absolute top-10 left-10 w-20 h-20 bg-white opacity-5 rounded-full blur-xl"></div>
+        <div class="absolute top-20 right-20 w-32 h-32 bg-white opacity-5 rounded-full blur-2xl"></div>
+    </section>
+
+    <!-- 课程概览 -->
+    <section id="overview" class="py-20 relative">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-16 fade-in">
+                <h2 class="text-4xl font-bold text-gray-800 mb-6">
+                    <span class="text-gradient">课程概览</span>
+                </h2>
+                <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+                    6次课程，24节课，从AI Coding入门到创业实战，完整闭环设计
+                </p>
+            </div>
+
+            <!-- 课程闭环说明 -->
+            <div class="grid md:grid-cols-3 gap-8 mb-16 stagger-fade-in">
+                <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-8 card-hover shadow-elevation-2 border border-blue-100 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-blue-200 rounded-full opacity-10 -mr-16 -mt-16"></div>
+                    <div class="relative z-10">
+                        <div class="bg-blue-500 text-white w-16 h-16 rounded-2xl flex items-center justify-center mb-6 float-animation">
+                            <i class="fas fa-project-diagram text-2xl"></i>
+                        </div>
+                        <h3 class="font-bold text-2xl mb-3 text-blue-900">闭环1</h3>
+                        <h4 class="font-semibold text-lg mb-4 text-blue-700">规划 → 实现</h4>
+                        <p class="text-gray-700 mb-4">课程2规划"AI学习助手" → 课程3真正开发出来</p>
+                        <div class="flex items-center text-sm font-medium text-blue-600 bg-blue-50 rounded-lg px-4 py-2">
+                            <i class="fas fa-lightbulb mr-2"></i>
+                            产品思维 + 技术实现
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl p-8 card-hover shadow-elevation-2 border border-purple-100 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-purple-200 rounded-full opacity-10 -mr-16 -mt-16"></div>
+                    <div class="relative z-10">
+                        <div class="bg-purple-500 text-white w-16 h-16 rounded-2xl flex items-center justify-center mb-6 float-animation">
+                            <i class="fas fa-microchip text-2xl"></i>
+                        </div>
+                        <h3 class="font-bold text-2xl mb-3 text-purple-900">闭环2</h3>
+                        <h4 class="font-semibold text-lg mb-4 text-purple-700">优化 → 部署</h4>
+                        <p class="text-gray-700 mb-4">课程4优化AI算法 → 课程5部署到智能硬件</p>
+                        <div class="flex items-center text-sm font-medium text-purple-600 bg-purple-50 rounded-lg px-4 py-2">
+                            <i class="fas fa-brain mr-2"></i>
+                            算法研究 + 硬件集成
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-8 card-hover shadow-elevation-2 border border-green-100 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-green-200 rounded-full opacity-10 -mr-16 -mt-16"></div>
+                    <div class="relative z-10">
+                        <div class="bg-green-500 text-white w-16 h-16 rounded-2xl flex items-center justify-center mb-6 float-animation">
+                            <i class="fas fa-rocket text-2xl"></i>
+                        </div>
+                        <h3 class="font-bold text-2xl mb-3 text-green-900">总闭环</h3>
+                        <h4 class="font-semibold text-lg mb-4 text-green-700">综合应用</h4>
+                        <p class="text-gray-700 mb-4">课程6整合所有能力，真实创业项目</p>
+                        <div class="flex items-center text-sm font-medium text-green-600 bg-green-50 rounded-lg px-4 py-2">
+                            <i class="fas fa-users mr-2"></i>
+                            团队协作 + 商业实践
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6次课程总览 -->
+            <div class="bg-white rounded-2xl shadow-elevation-3 overflow-hidden border border-gray-100">
+                <div class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-6">
+                    <h3 class="text-2xl font-bold flex items-center">
+                        <i class="fas fa-calendar-alt mr-3"></i>
+                        6次课程详细安排
+                    </h3>
+                    <p class="text-indigo-100 mt-2">完整的学习路径，从入门到精通</p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full table-hover">
+                        <thead class="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">课程</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">主题</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">学生角色</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">核心任务</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">学习成果</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">培养重点</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                        <tr class="hover:bg-gradient-to-r hover:from-blue-50 hover:to-transparent transition-all duration-300">
+                            <td class="px-6 py-6 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-12 w-12 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl flex items-center justify-center font-bold text-lg shadow-lg">
+                                        1
+                                    </div>
+                                    <div class="ml-3">
+                                        <div class="text-xs text-gray-500 font-medium">COURSE</div>
+                                        <div class="text-sm font-bold text-gray-900">基础入门</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-6">
+                                <div class="flex items-center">
+                                    <div class="bg-blue-100 p-2 rounded-lg mr-3">
+                                        <i class="fas fa-gamepad text-blue-600"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-bold text-gray-900">体感游戏</div>
+                                        <div class="text-xs text-gray-500 font-medium">AI Coding入门</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-6">
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                                    <i class="fas fa-running mr-1"></i>
+                                    动作捕捉师
+                                </span>
+                            </td>
+                            <td class="px-6 py-6">
+                                <div class="text-sm text-gray-700">
+                                    <div class="font-medium mb-1">制作体感互动游戏</div>
+                                    <div class="text-xs text-gray-500 bg-gray-50 rounded px-2 py-1 inline-block">
+                                        <i class="fas fa-code mr-1"></i>MediaPipe + Phaser.js
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-6">
+                                <div class="space-y-2">
+                                    <div class="flex items-center text-green-600 font-medium text-sm">
+                                        <i class="fas fa-check-circle mr-2"></i>
+                                        科技节展示
+                                    </div>
+                                    <div class="text-xs text-gray-500 bg-green-50 rounded px-2 py-1">
+                                        100+人体验
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-6">
+                                <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md">
+                                    <i class="fas fa-brain mr-1"></i>
+                                    AI Coding基础
+                                </span>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-gradient-to-r hover:from-purple-50 hover:to-transparent transition-all duration-300">
+                            <td class="px-6 py-6 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-12 w-12 bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-2xl flex items-center justify-center font-bold text-lg shadow-lg">
+                                        2
+                                    </div>
+                                    <div class="ml-3">
+                                        <div class="text-xs text-gray-500 font-medium">COURSE</div>
+                                        <div class="text-sm font-bold text-gray-900">思维提升</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-6">
+                                <div class="flex items-center">
+                                    <div class="bg-purple-100 p-2 rounded-lg mr-3">
+                                        <i class="fas fa-lightbulb text-purple-600"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-bold text-gray-900">产品+项目</div>
+                                        <div class="text-xs text-gray-500 font-medium">产品经理+项目经理</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-900">CEO/产品经理</td>
+                            <td class="px-6 py-4 text-sm text-gray-500">规划"AI智能校园助手"<br/>用户调研+产品设计</td>
+                            <td class="px-6 py-4 text-sm text-gray-500">
+                                <div class="text-green-600 font-medium">✓ PRD文档+Figma原型</div>
+                                <div class="text-gray-400">完整产品方案</div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">产品思维</span>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-gradient-to-r hover:from-green-50 hover:to-transparent transition-all duration-300">
+                            <td class="px-6 py-6 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-12 w-12 bg-gradient-to-br from-green-500 to-green-600 text-white rounded-2xl flex items-center justify-center font-bold text-lg shadow-lg">
+                                        3
+                                    </div>
+                                    <div class="ml-3">
+                                        <div class="text-xs text-gray-500 font-medium">COURSE</div>
+                                        <div class="text-sm font-bold text-gray-900">技术实战</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-6">
+                                <div class="flex items-center">
+                                    <div class="bg-green-100 p-2 rounded-lg mr-3">
+                                        <i class="fas fa-code text-green-600"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-bold text-gray-900">全栈开发</div>
+                                        <div class="text-xs text-gray-500 font-medium">全栈工程师</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-900">全栈开发者</td>
+                            <td class="px-6 py-4 text-sm text-gray-500">实现课程2的规划<br/>React+Node.js+数据库</td>
+                            <td class="px-6 py-4 text-sm text-gray-500">
+                                <div class="text-green-600 font-medium">✓ 真实运行的Web应用</div>
+                                <div class="text-gray-400">有真实用户使用</div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">技术实现</span>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-gradient-to-r hover:from-red-50 hover:to-transparent transition-all duration-300">
+                            <td class="px-6 py-6 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-12 w-12 bg-gradient-to-br from-red-500 to-red-600 text-white rounded-2xl flex items-center justify-center font-bold text-lg shadow-lg">
+                                        4
+                                    </div>
+                                    <div class="ml-3">
+                                        <div class="text-xs text-gray-500 font-medium">COURSE</div>
+                                        <div class="text-sm font-bold text-gray-900">深度研究</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-6">
+                                <div class="flex items-center">
+                                    <div class="bg-red-100 p-2 rounded-lg mr-3">
+                                        <i class="fas fa-brain text-red-600"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-bold text-gray-900">算法研究</div>
+                                        <div class="text-xs text-gray-500 font-medium">算法工程师</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-900">AI研究员</td>
+                            <td class="px-6 py-4 text-sm text-gray-500">论文驱动优化系统<br/>读论文+训练模型</td>
+                            <td class="px-6 py-4 text-sm text-gray-500">
+                                <div class="text-green-600 font-medium">✓ 学术研究报告</div>
+                                <div class="text-gray-400">算法性能提升</div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">科研能力</span>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-gradient-to-r hover:from-yellow-50 hover:to-transparent transition-all duration-300">
+                            <td class="px-6 py-6 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-12 w-12 bg-gradient-to-br from-yellow-500 to-yellow-600 text-white rounded-2xl flex items-center justify-center font-bold text-lg shadow-lg">
+                                        5
+                                    </div>
+                                    <div class="ml-3">
+                                        <div class="text-xs text-gray-500 font-medium">COURSE</div>
+                                        <div class="text-sm font-bold text-gray-900">硬件实践</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-6">
+                                <div class="flex items-center">
+                                    <div class="bg-yellow-100 p-2 rounded-lg mr-3">
+                                        <i class="fas fa-microchip text-yellow-600"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-bold text-gray-900">嵌入式</div>
+                                        <div class="text-xs text-gray-500 font-medium">嵌入式工程师</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-900">硬件创客</td>
+                            <td class="px-6 py-4 text-sm text-gray-500">智能硬件开发<br/>集成课程4算法</td>
+                            <td class="px-6 py-4 text-sm text-gray-500">
+                                <div class="text-green-600 font-medium">✓ 智能垃圾分类箱</div>
+                                <div class="text-gray-400">实物作品</div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">软硬结合</span>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-gradient-to-r hover:from-indigo-50 hover:to-transparent transition-all duration-300">
+                            <td class="px-6 py-6 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-12 w-12 bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-2xl flex items-center justify-center font-bold text-lg shadow-lg">
+                                        6
+                                    </div>
+                                    <div class="ml-3">
+                                        <div class="text-xs text-gray-500 font-medium">COURSE</div>
+                                        <div class="text-sm font-bold text-gray-900">融会贯通</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-6">
+                                <div class="flex items-center">
+                                    <div class="bg-indigo-100 p-2 rounded-lg mr-3">
+                                        <i class="fas fa-rocket text-indigo-600"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-bold text-gray-900">综合实践</div>
+                                        <div class="text-xs text-gray-500 font-medium">创业团队</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-900">创业者</td>
+                            <td class="px-6 py-4 text-sm text-gray-500">校园创业大赛<br/>自选项目+团队协作</td>
+                            <td class="px-6 py-4 text-sm text-gray-500">
+                                <div class="text-green-600 font-medium">✓ 真实产品+路演冠军</div>
+                                <div class="text-gray-400">商业计划书</div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="px-2 py-1 text-xs rounded-full bg-indigo-100 text-indigo-800">综合能力</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- 项目详情 -->
+    <section id="projects" class="py-20 bg-gradient-to-br from-gray-50 to-blue-50 relative">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-16 fade-in">
+                <h2 class="text-4xl font-bold text-gray-800 mb-6">
+                    <span class="text-gradient">项目详情</span>
+                </h2>
+                <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+                    每个项目都包含详细的4节课安排，<strong class="text-blue-600">适合零基础学生</strong>，循序渐进掌握核心技能
+                </p>
+                <div class="mt-8 flex justify-center gap-4">
+                    <div class="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                        <i class="fas fa-clock mr-2"></i>
+                        每个项目 4 节课
+                    </div>
+                    <div class="inline-flex items-center px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                        <i class="fas fa-users mr-2"></i>
+                        3-6 人小组协作
+                    </div>
+                    <div class="inline-flex items-center px-4 py-2 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
+                        <i class="fas fa-trophy mr-2"></i>
+                        真实作品成果
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- 项目1 -->
+                <div class="bg-white rounded-2xl shadow-elevation-3 overflow-hidden card-hover border border-gray-100 relative group">
+                    <div class="absolute top-0 right-0 w-20 h-20 bg-blue-100 rounded-full opacity-20 -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500"></div>
+                    <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-8 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-16 -mt-16"></div>
+                        <div class="relative z-10">
+                            <div class="flex items-center mb-4">
+                                <div class="bg-white bg-opacity-20 p-3 rounded-xl mr-4 backdrop-blur-sm">
+                                    <i class="fas fa-gamepad text-3xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-2xl font-bold">项目1</h3>
+                                    <div class="text-sm opacity-90">体感互动游戏</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center text-sm">
+                                <i class="fas fa-running mr-2"></i>
+                                动作捕捉师 + AI应用开发
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-8">
+                        <div class="mb-6">
+                            <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+                                <span class="bg-red-100 text-red-600 p-2 rounded-lg mr-3">
+                                    <i class="fas fa-bullseye"></i>
+                                </span>
+                                超级任务
+                            </h4>
+                            <p class="text-gray-700 font-medium">成为体感游戏魔法师 - 打造科技节爆款</p>
+                        </div>
+                        <div class="mb-6">
+                            <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+                                <span class="bg-green-100 text-green-600 p-2 rounded-lg mr-3">
+                                    <i class="fas fa-list"></i>
+                                </span>
+                                4节课安排
+                            </h4>
+                            <div class="space-y-2">
+                                <div class="flex items-center text-sm">
+                                    <span class="bg-blue-100 text-blue-600 text-xs font-bold px-2 py-1 rounded mr-3">1</span>
+                                    <div>
+                                        <div class="font-medium text-gray-800">AI觉醒</div>
+                                        <div class="text-xs text-gray-500">让机器看懂你的动作</div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center text-sm">
+                                    <span class="bg-blue-100 text-blue-600 text-xs font-bold px-2 py-1 rounded mr-3">2</span>
+                                    <div>
+                                        <div class="font-medium text-gray-800">闪电开发</div>
+                                        <div class="text-xs text-gray-500">AI写代码造游戏</div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center text-sm">
+                                    <span class="bg-blue-100 text-blue-600 text-xs font-bold px-2 py-1 rounded mr-3">3</span>
+                                    <div>
+                                        <div class="font-medium text-gray-800">体验魔法师</div>
+                                        <div class="text-xs text-gray-500">打造科技节爆款展位</div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center text-sm">
+                                    <span class="bg-blue-100 text-blue-600 text-xs font-bold px-2 py-1 rounded mr-3">4</span>
+                                    <div>
+                                        <div class="font-medium text-gray-800">科技节预演</div>
+                                        <div class="text-xs text-gray-500">全班排队体验游戏</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-6">
+                            <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+                                <span class="bg-purple-100 text-purple-600 p-2 rounded-lg mr-3">
+                                    <i class="fas fa-tools"></i>
+                                </span>
+                                技术栈
+                            </h4>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-200">MediaPipe</span>
+                                <span class="px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium border border-green-200">Phaser.js</span>
+                                <span class="px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-xs font-medium border border-purple-200">AI Coding</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div class="text-sm text-gray-500">
+                                <i class="fas fa-file-alt mr-2"></i>
+                                <a href="course-files/project1/项目1-体感互动游戏.md" class="text-blue-600 hover:text-blue-700 font-medium hover:underline transition-colors markdown-link">查看详细文档</a>
+                            </div>
+                            <div class="flex items-center text-xs text-gray-400">
+                                <i class="fas fa-clock mr-1"></i>
+                                4节课
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 项目2 -->
+                <div class="bg-white rounded-lg shadow-lg overflow-hidden card-hover">
+                    <div class="bg-purple-500 text-white p-6">
+                        <div class="flex items-center mb-4">
+                            <i class="fas fa-lightbulb text-3xl mr-3"></i>
+                            <h3 class="text-xl font-bold">项目2：产品经理+项目经理</h3>
+                        </div>
+                        <div class="text-sm opacity-90">产品规划 + 项目管理</div>
+                    </div>
+                    <div class="p-6">
+                        <div class="mb-4">
+                            <h4 class="font-bold text-gray-800 mb-2">🎯 超级任务</h4>
+                            <p class="text-gray-600 text-sm">打造下一个校园爆款APP - "AI智能校园助手"</p>
+                        </div>
+                        <div class="mb-4">
+                            <h4 class="font-bold text-gray-800 mb-2">📋 4节课安排</h4>
+                            <ul class="text-sm text-gray-600 space-y-1">
+                                <li>• 第1节：侦探模式 - 卧底调研挖需求</li>
+                                <li>• 第2节：梦想家 - 用Figma设计爆款APP</li>
+                                <li>• 第3节：战斗计划 - 2周上线敏捷规划</li>
+                                <li>• 第4节：创业之夜 - 向投资人路演</li>
+                            </ul>
+                        </div>
+                        <div class="mb-4">
+                            <h4 class="font-bold text-gray-800 mb-2">🎨 产品方向</h4>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="text-xs bg-gray-100 px-2 py-1 rounded">AI学习助手</span>
+                                <span class="text-xs bg-gray-100 px-2 py-1 rounded">3D打印商店</span>
+                                <span class="text-xs bg-gray-100 px-2 py-1 rounded">失物招领</span>
+                            </div>
+                        </div>
+                        <div class="text-sm text-gray-500">
+                            <i class="fas fa-file-alt mr-2"></i>
+                            <a href="course-files/project2/项目2-产品经理与项目经理.md" class="text-blue-600 hover:underline markdown-link">查看详细文档</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 项目3 -->
+                <div class="bg-white rounded-lg shadow-lg overflow-hidden card-hover">
+                    <div class="bg-green-500 text-white p-6">
+                        <div class="flex items-center mb-4">
+                            <i class="fas fa-code text-3xl mr-3"></i>
+                            <h3 class="text-xl font-bold">项目3：全栈工程师</h3>
+                        </div>
+                        <div class="text-sm opacity-90">Web开发 + 真实部署</div>
+                    </div>
+                    <div class="p-6">
+                        <div class="mb-4">
+                            <h4 class="font-bold text-gray-800 mb-2">🎯 超级任务</h4>
+                            <p class="text-gray-600 text-sm">黑客马拉松 - 48小时把想法变成真实产品</p>
+                        </div>
+                        <div class="mb-4">
+                            <h4 class="font-bold text-gray-800 mb-2">📋 4节课安排</h4>
+                            <ul class="text-sm text-gray-600 space-y-1">
+                                <li>• 第1节：黑客觉醒 - 搭建开发武器库</li>
+                                <li>• 第2节：闪电开发 - AI结对编程秒速出原型</li>
+                                <li>• 第3节：Debug大作战 - 消灭所有Bug</li>
+                                <li>• 第4节：火箭发射 - 产品上线全校围观</li>
+                            </ul>
+                        </div>
+                        <div class="mb-4">
+                            <h4 class="font-bold text-gray-800 mb-2">🛠️ 技术栈</h4>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="text-xs bg-gray-100 px-2 py-1 rounded">React</span>
+                                <span class="text-xs bg-gray-100 px-2 py-1 rounded">Node.js</span>
+                                <span class="text-xs bg-gray-100 px-2 py-1 rounded">Supabase</span>
+                            </div>
+                        </div>
+                        <div class="text-sm text-gray-500">
+                            <i class="fas fa-file-alt mr-2"></i>
+                            <a href="course-files/project3/项目3-全栈工程师.md" class="text-blue-600 hover:underline markdown-link">查看详细文档</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 项目4 -->
+                <div class="bg-white rounded-lg shadow-lg overflow-hidden card-hover">
+                    <div class="bg-red-500 text-white p-6">
+                        <div class="flex items-center mb-4">
+                            <i class="fas fa-brain text-3xl mr-3"></i>
+                            <h3 class="text-xl font-bold">项目4：算法工程师</h3>
+                        </div>
+                        <div class="text-sm opacity-90">算法研究 + 学术写作</div>
+                    </div>
+                    <div class="p-6">
+                        <div class="mb-4">
+                            <h4 class="font-bold text-gray-800 mb-2">🎯 超级任务</h4>
+                            <p class="text-gray-600 text-sm">训练专属AI - 从论文到算法落地</p>
+                        </div>
+                        <div class="mb-4">
+                            <h4 class="font-bold text-gray-800 mb-2">📋 4节课安排</h4>
+                            <ul class="text-sm text-gray-600 space-y-1">
+                                <li>• 第1节：论文黑客 - 破解顶会论文秘密</li>
+                                <li>• 第2节：算法炼金术 - 从论文到代码</li>
+                                <li>• 第3节：模型进化 - 让AI快10倍准10%</li>
+                                <li>• 第4节：算法落地 - 集成到真实系统</li>
+                            </ul>
+                        </div>
+                        <div class="mb-4">
+                            <h4 class="font-bold text-gray-800 mb-2">📚 学术能力</h4>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="text-xs bg-gray-100 px-2 py-1 rounded">论文阅读</span>
+                                <span class="text-xs bg-gray-100 px-2 py-1 rounded">实验设计</span>
+                                <span class="text-xs bg-gray-100 px-2 py-1 rounded">学术写作</span>
+                            </div>
+                        </div>
+                        <div class="text-sm text-gray-500">
+                            <i class="fas fa-file-alt mr-2"></i>
+                            <a href="course-files/project4/项目4-算法工程师.md" class="text-blue-600 hover:underline markdown-link">查看详细文档</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 项目5 -->
+                <div class="bg-white rounded-lg shadow-lg overflow-hidden card-hover">
+                    <div class="bg-yellow-500 text-white p-6">
+                        <div class="flex items-center mb-4">
+                            <i class="fas fa-microchip text-3xl mr-3"></i>
+                            <h3 class="text-xl font-bold">项目5：嵌入式工程师</h3>
+                        </div>
+                        <div class="text-sm opacity-90">硬件开发 + IoT</div>
+                    </div>
+                    <div class="p-6">
+                        <div class="mb-4">
+                            <h4 class="font-bold text-gray-800 mb-2">🎯 超级任务</h4>
+                            <p class="text-gray-600 text-sm">DIY智能硬件 - 让AI跑在你的机器人上</p>
+                        </div>
+                        <div class="mb-4">
+                            <h4 class="font-bold text-gray-800 mb-2">📋 4节课安排</h4>
+                            <ul class="text-sm text-gray-600 space-y-1">
+                                <li>• 第1节：硬件设计师 - 规划智能硬件</li>
+                                <li>• 第2节：硬件魔法师 - 传感器都听你的</li>
+                                <li>• 第3节：AI加持 - 算法跑在硬件上</li>
+                                <li>• 第4节：黑科技发布会 - 像苹果发布产品</li>
+                            </ul>
+                        </div>
+                        <div class="mb-4">
+                            <h4 class="font-bold text-gray-800 mb-2">🔧 硬件组件</h4>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="text-xs bg-gray-100 px-2 py-1 rounded">树莓派</span>
+                                <span class="text-xs bg-gray-100 px-2 py-1 rounded">摄像头</span>
+                                <span class="text-xs bg-gray-100 px-2 py-1 rounded">舵机</span>
+                            </div>
+                        </div>
+                        <div class="text-sm text-gray-500">
+                            <i class="fas fa-file-alt mr-2"></i>
+                            <a href="course-files/project5/项目5-嵌入式工程师.md" class="text-blue-600 hover:underline markdown-link">查看详细文档</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 项目6 -->
+                <div class="bg-white rounded-lg shadow-lg overflow-hidden card-hover">
+                    <div class="bg-indigo-500 text-white p-6">
+                        <div class="flex items-center mb-4">
+                            <i class="fas fa-rocket text-3xl mr-3"></i>
+                            <h3 class="text-xl font-bold">项目6：综合实践周</h3>
+                        </div>
+                        <div class="text-sm opacity-90">创业实战 + 团队协作</div>
+                    </div>
+                    <div class="p-6">
+                        <div class="mb-4">
+                            <h4 class="font-bold text-gray-800 mb-2">🎯 超级任务</h4>
+                            <p class="text-gray-600 text-sm">校园创业大赛 - 打造改变校园的产品</p>
+                        </div>
+                        <div class="mb-4">
+                            <h4 class="font-bold text-gray-800 mb-2">📋 4节课安排</h4>
+                            <ul class="text-sm text-gray-600 space-y-1">
+                                <li>• 第1节：创业启动 - 组队选赛道定目标</li>
+                                <li>• 第2节：极限编程 - 24小时疯狂开发MVP</li>
+                                <li>• 第3节：冲刺上线 - 抢占100种子用户</li>
+                                <li>• 第4节：创业之夜 - 鲨鱼缸路演大赛</li>
+                            </ul>
+                        </div>
+                        <div class="mb-4">
+                            <h4 class="font-bold text-gray-800 mb-2">🏆 项目方向</h4>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="text-xs bg-gray-100 px-2 py-1 rounded">学习打卡</span>
+                                <span class="text-xs bg-gray-100 px-2 py-1 rounded">错题整理</span>
+                                <span class="text-xs bg-gray-100 px-2 py-1 rounded">AI头像生成</span>
+                            </div>
+                        </div>
+                        <div class="text-sm text-gray-500">
+                            <i class="fas fa-file-alt mr-2"></i>
+                            <a href="course-files/project6/项目6-综合实践周.md" class="text-blue-600 hover:underline markdown-link">查看详细文档</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 能力培养 -->
+    <section id="skills" class="py-16">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-gray-800 mb-4">能力培养体系</h2>
+                <p class="text-gray-600 max-w-2xl mx-auto">
+                    双核心能力贯穿始终，8大类能力系统培养
+                </p>
+            </div>
+
+            <!-- 双核心能力 -->
+            <div class="grid md:grid-cols-2 gap-8 mb-12">
+                <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-8">
+                    <div class="flex items-center mb-6">
+                        <div class="bg-blue-500 text-white rounded-full p-3 mr-4">
+                            <i class="fas fa-robot text-2xl"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-blue-900">AI Coding能力</h3>
+                    </div>
+                    <p class="text-blue-800 mb-6">在AI工具辅助下，快速实现想法、解决问题、提升开发效率的能力</p>
+                    <div class="space-y-4">
+                        <div class="flex items-center start">
+                            <i class="fas fa-check-circle text-blue-500 mt-1 mr-3"></i>
+                            <div>
+                                <h4 class="font-semibold text-blue-900">L1：工具使用</h4>
+                                <p class="text-sm text-blue-700">会用ChatGPT解答问题、生成代码片段（课程1）</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center start">
+                            <i class="fas fa-check-circle text-blue-500 mt-1 mr-3"></i>
+                            <div>
+                                <h4 class="font-semibold text-blue-900">L2：协同开发</h4>
+                                <p class="text-sm text-blue-700">能用Cursor/Copilot完成完整功能模块（课程2-3）</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center start">
+                            <i class="fas fa-check-circle text-blue-500 mt-1 mr-3"></i>
+                            <div>
+                                <h4 class="font-semibold text-blue-900">L3：专业应用</h4>
+                                <p class="text-sm text-blue-700">在特定领域熟练用AI（课程4-5）</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center start">
+                            <i class="fas fa-check-circle text-blue-500 mt-1 mr-3"></i>
+                            <div>
+                                <h4 class="font-semibold text-blue-900">L4：架构设计</h4>
+                                <p class="text-sm text-blue-700">能用AI辅助系统设计、技术选型（课程6）</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-8">
+                    <div class="flex items-center mb-6">
+                        <div class="bg-purple-500 text-white rounded-full p-3 mr-4">
+                            <i class="fas fa-tasks text-2xl"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-purple-900">任务规划能力</h3>
+                    </div>
+                    <p class="text-purple-800 mb-6">科学拆解任务、合理安排时间、有效管理项目、应对突发问题的能力</p>
+                    <div class="space-y-4">
+                        <div class="flex items-center start">
+                            <i class="fas fa-check-circle text-purple-500 mt-1 mr-3"></i>
+                            <div>
+                                <h4 class="font-semibold text-purple-900">L1：任务分解</h4>
+                                <p class="text-sm text-purple-700">能将大任务拆解为可执行的小任务（课程1-2）</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center start">
+                            <i class="fas fa-check-circle text-purple-500 mt-1 mr-3"></i>
+                            <div>
+                                <h4 class="font-semibold text-purple-900">L2：时间管理</h4>
+                                <p class="text-sm text-purple-700">会用工具管理个人任务和时间（课程2-3）</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center start">
+                            <i class="fas fa-check-circle text-purple-500 mt-1 mr-3"></i>
+                            <div>
+                                <h4 class="font-semibold text-purple-900">L3：项目管理</h4>
+                                <p class="text-sm text-purple-700">能制定项目计划、监控进度、应对风险（课程2+5）</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center start">
+                            <i class="fas fa-check-circle text-purple-500 mt-1 mr-3"></i>
+                            <div>
+                                <h4 class="font-semibold text-purple-900">L4：团队协作</h4>
+                                <p class="text-sm text-purple-700">能协调跨职能团队、制定整体规划（课程6）</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 能力矩阵图表 -->
+            <div class="bg-white rounded-lg shadow-lg p-8">
+                <h3 class="text-2xl font-bold text-gray-800 mb-6 text-center">8大类能力培养矩阵</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="bg-gray-50">
+                                <th class="px-4 py-3 text-left font-medium text-gray-700">能力类别</th>
+                                <th class="px-4 py-3 text-center font-medium text-gray-700">课程1<br/>体感游戏</th>
+                                <th class="px-4 py-3 text-center font-medium text-gray-700">课程2<br/>产品+项目</th>
+                                <th class="px-4 py-3 text-center font-medium text-gray-700">课程3<br/>全栈开发</th>
+                                <th class="px-4 py-3 text-center font-medium text-gray-700">课程4<br/>算法研究</th>
+                                <th class="px-4 py-3 text-center font-medium text-gray-700">课程5<br/>嵌入式</th>
+                                <th class="px-4 py-3 text-center font-medium text-gray-700">课程6<br/>综合实践</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-4 py-3 font-medium text-gray-900">计算思维</td>
+                                <td class="px-4 py-3 text-center">⭐⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐⭐</td>
+                            </tr>
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-4 py-3 font-medium text-gray-900">批判性思维</td>
+                                <td class="px-4 py-3 text-center">⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐</td>
+                            </tr>
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-4 py-3 font-medium text-gray-900">系统思维</td>
+                                <td class="px-4 py-3 text-center">⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐⭐</td>
+                            </tr>
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-4 py-3 font-medium text-gray-900">设计思维</td>
+                                <td class="px-4 py-3 text-center">⭐⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐</td>
+                                <td class="px-4 py-3 text-center">⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐</td>
+                            </tr>
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-4 py-3 font-medium text-gray-900">自主学习</td>
+                                <td class="px-4 py-3 text-center">⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐</td>
+                            </tr>
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-4 py-3 font-medium text-gray-900">问题解决</td>
+                                <td class="px-4 py-3 text-center">⭐⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐⭐</td>
+                            </tr>
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-4 py-3 font-medium text-gray-900">团队协作</td>
+                                <td class="px-4 py-3 text-center">⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐</td>
+                                <td class="px-4 py-3 text-center">⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐⭐</td>
+                            </tr>
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-4 py-3 font-medium text-gray-900">产品思维</td>
+                                <td class="px-4 py-3 text-center">⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐</td>
+                                <td class="px-4 py-3 text-center">⭐</td>
+                                <td class="px-4 py-3 text-center">⭐</td>
+                                <td class="px-4 py-3 text-center">⭐⭐⭐</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-4 text-center text-sm text-gray-600">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    ⭐ 培养强度：⭐ 基础 → ⭐⭐ 中等 → ⭐⭐⭐ 重点培养
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 资源下载 -->
+    <section id="resources" class="py-16 bg-gray-100">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-gray-800 mb-4">资源下载</h2>
+                <p class="text-gray-600 max-w-2xl mx-auto">
+                    完整的课程文档、教案、工具清单等资源
+                </p>
+            </div>
+
+            <div class="text-center mb-8">
+                <a href="downloads.html" class="inline-flex items-center bg-indigo-600 text-white px-8 py-4 rounded-lg font-bold text-lg hover:bg-indigo-700 transition-all duration-300 btn-glow shadow-elevation-3">
+                    <i class="fas fa-download mr-3"></i>
+                    进入资源下载页面
+                    <i class="fas fa-arrow-right ml-2"></i>
+                </a>
+            </div>
+
+            <!-- 快速预览 -->
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- 核心文档 -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-book text-blue-500 text-2xl mr-3"></i>
+                        <h3 class="text-lg font-bold text-gray-800">核心文档</h3>
+                    </div>
+                    <ul class="space-y-2 text-sm">
+                        <li class="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
+                            <span class="text-gray-700">课程总体设计</span>
+                            <a href="course-files/common/课程总体设计.md" class="text-blue-600 hover:text-blue-800">
+                                <i class="fas fa-download"></i>
+                            </a>
+                        </li>
+                        <li class="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
+                            <span class="text-gray-700">能力素养培养体系</span>
+                            <a href="course-files/common/能力素养培养体系.md" class="text-blue-600 hover:text-blue-800">
+                                <i class="fas fa-download"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- 项目文档 -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-project-diagram text-purple-500 text-2xl mr-3"></i>
+                        <h3 class="text-lg font-bold text-gray-800">项目文档</h3>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-3">6个项目详细实施方案</p>
+                    <a href="downloads.html#projects" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                        查看所有项目 →
+                    </a>
+                </div>
+
+                <!-- 工具资源 -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-tools text-orange-500 text-2xl mr-3"></i>
+                        <h3 class="text-lg font-bold text-gray-800">工具资源</h3>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-3">开发工具、AI工具、硬件清单</p>
+                    <a href="course-files/common/工具清单和资源.md" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                        下载工具清单 →
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 页脚 -->
+    <footer class="gradient-bg text-white py-12">
+        <div class="container mx-auto px-4">
+            <div class="grid md:grid-cols-3 gap-8">
+                <div>
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-graduation-cap text-2xl mr-3"></i>
+                        <h3 class="text-lg font-bold">课程特色</h3>
+                    </div>
+                    <ul class="space-y-2 text-sm">
+                        <li>• AI原生教学</li>
+                        <li>• 游戏化学习</li>
+                        <li>• 真实项目导向</li>
+                        <li>• 能力导向评估</li>
+                    </ul>
+                </div>
+                <div>
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-users text-2xl mr-3"></i>
+                        <h3 class="text-lg font-bold">适合对象</h3>
+                    </div>
+                    <ul class="space-y-2 text-sm">
+                        <li>• 高一年级学生</li>
+                        <li>• 零基础可学</li>
+                        <li>• 3-6人小组协作</li>
+                        <li>• 创新兴趣爱好者</li>
+                    </ul>
+                </div>
+                <div>
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-trophy text-2xl mr-3"></i>
+                        <h3 class="text-lg font-bold">学生收获</h3>
+                    </div>
+                    <ul class="space-y-2 text-sm">
+                        <li>• 6个真实项目作品</li>
+                        <li>• 6种职业体验</li>
+                        <li>• AI Coding能力</li>
+                        <li>• 团队协作经验</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-white border-opacity-20 mt-8 pt-8 text-center">
+                <p class="text-sm opacity-80">
+                    © 2025 高一学生职业技能培训课程体系 - AI时代的新一代工程师培养
+                </p>
+                <div class="mt-4 flex justify-center space-x-4">
+                    <span class="text-xs opacity-60">版本：v2.0（45分钟版）</span>
+                    <span class="text-xs opacity-60">•</span>
+                    <span class="text-xs opacity-60">最后更新：2025年</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 返回顶部按钮 -->
+    <button id="backToTop" class="fixed bottom-8 right-8 bg-blue-500 text-white p-3 rounded-full shadow-lg hover:bg-blue-600 transition-all duration-300 opacity-0 invisible">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <!-- Markdown 模态框 -->
+    <div id="markdownModal" class="markdown-modal">
+        <div class="markdown-modal-content">
+            <div class="markdown-modal-header">
+                <h2 id="markdownModalTitle" class="markdown-modal-title">文档内容</h2>
+                <div class="flex items-center space-x-2">
+                    <button id="markdownModalFullscreen" class="bg-white bg-opacity-20 border-none text-white w-8 h-8 rounded-lg text-sm cursor-pointer transition-all duration-200 hover:bg-opacity-30 flex items-center justify-center" title="全屏切换">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                    <button id="markdownModalClose" class="markdown-modal-close" title="关闭">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <!-- 全屏模式下的浮动标题栏 -->
+            <div id="fullscreenHeader" class="hidden fixed top-0 left-0 w-full h-16 bg-black bg-opacity-90 text-white flex items-center justify-between px-4 z-50" style="display: none;">
+                <h3 id="fullscreenTitle" class="text-lg font-semibold truncate max-w-2xl">文档标题</h3>
+                <div class="flex items-center space-x-2">
+                    <button id="fullscreenExitBtn" class="bg-white bg-opacity-20 border-none text-white w-8 h-8 rounded-lg text-sm cursor-pointer transition-all duration-200 hover:bg-opacity-30 flex items-center justify-center" title="退出全屏">
+                        <i class="fas fa-compress"></i>
+                    </button>
+                    <button id="fullscreenCloseBtn" class="bg-red-600 bg-opacity-80 border-none text-white w-8 h-8 rounded-lg text-sm cursor-pointer transition-all duration-200 hover:bg-opacity-100 flex items-center justify-center" title="关闭">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="markdown-modal-body">
+                <div id="markdownContent" class="markdown-loading">
+                    <div class="markdown-loading-spinner"></div>
+                    <div>正在加载文档...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 移动端菜单切换
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const mobileMenu = document.getElementById('mobileMenu');
+
+        mobileMenuBtn.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        // 平滑滚动
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                    // 关闭移动端菜单
+                    mobileMenu.classList.add('hidden');
+                }
+            });
+        });
+
+        // 返回顶部按钮
+        const backToTopBtn = document.getElementById('backToTop');
+
+        window.addEventListener('scroll', () => {
+            if (window.pageYOffset > 300) {
+                backToTopBtn.classList.remove('opacity-0', 'invisible');
+                backToTopBtn.classList.add('opacity-100', 'visible');
+            } else {
+                backToTopBtn.classList.add('opacity-0', 'invisible');
+                backToTopBtn.classList.remove('opacity-100', 'visible');
+            }
+        });
+
+        backToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+
+        // 页面加载动画
+        document.addEventListener('DOMContentLoaded', () => {
+            const fadeElements = document.querySelectorAll('.fade-in');
+            fadeElements.forEach((el, index) => {
+                setTimeout(() => {
+                    el.style.opacity = '1';
+                    el.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+        });
+
+        // 导航栏滚动效果
+        let lastScroll = 0;
+        const nav = document.querySelector('nav');
+
+        window.addEventListener('scroll', () => {
+            const currentScroll = window.pageYOffset;
+
+            if (currentScroll > 100) {
+                nav.classList.add('shadow-lg');
+            } else {
+                nav.classList.remove('shadow-lg');
+            }
+
+            lastScroll = currentScroll;
+        });
+
+        // 深色模式切换
+        let isDarkMode = false;
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        darkModeToggle.addEventListener('click', () => {
+            isDarkMode = !isDarkMode;
+            document.body.classList.toggle('dark-mode');
+            darkModeToggle.innerHTML = isDarkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+            localStorage.setItem('darkMode', isDarkMode);
+        });
+
+        // 恢复深色模式设置
+        if (localStorage.getItem('darkMode') === 'true') {
+            isDarkMode = true;
+            document.body.classList.add('dark-mode');
+            darkModeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+        }
+
+        // ESC键关闭模态框
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeMarkdownModal();
+            }
+        });
+
+        // Markdown 模态框功能
+        const markdownModal = document.getElementById('markdownModal');
+        const markdownModalTitle = document.getElementById('markdownModalTitle');
+        const markdownContent = document.getElementById('markdownContent');
+        const markdownModalClose = document.getElementById('markdownModalClose');
+        const markdownModalFullscreen = document.getElementById('markdownModalFullscreen');
+        const fullscreenHeader = document.getElementById('fullscreenHeader');
+        const fullscreenTitle = document.getElementById('fullscreenTitle');
+        const fullscreenExitBtn = document.getElementById('fullscreenExitBtn');
+        const fullscreenCloseBtn = document.getElementById('fullscreenCloseBtn');
+        let isFullscreen = false;
+
+        // 等待 marked.js 加载完成后再配置
+        function initializeMarkdown() {
+            if (typeof marked !== 'undefined') {
+                // 配置 marked.js
+                marked.setOptions({
+                    highlight: function(code, lang) {
+                        // 简单的语法高亮
+                        return code;
+                    },
+                    breaks: true,
+                    gfm: true
+                });
+                console.log('Markdown 渲染器初始化成功');
+            } else {
+                console.error('marked.js 未加载');
+            }
+        }
+
+        // 处理 Markdown 链接点击
+        function handleMarkdownLink(event) {
+            console.log('Markdown 链接被点击');
+            const link = event.target.closest('a[href$=".md"]');
+            if (!link) return;
+
+            console.log('找到 Markdown 链接:', link.href);
+            event.preventDefault();
+            const mdPath = link.getAttribute('href');
+            const fileName = mdPath.split('/').pop().replace('.md', '');
+
+            console.log('加载 Markdown 文件:', mdPath);
+
+            // 设置模态框标题
+            markdownModalTitle.textContent = fileName;
+
+            // 显示模态框
+            markdownModal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+
+            // 强制滚动到顶部
+            setTimeout(() => {
+                markdownContent.scrollTop = 0;
+            }, 50);
+
+            // 加载 Markdown 内容
+            loadMarkdown(mdPath);
+        }
+
+        // 加载并渲染 Markdown 文件
+        async function loadMarkdown(mdPath) {
+            console.log('开始加载 Markdown:', mdPath);
+
+            try {
+                markdownContent.innerHTML = `
+                    <div class="markdown-loading">
+                        <div class="markdown-loading-spinner"></div>
+                        <div>正在加载文档...</div>
+                    </div>
+                `;
+
+                // 尝试获取 Markdown 文件内容
+                const response = await fetch(mdPath);
+                console.log('Fetch 响应状态:', response.status, response.statusText);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const markdownText = await response.text();
+                console.log('Markdown 文本长度:', markdownText.length);
+
+                // 检查 marked 是否可用
+                if (typeof marked === 'undefined') {
+                    throw new Error('marked.js 库未加载');
+                }
+
+                // 渲染 Markdown
+                const htmlContent = marked.parse(markdownText);
+                console.log('Markdown 渲染成功');
+
+                // 使用 DOMPurify 清理 HTML（安全考虑）
+                let cleanHtml = htmlContent;
+                if (typeof DOMPurify !== 'undefined') {
+                    cleanHtml = DOMPurify.sanitize(htmlContent);
+                    console.log('HTML 安全清理完成');
+                } else {
+                    console.warn('DOMPurify 未加载，跳过安全清理');
+                }
+
+                // 显示渲染后的内容
+                markdownContent.innerHTML = `<div class="markdown-content">${cleanHtml}</div>`;
+                console.log('Markdown 内容已显示');
+
+                // 自动滚动到模态框顶部
+                setTimeout(() => {
+                    markdownContent.scrollTop = 0;
+                }, 100);
+
+                // 为 Markdown 内容中的链接添加特殊处理
+                processMarkdownContentLinks();
+
+            } catch (error) {
+                console.error('加载 Markdown 文件失败:', error);
+                markdownContent.innerHTML = `
+                    <div class="markdown-error">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>文档加载失败</h3>
+                        <p>无法加载文档: ${mdPath}</p>
+                        <p class="text-sm mt-2">错误信息: ${error.message}</p>
+                        <div class="mt-4">
+                            <button class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors mr-2" onclick="window.open('${mdPath}', '_blank')">
+                                <i class="fas fa-external-link-alt mr-2"></i>
+                                在新窗口中打开
+                            </button>
+                            <button class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors" onclick="showMarkdownRaw('${mdPath}')">
+                                <i class="fas fa-code mr-2"></i>
+                                显示原始内容
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // 显示原始 Markdown 内容
+        async function showMarkdownRaw(mdPath) {
+            try {
+                const response = await fetch(mdPath);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                const markdownText = await response.text();
+                const escapedText = markdownText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                markdownContent.innerHTML = `
+                    <div class="markdown-content">
+                        <h3>原始 Markdown 内容</h3>
+                        <pre style="background: #f8f9fa; padding: 1rem; border-radius: 8px; overflow-x: auto;"><code>${escapedText}</code></pre>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('显示原始内容失败:', error);
+                markdownContent.innerHTML = `<div class="markdown-error">无法加载原始内容: ${error.message}</div>`;
+            }
+        }
+
+        // 处理 Markdown 内容中的链接
+        function processMarkdownContentLinks() {
+            const contentLinks = markdownContent.querySelectorAll('a[href$=".md"]');
+            contentLinks.forEach(link => {
+                link.addEventListener('click', handleMarkdownLink);
+            });
+        }
+
+        // 关闭模态框
+        function closeMarkdownModal() {
+            // 如果在全屏模式，先退出全屏
+            if (isFullscreen) {
+                toggleFullscreen();
+            }
+
+            markdownModal.classList.remove('active');
+            document.body.style.overflow = '';
+            markdownContent.innerHTML = `
+                <div class="markdown-loading">
+                    <div class="markdown-loading-spinner"></div>
+                    <div>正在加载文档...</div>
+                </div>
+            `;
+        }
+
+        // 事件监听器
+        markdownModalClose.addEventListener('click', closeMarkdownModal);
+
+        // 全屏切换功能
+        function toggleFullscreen() {
+            if (!isFullscreen) {
+                // 进入全屏
+                document.body.style.overflow = 'hidden';
+                markdownModal.style.background = 'white';
+                markdownModal.style.padding = '0';
+                markdownModal.style.position = 'fixed';
+                markdownModal.style.top = '0';
+                markdownModal.style.left = '0';
+                markdownModal.style.width = '100vw';
+                markdownModal.style.height = '100vh';
+                markdownModal.style.borderRadius = '0';
+
+                const modalContent = markdownModal.querySelector('.markdown-modal-content');
+                modalContent.style.maxHeight = '100vh';
+                modalContent.style.height = '100vh';
+                modalContent.style.maxWidth = '100vw';
+                modalContent.style.width = '100vw';
+                modalContent.style.borderRadius = '0';
+                modalContent.style.margin = '0';
+
+                // 隐藏原始标题栏
+                markdownModal.querySelector('.markdown-modal-header').style.display = 'none';
+
+                // 显示浮动标题栏
+                fullscreenHeader.style.display = 'flex';
+                fullscreenTitle.textContent = markdownModalTitle.textContent;
+
+                const modalBody = markdownModal.querySelector('.markdown-modal-body');
+                modalBody.style.paddingTop = '4rem';
+                modalBody.style.height = 'calc(100vh - 4rem)';
+
+                markdownModalFullscreen.innerHTML = '<i class="fas fa-compress"></i>';
+
+                isFullscreen = true;
+            } else {
+                // 退出全屏
+                document.body.style.overflow = '';
+                markdownModal.style.background = '';
+                markdownModal.style.padding = '';
+                markdownModal.style.position = '';
+                markdownModal.style.top = '';
+                markdownModal.style.left = '';
+                markdownModal.style.width = '';
+                markdownModal.style.height = '';
+                markdownModal.style.borderRadius = '';
+
+                const modalContent = markdownModal.querySelector('.markdown-modal-content');
+                modalContent.style.maxHeight = '';
+                modalContent.style.height = '';
+                modalContent.style.maxWidth = '';
+                modalContent.style.width = '';
+                modalContent.style.borderRadius = '';
+                modalContent.style.margin = '';
+
+                // 显示原始标题栏
+                markdownModal.querySelector('.markdown-modal-header').style.display = '';
+
+                // 隐藏浮动标题栏
+                fullscreenHeader.style.display = 'none';
+
+                const modalBody = markdownModal.querySelector('.markdown-modal-body');
+                modalBody.style.paddingTop = '';
+                modalBody.style.height = '';
+
+                markdownModalFullscreen.innerHTML = '<i class="fas fa-expand"></i>';
+
+                isFullscreen = false;
+            }
+        }
+
+        markdownModalFullscreen.addEventListener('click', toggleFullscreen);
+
+        // 浮动标题栏按钮事件
+        fullscreenExitBtn.addEventListener('click', toggleFullscreen);
+        fullscreenCloseBtn.addEventListener('click', closeMarkdownModal);
+
+        // 点击模态框背景关闭
+        markdownModal.addEventListener('click', (event) => {
+            if (event.target === markdownModal && !isFullscreen) {
+                closeMarkdownModal();
+            }
+        });
+
+        // 为页面中所有的 Markdown 链接添加点击事件
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM 加载完成，开始初始化...');
+
+            // 初始化 Markdown 渲染器
+            initializeMarkdown();
+
+            // 为所有 Markdown 链接添加点击事件
+            const markdownLinks = document.querySelectorAll('a[href$=".md"]');
+            console.log('找到 Markdown 链接数量:', markdownLinks.length);
+
+            markdownLinks.forEach((link, index) => {
+                console.log(`链接 ${index + 1}:`, link.href);
+                link.addEventListener('click', handleMarkdownLink);
+            });
+
+            // 检查必要的元素是否存在
+            console.log('模态框元素检查:');
+            console.log('markdownModal:', !!markdownModal);
+            console.log('markdownModalTitle:', !!markdownModalTitle);
+            console.log('markdownContent:', !!markdownContent);
+            console.log('markdownModalClose:', !!markdownModalClose);
+        });
+    </script>
+</body>
+</html>

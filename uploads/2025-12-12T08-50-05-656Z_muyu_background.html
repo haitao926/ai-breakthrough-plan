@@ -1,0 +1,374 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>电子木鱼 · 交互版</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg-start: #f3eee7;
+      --bg-end: #e6e1da;
+      --ink: #4a4742;
+      --muyu: #5b3b24;
+      --shadow: rgba(0, 0, 0, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(135deg, rgba(243, 238, 231, 0.82), rgba(230, 225, 218, 0.9)),
+        url("muyu.png") center / cover no-repeat fixed;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      color: var(--ink);
+      display: grid;
+      place-items: center;
+    }
+    .frame {
+      width: min(520px, 90vw);
+      padding: 8px 12px 18px;
+      display: grid;
+      gap: 14px;
+      justify-items: center;
+      text-align: center;
+      position: relative;
+      overflow: visible;
+    }
+    .title {
+      font-size: 22px;
+      letter-spacing: 0.8px;
+      font-weight: 700;
+    }
+    .subtitle {
+      font-size: 14px;
+      opacity: 0.75;
+      line-height: 1.6;
+      max-width: 360px;
+    }
+    .counter {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      background: rgba(255, 255, 255, 0.55);
+      padding: 10px 18px;
+      border-radius: 12px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+      display: inline-flex;
+      gap: 8px;
+      align-items: baseline;
+    }
+    .counter small {
+      opacity: 0.7;
+      font-weight: 500;
+    }
+    .muyu {
+      width: clamp(180px, 40vw, 260px);
+      aspect-ratio: 1;
+      border-radius: 46% 54% 52% 48%;
+      background: var(--muyu) url("muyu.png") center / cover no-repeat;
+      position: relative;
+      box-shadow:
+        0 18px 40px rgba(0, 0, 0, 0.16);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      border: none;
+      padding: 0;
+      color: inherit;
+      outline: none;
+      overflow: hidden;
+      user-select: none;
+      transition: transform 150ms cubic-bezier(0.34, 1.56, 0.64, 1);
+      touch-action: manipulation;
+    }
+    .muyu:focus-visible {
+      box-shadow:
+        0 22px 48px rgba(0, 0, 0, 0.2);
+    }
+    .ripple {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      background: radial-gradient(circle, rgba(255,255,255,0.65), rgba(255,255,255,0));
+      border-radius: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      opacity: 0.6;
+      pointer-events: none;
+      animation: ripple 480ms ease-out forwards;
+    }
+    @keyframes ripple {
+      to {
+        transform: translate(-50%, -50%) scale(6);
+        opacity: 0;
+      }
+    }
+    .float-text {
+      position: absolute;
+      font-weight: 800;
+      color: #7b5033;
+      text-shadow:
+        0 0 4px rgba(255, 255, 255, 0.6),
+        0 8px 18px rgba(0, 0, 0, 0.12);
+      pointer-events: none;
+      animation: rise 760ms ease-out forwards;
+      transform: translate(-50%, -50%);
+      font-size: 17px;
+    }
+    @keyframes rise {
+      0% {
+        opacity: 1;
+        transform: translate(-50%, -50%) translateY(0);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) translateY(-34px);
+      }
+    }
+    .hint {
+      font-size: 13px;
+      opacity: 0.7;
+      letter-spacing: 0.4px;
+    }
+    .race {
+      display: grid;
+      gap: 10px;
+      padding: 10px 0 6px;
+      width: 100%;
+      max-width: 420px;
+    }
+    .race-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-size: 14px;
+    }
+    .race button {
+      background: #6b4a31;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+      box-shadow: 0 8px 18px rgba(0,0,0,0.16);
+    }
+    .race button:active {
+      transform: translateY(1px) scale(0.98);
+    }
+    .race button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    .race .timer {
+      font-weight: 700;
+      color: #5b3b24;
+    }
+    .race ol {
+      margin: 0 auto;
+      padding-left: 18px;
+      width: 100%;
+      max-width: 320px;
+      color: #4a3a2c;
+    }
+    .race li {
+      padding: 4px 0;
+      font-size: 14px;
+    }
+    .race small {
+      opacity: 0.65;
+    }
+  </style>
+</head>
+<body>
+  <div class="frame" aria-label="电子木鱼界面">
+    <div class="title">电子木鱼</div>
+    <div class="subtitle">点击木鱼，每次敲击都能让功德 +1。计数会自动保存在本地存储，刷新也不会丢失。</div>
+    <div class="counter" aria-live="polite">
+      <small>功德值</small>
+      <span data-count>0</span>
+    </div>
+    <div class="race" aria-label="竞速模式">
+      <div class="race-row">
+        <button type="button" data-race-start>开启 1 分钟竞速</button>
+        <div class="timer" aria-live="polite" data-race-timer>未开始 · 60.0s</div>
+      </div>
+      <div class="race-row" aria-live="polite">
+        <small data-race-status>点击开始后，将清零功德值并在 60 秒后记录成绩</small>
+      </div>
+      <div>
+        <small>排行榜（前三）</small>
+        <ol data-race-board></ol>
+      </div>
+    </div>
+    <button class="muyu" type="button" aria-label="点击木鱼祈福"></button>
+    <div class="hint">点击木鱼可触发缩放、波纹与“+1”浮动动画</div>
+  </div>
+  <script>
+    (() => {
+      const storageKey = "muyu-gongde-count";
+      const raceStorageKey = "muyu-race-top3";
+      const frame = document.querySelector(".frame");
+      const muyu = document.querySelector(".muyu");
+      const countEl = document.querySelector("[data-count]");
+      const raceBtn = document.querySelector("[data-race-start]");
+      const raceTimer = document.querySelector("[data-race-timer]");
+      const raceStatus = document.querySelector("[data-race-status]");
+      const raceBoard = document.querySelector("[data-race-board]");
+
+      let count = Number(localStorage.getItem(storageKey));
+      if (!Number.isFinite(count) || count < 0) count = 0;
+      updateCount();
+
+      let raceActive = false;
+      let raceDeadline = 0;
+      let raceTimerId = null;
+      let currentRunner = "";
+      let raceBoardData = loadBoard();
+      renderBoard();
+
+      muyu.addEventListener("click", handleHit);
+      muyu.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          handleHit(event);
+        }
+      });
+      raceBtn.addEventListener("click", startRace);
+
+      function handleHit(event) {
+        const muyuRect = muyu.getBoundingClientRect();
+        const frameRect = frame.getBoundingClientRect();
+        const hasPoint = Number.isFinite(event.clientX) && Number.isFinite(event.clientY) && (event.clientX !== 0 || event.clientY !== 0);
+        const x = hasPoint ? event.clientX - muyuRect.left : muyuRect.width / 2;
+        const y = hasPoint ? event.clientY - muyuRect.top : muyuRect.height / 2;
+
+        animateTap();
+        spawnRipple(x, y);
+        spawnFloat(muyuRect.left - frameRect.left + x, muyuRect.top - frameRect.top + y);
+
+        count += 1;
+        updateCount();
+      }
+
+      function animateTap() {
+        muyu.style.transition = "none";
+        muyu.style.transform = "scale(0.9)";
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            muyu.style.transition = "transform 150ms cubic-bezier(0.34, 1.56, 0.64, 1)";
+            muyu.style.transform = "scale(1)";
+          });
+        });
+      }
+
+      function spawnRipple(x, y) {
+        const ripple = document.createElement("span");
+        ripple.className = "ripple";
+        ripple.style.left = `${x}px`;
+        ripple.style.top = `${y}px`;
+        muyu.appendChild(ripple);
+        ripple.addEventListener("animationend", () => ripple.remove());
+      }
+
+      function spawnFloat(x, y) {
+        const float = document.createElement("span");
+        float.className = "float-text";
+        float.textContent = "+1";
+        float.style.left = `${x}px`;
+        float.style.top = `${y}px`;
+        frame.appendChild(float);
+        float.addEventListener("animationend", () => float.remove());
+      }
+
+      function updateCount() {
+        countEl.textContent = count;
+        localStorage.setItem(storageKey, String(count));
+      }
+
+      function startRace() {
+        if (raceActive) return;
+        const nameInput = prompt("输入竞速名称（将记录在排行榜）", currentRunner || "无名功德");
+        if (nameInput === null) return;
+        currentRunner = (nameInput || "无名功德").trim() || "无名功德";
+        raceActive = true;
+        raceDeadline = Date.now() + 60_000;
+        count = 0;
+        updateCount();
+        updateRaceStatus("进行中");
+        updateRaceTimer();
+        raceBtn.disabled = true;
+        raceTimerId = setInterval(updateRaceTimer, 200);
+      }
+
+      function updateRaceTimer() {
+        if (!raceActive) return;
+        const remain = Math.max(0, raceDeadline - Date.now());
+        raceTimer.textContent = `进行中 · ${(remain / 1000).toFixed(1)}s`;
+        if (remain <= 0) {
+          endRace();
+        }
+      }
+
+      function endRace() {
+        if (!raceActive) return;
+        clearInterval(raceTimerId);
+        raceTimerId = null;
+        raceActive = false;
+        raceBtn.disabled = false;
+        raceTimer.textContent = "未开始 · 60.0s";
+        updateRaceStatus(`已结束，本次成绩：${count}`);
+        addRecord(currentRunner, count);
+        renderBoard();
+      }
+
+      function updateRaceStatus(text) {
+        raceStatus.textContent = text;
+      }
+
+      function addRecord(name, score) {
+        const entry = { name, score, ts: Date.now() };
+        raceBoardData.push(entry);
+        raceBoardData.sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score;
+          return a.ts - b.ts;
+        });
+        raceBoardData = raceBoardData.slice(0, 3);
+        localStorage.setItem(raceStorageKey, JSON.stringify(raceBoardData));
+      }
+
+      function renderBoard() {
+        raceBoard.innerHTML = "";
+        if (!raceBoardData.length) {
+          const empty = document.createElement("li");
+          empty.textContent = "暂无记录";
+          raceBoard.appendChild(empty);
+          return;
+        }
+        raceBoardData.forEach((item, idx) => {
+          const li = document.createElement("li");
+          li.textContent = `${idx + 1}. ${item.name} - ${item.score}`;
+          raceBoard.appendChild(li);
+        });
+      }
+
+      function loadBoard() {
+        try {
+          const saved = JSON.parse(localStorage.getItem(raceStorageKey) || "[]");
+          if (Array.isArray(saved)) {
+            return saved.filter(x => Number.isFinite(x.score) && typeof x.name === "string").slice(0, 3);
+          }
+        } catch (err) {
+          console.error(err);
+        }
+        return [];
+      }
+    })();
+  </script>
+</body>
+</html>

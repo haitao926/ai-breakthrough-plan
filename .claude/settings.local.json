@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(curl:*)",
+      "Bash(python:*)",
+      "Bash(where:*)",
+      "Bash(npm config set:*)",
+      "Bash(npx serve:*)",
+      "Bash(ipconfig:*)",
+      "Bash(findstr:*)",
+      "Bash(npm start)",
+      "Bash(node:*)",
+      "Bash(tree:*)",
+      "Bash(start:*)",
+      "Bash(ls:*)",
+      "Bash(taskkill:*)",
+      "Bash(powershell:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

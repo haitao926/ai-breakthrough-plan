@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI万花筒 - 高一职业技能培训课程体系</title>
+    <link href="css/tailwind.min.css" rel="stylesheet">
+    <link href="css/fontawesome.min.css" rel="stylesheet">
+    <script src="js/marked.min.js"></script>
+    <script src="js/purify.min.js"></script>
+    <style>
+        @import url('fonts/inter.css');
+        @import url('fonts/noto-sans-sc.css');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+            background-size: 200% 200%;
+            animation: gradientShift 15s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .card-hover {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-hover::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.6s;
+        }
+
+        .card-hover:hover::before {
+            left: 100%;
+        }
+
+        .card-hover:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .tab-active {
+            border-bottom: 3px solid #6366f1;
+            color: #6366f1;
+            position: relative;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+        }
+
+        /* 按钮美化 */
+        .btn-glow {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .btn-glow::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn-glow:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        /* 文字渐变 */
+        .text-gradient {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* 浮动动画 */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .float-animation {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        /* 文件列表样式 */
+        .file-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin: 8px 0;
+            background: #f8fafc;
+            border-radius: 8px;
+            transition: all 0.3s;
+            border: 1px solid #e5e7eb;
+        }
+
+        .file-item:hover {
+            background: #e0e7ff;
+            transform: translateX(4px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .file-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            margin-right: 12px;
+        }
+
+        .file-icon.pdf { background: #fee2e2; color: #dc2626; }
+        .file-icon.doc { background: #dbeafe; color: #2563eb; }
+        .file-icon.zip { background: #fef3c7; color: #d97706; }
+        .file-icon.mp4 { background: #ede9fe; color: #7c3aed; }
+        .file-icon.js { background: #f0fdf4; color: #16a34a; }
+        .file-icon.md { background: #f0f9ff; color: #0284c7; }
+        .file-icon.default { background: #e5e7eb; color: #6b7280; }
+
+        /* 加载动画 */
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #6366f1;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 统计卡片 */
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+            transition: all 0.3s;
+            border: 1px solid #e5e7eb;
+        }
+
+        .stat-card:hover {
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        /* 项目卡片增强 */
+        .badge-new {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #ef4444;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+            z-index: 10;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        /* 标签页切换 */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Markdown内容样式 */
+        .markdown-content {
+            background: white;
+            border-radius: 0;
+            padding: 0.5rem 1.5rem 1rem 1.5rem;
+            box-shadow: none;
+            max-width: none;
+            margin: 0;
+            line-height: 1.6;
+            font-size: 0.9rem;
+        }
+
+        .markdown-content h1, .markdown-content h2, .markdown-content h3,
+        .markdown-content h4, .markdown-content h5, .markdown-content h6 {
+            color: #2d3748;
+            font-weight: 700;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            line-height: 1.3;
+        }
+
+        .markdown-content h1 {
+            font-size: 1.8rem;
+            border-bottom: 2px solid #4299e1;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+            margin-top: 0;
+        }
+
+        .markdown-content h2 {
+            font-size: 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 0.3rem;
+            margin-top: 1.5rem;
+        }
+
+        .markdown-content p {
+            margin-bottom: 1rem;
+            color: #4a5568;
+            text-align: justify;
+        }
+
+        .markdown-content ul, .markdown-content ol {
+            margin-bottom: 1rem;
+            padding-left: 2rem;
+        }
+
+        .markdown-content li {
+            margin-bottom: 0.5rem;
+            color: #4a5568;
+        }
+
+        .markdown-content blockquote {
+            border-left: 4px solid #4299e1;
+            background: linear-gradient(90deg, #ebf8ff 0%, #ffffff 100%);
+            padding: 1rem 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 8px 8px 0;
+            font-style: italic;
+            color: #2b6cb0;
+        }
+
+        /* 响应式优化 */
+        @media (max-width: 768px) {
+            .project-card {
+                margin-bottom: 1rem;
+            }
+
+            .stat-card {
+                margin-bottom: 0.5rem;
+            }
+        }
+
+        /* 深色模式切换 */
+        .dark-mode {
+            background: #1a202c;
+            color: #e2e8f0;
+        }
+
+        .dark-mode .bg-white {
+            background: #2d3748 !important;
+        }
+
+        .dark-mode .text-gray-800 {
+            color: #e2e8f0 !important;
+        }
+
+        .dark-mode .text-gray-600 {
+            color: #cbd5e0 !important;
+        }
+
+        .dark-mode .bg-gray-50 {
+            background: #2d3748 !important;
+        }
+
+        .dark-mode .file-item {
+            background: #4a5568;
+            border-color: #718096;
+        }
+
+        .dark-mode .file-item:hover {
+            background: #4299e1;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 导航栏 -->
+    <nav class="gradient-bg text-white sticky top-0 z-50 shadow-lg">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-graduation-cap text-2xl"></i>
+                    <h1 class="text-xl font-bold">AI万花筒 - 职业技能培训课程</h1>
+                </div>
+                <div class="hidden md:flex space-x-6">
+                    <button onclick="switchTab('overview')" class="nav-tab hover:text-blue-200 transition tab-active" data-tab="overview">
+                        <i class="fas fa-home mr-2"></i>课程概览
+                    </button>
+                    <button onclick="switchTab('projects')" class="nav-tab hover:text-blue-200 transition" data-tab="projects">
+                        <i class="fas fa-folder-open mr-2"></i>项目详情
+                    </button>
+                    <button onclick="switchTab('resources')" class="nav-tab hover:text-blue-200 transition" data-tab="resources">
+                        <i class="fas fa-download mr-2"></i>资料下载
+                    </button>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button id="darkModeToggle" class="bg-white bg-opacity-20 p-2 rounded-lg hover:bg-opacity-30 transition" title="深色模式">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <button id="refreshBtn" class="bg-white bg-opacity-20 px-4 py-2 rounded-lg hover:bg-opacity-30 transition">
+                        <i class="fas fa-sync-alt mr-2"></i>刷新
+                    </button>
+                    <button id="mobileMenuBtn" class="md:hidden">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- 移动端菜单 -->
+        <div id="mobileMenu" class="hidden md:hidden bg-purple-800">
+            <div class="px-4 py-2 space-y-2">
+                <button onclick="switchTab('overview')" class="block w-full text-left py-2 hover:text-blue-200">
+                    <i class="fas fa-home mr-2"></i>课程概览
+                </button>
+                <button onclick="switchTab('projects')" class="block w-full text-left py-2 hover:text-blue-200">
+                    <i class="fas fa-folder-open mr-2"></i>项目详情
+                </button>
+                <button onclick="switchTab('resources')" class="block w-full text-left py-2 hover:text-blue-200">
+                    <i class="fas fa-download mr-2"></i>资料下载
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 课程概览标签页 -->
+    <div id="overview" class="tab-content active">
+        <!-- 主页横幅 -->
+        <section class="gradient-bg text-white py-20 relative overflow-hidden">
+            <div class="container mx-auto px-4 text-center relative z-10">
+                <div class="float-animation mb-8">
+                    <i class="fas fa-graduation-cap text-6xl md:text-8xl opacity-20"></i>
+                </div>
+                <h1 class="text-4xl md:text-6xl font-bold mb-6 fade-in">
+                    <span class="text-gradient text-white">AI时代的新一代工程师培养</span>
+                </h1>
+                <p class="text-xl md:text-2xl mb-12 opacity-90 fade-in max-w-3xl mx-auto text-white">
+                    让高一学生用AI工具，<strong class="text-yellow-300 font-bold">6次课程</strong>体验<strong class="text-yellow-300 font-bold">6种职业</strong>，完成<strong class="text-yellow-300 font-bold">6个真实作品</strong>
+                </p>
+                <div class="flex flex-wrap justify-center gap-6 fade-in">
+                    <div class="bg-white bg-opacity-90 backdrop-blur-md rounded-2xl px-8 py-6 card-hover shadow-elevation-2">
+                        <i class="fas fa-robot text-3xl mb-3 text-blue-600"></i>
+                        <div class="font-bold text-lg text-gray-800">AI Coding能力</div>
+                        <div class="text-sm text-gray-600 font-medium">人机协作新时代</div>
+                    </div>
+                    <div class="bg-white bg-opacity-90 backdrop-blur-md rounded-2xl px-8 py-6 card-hover shadow-elevation-2">
+                        <i class="fas fa-gamepad text-3xl mb-3 text-green-600"></i>
+                        <div class="font-bold text-lg text-gray-800">6个项目作品</div>
+                        <div class="text-sm text-gray-600 font-medium">从想法到现实</div>
+                    </div>
+                    <div class="bg-white bg-opacity-90 backdrop-blur-md rounded-2xl px-8 py-6 card-hover shadow-elevation-2">
+                        <i class="fas fa-users text-3xl mb-3 text-purple-600"></i>
+                        <div class="font-bold text-lg text-gray-800">6种职业体验</div>
+                        <div class="text-sm text-gray-600 font-medium">发现未来方向</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 课程安排 -->
+        <section class="py-20 bg-white">
+            <div class="container mx-auto px-4">
+                <div class="text-center mb-16">
+                    <h2 class="text-4xl font-bold text-gray-800 mb-6">
+                        <span class="text-gradient">课程安排</span>
+                    </h2>
+                    <p class="text-xl text-gray-600">6次课程，24节课，完整闭环设计</p>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full bg-white rounded-lg shadow-lg overflow-hidden">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">课程</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">主题</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">角色</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">学习成果</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            <tr class="hover:bg-blue-50 transition">
+                                <td class="px-6 py-6">
+                                    <div class="flex items-center">
+                                        <div class="bg-blue-500 text-white w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg">1</div>
+                                        <div class="ml-3">
+                                            <div class="font-bold text-gray-900">体感游戏</div>
+                                            <div class="text-xs text-gray-500">AI Coding入门</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-6">
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+                                        <i class="fas fa-gamepad mr-2"></i>动作捕捉师
+                                    </span>
+                                </td>
+                                <td class="px-6 py-6 text-gray-700">MediaPipe + Phaser.js</td>
+                                <td class="px-6 py-6">
+                                    <span class="text-green-600 font-medium">✓ 科技节展示</span>
+                                </td>
+                            </tr>
+                            <tr class="hover:bg-purple-50 transition">
+                                <td class="px-6 py-6">
+                                    <div class="flex items-center">
+                                        <div class="bg-purple-500 text-white w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg">2</div>
+                                        <div class="ml-3">
+                                            <div class="font-bold text-gray-900">产品+项目</div>
+                                            <div class="text-xs text-gray-500">产品经理</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-6">
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-50 text-purple-700">
+                                        <i class="fas fa-lightbulb mr-2"></i>CEO/产品经理
+                                    </span>
+                                </td>
+                                <td class="px-6 py-6 text-gray-700">用户调研 + 产品设计</td>
+                                <td class="px-6 py-6">
+                                    <span class="text-green-600 font-medium">✓ PRD文档+原型</span>
+                                </td>
+                            </tr>
+                            <tr class="hover:bg-green-50 transition">
+                                <td class="px-6 py-6">
+                                    <div class="flex items-center">
+                                        <div class="bg-green-500 text-white w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg">3</div>
+                                        <div class="ml-3">
+                                            <div class="font-bold text-gray-900">全栈开发</div>
+                                            <div class="text-xs text-gray-500">全栈工程师</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-6">
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700">
+                                        <i class="fas fa-code mr-2"></i>全栈开发者
+                                    </span>
+                                </td>
+                                <td class="px-6 py-6 text-gray-700">React + Node.js</td>
+                                <td class="px-6 py-6">
+                                    <span class="text-green-600 font-medium">✓ 真实Web应用</span>
+                                </td>
+                            </tr>
+                            <tr class="hover:bg-red-50 transition">
+                                <td class="px-6 py-6">
+                                    <div class="flex items-center">
+                                        <div class="bg-red-500 text-white w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg">4</div>
+                                        <div class="ml-3">
+                                            <div class="font-bold text-gray-900">算法研究</div>
+                                            <div class="text-xs text-gray-500">算法工程师</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-6">
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700">
+                                        <i class="fas fa-brain mr-2"></i>AI研究员
+                                    </span>
+                                </td>
+                                <td class="px-6 py-6 text-gray-700">论文阅读 + 模型训练</td>
+                                <td class="px-6 py-6">
+                                    <span class="text-green-600 font-medium">✓ 学术研究报告</span>
+                                </td>
+                            </tr>
+                            <tr class="hover:bg-yellow-50 transition">
+                                <td class="px-6 py-6">
+                                    <div class="flex items-center">
+                                        <div class="bg-yellow-500 text-white w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg">5</div>
+                                        <div class="ml-3">
+                                            <div class="font-bold text-gray-900">嵌入式</div>
+                                            <div class="text-xs text-gray-500">嵌入式工程师</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-6">
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700">
+                                        <i class="fas fa-microchip mr-2"></i>硬件创客
+                                    </span>
+                                </td>
+                                <td class="px-6 py-6 text-gray-700">树莓派 + 传感器</td>
+                                <td class="px-6 py-6">
+                                    <span class="text-green-600 font-medium">✓ 智能硬件作品</span>
+                                </td>
+                            </tr>
+                            <tr class="hover:bg-indigo-50 transition">
+                                <td class="px-6 py-6">
+                                    <div class="flex items-center">
+                                        <div class="bg-indigo-500 text-white w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg">6</div>
+                                        <div class="ml-3">
+                                            <div class="font-bold text-gray-900">综合实践</div>
+                                            <div class="text-xs text-gray-500">创业团队</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-6">
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                                        <i class="fas fa-rocket mr-2"></i>创业者
+                                    </span>
+                                </td>
+                                <td class="px-6 py-6 text-gray-700">团队协作 + 路演</td>
+                                <td class="px-6 py-6">
+                                    <span class="text-green-600 font-medium">✓ 真实产品</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- 项目详情标签页 -->
+    <div id="projects" class="tab-content">
+        <section class="py-20 bg-gray-50">
+            <div class="container mx-auto px-4">
+                <div class="text-center mb-12">
+                    <h2 class="text-4xl font-bold text-gray-800 mb-4">6个项目课程详情</h2>
+                    <p class="text-xl text-gray-600">每个项目都是一次职业体验，从想法到作品</p>
+                </div>
+
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8" id="projectsContainer">
+                    <!-- 项目卡片将通过JS动态生成 -->
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- 资料下载标签页 -->
+    <div id="resources" class="tab-content">
+        <!-- 统计信息 -->
+        <section class="py-12 bg-white">
+            <div class="container mx-auto px-4">
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4" id="statsContainer">
+                    <!-- 统计卡片将通过JS动态生成 -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 资料下载区 -->
+        <section class="py-20 bg-gray-50">
+            <div class="container mx-auto px-4">
+                <div class="text-center mb-12">
+                    <h2 class="text-4xl font-bold text-gray-800 mb-4">课程资料下载</h2>
+                    <p class="text-xl text-gray-600">所有课程资料，一键下载</p>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-8" id="downloadContainer">
+                    <!-- 下载区域将通过JS动态生成 -->
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- 文件模态框 -->
+    <div id="fileModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
+            <div class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h3 id="modalTitle" class="text-2xl font-bold">项目资料</h3>
+                        <p id="modalSubtitle" class="opacity-90">查看和下载相关文件</p>
+                    </div>
+                    <button onclick="closeFileModal()" class="bg-white bg-opacity-20 p-2 rounded-lg hover:bg-opacity-30">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[60vh]">
+                <div id="modalFiles">
+                    <div class="text-center py-8">
+                        <i class="fas fa-spinner spinner mx-auto mb-4"></i>
+                        <p>加载中...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Markdown 模态框 -->
+    <div id="markdownModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-6xl w-full max-h-[95vh] overflow-hidden">
+            <div class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-6">
+                <div class="flex justify-between items-center">
+                    <h2 id="markdownModalTitle" class="text-2xl font-bold">文档内容</h2>
+                    <div class="flex space-x-2">
+                        <button onclick="toggleMarkdownFullscreen()" class="bg-white bg-opacity-20 p-2 rounded-lg hover:bg-opacity-30">
+                            <i class="fas fa-expand"></i>
+                        </button>
+                        <button onclick="closeMarkdownModal()" class="bg-white bg-opacity-20 p-2 rounded-lg hover:bg-opacity-30">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[80vh]">
+                <div id="markdownContent" class="markdown-content">
+                    <div class="text-center py-8">
+                        <i class="fas fa-spinner spinner mx-auto mb-4"></i>
+                        <p>加载中...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="gradient-bg text-white py-12">
+        <div class="container mx-auto px-4">
+            <div class="grid md:grid-cols-3 gap-8">
+                <div>
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-graduation-cap text-2xl mr-3"></i>
+                        <h3 class="text-lg font-bold">课程特色</h3>
+                    </div>
+                    <ul class="space-y-2 text-sm">
+                        <li>• AI原生教学</li>
+                        <li>• 游戏化学习</li>
+                        <li>• 真实项目导向</li>
+                        <li>• 能力导向评估</li>
+                    </ul>
+                </div>
+                <div>
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-users text-2xl mr-3"></i>
+                        <h3 class="text-lg font-bold">适合对象</h3>
+                    </div>
+                    <ul class="space-y-2 text-sm">
+                        <li>• 高一年级学生</li>
+                        <li>• 零基础可学</li>
+                        <li>• 3-6人小组协作</li>
+                        <li>• 创新兴趣爱好者</li>
+                    </ul>
+                </div>
+                <div>
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-trophy text-2xl mr-3"></i>
+                        <h3 class="text-lg font-bold">学生收获</h3>
+                    </div>
+                    <ul class="space-y-2 text-sm">
+                        <li>• 6个真实项目作品</li>
+                        <li>• 6种职业体验</li>
+                        <li>• AI Coding能力</li>
+                        <li>• 团队协作经验</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-white border-opacity-20 mt-8 pt-8 text-center">
+                <p class="text-sm opacity-80">
+                    © 2025 AI万花筒 - 高一学生职业技能培训课程体系
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // 全局变量
+        let currentProject = 'common';
+        let allStats = {};
+        let isDarkMode = false;
+
+        // 项目信息
+        const projects = {
+            project1: {
+                title: '项目1：体感互动游戏',
+                subtitle: '动作捕捉师 + AI应用开发',
+                description: '制作体感互动游戏，让机器看懂你的动作',
+                icon: 'fa-gamepad',
+                color: 'blue',
+                tasks: ['AI觉醒', '闪电开发', '体验魔法师', '科技节预演'],
+                tools: ['MediaPipe', 'Phaser.js', 'AI Coding'],
+                detailDoc: '项目1-体感互动游戏.md'
+            },
+            project2: {
+                title: '项目2：产品经理+项目经理',
+                subtitle: 'CEO/产品经理',
+                description: '打造下一个校园爆款APP',
+                icon: 'fa-lightbulb',
+                color: 'purple',
+                tasks: ['侦探模式', '梦想家', '战斗计划', '创业之夜'],
+                tools: ['用户调研', '产品设计', '敏捷规划'],
+                detailDoc: '项目2-产品经理与项目经理.md'
+            },
+            project3: {
+                title: '项目3：全栈工程师',
+                subtitle: '全栈开发者',
+                description: '48小时把想法变成真实产品',
+                icon: 'fa-code',
+                color: 'green',
+                tasks: ['黑客觉醒', '闪电开发', 'Debug大作战', '火箭发射'],
+                tools: ['React', 'Node.js', '数据库'],
+                detailDoc: '项目3-全栈工程师.md'
+            },
+            project4: {
+                title: '项目4：算法工程师',
+                subtitle: 'AI研究员',
+                description: '训练专属AI - 从论文到算法落地',
+                icon: 'fa-brain',
+                color: 'red',
+                tasks: ['论文黑客', '算法炼金术', '模型进化', '算法落地'],
+                tools: ['论文阅读', '模型训练', '性能优化'],
+                detailDoc: '项目4-算法工程师.md'
+            },
+            project5: {
+                title: '项目5：嵌入式工程师',
+                subtitle: '硬件创客',
+                description: 'DIY智能硬件 - 让AI跑在你的机器人上',
+                icon: 'fa-microchip',
+                color: 'yellow',
+                tasks: ['硬件设计师', '硬件魔法师', 'AI加持', '黑科技发布会'],
+                tools: ['树莓派', '传感器', 'IoT'],
+                detailDoc: '项目5-嵌入式工程师.md'
+            },
+            project6: {
+                title: '项目6：综合实践',
+                subtitle: '创业者',
+                description: '校园创业大赛 - 打造改变校园的产品',
+                icon: 'fa-rocket',
+                color: 'indigo',
+                tasks: ['创业启动', '极限编程', '冲刺上线', '创业之夜'],
+                tools: ['团队协作', '商业计划', '路演展示'],
+                detailDoc: '项目6-综合实践周.md'
+            }
+        };
+
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadStats();
+            renderProjects();
+            renderDownloadArea();
+            initializeEventListeners();
+        });
+
+        // 初始化事件监听器
+        function initializeEventListeners() {
+            // 移动端菜单
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const mobileMenu = document.getElementById('mobileMenu');
+
+            mobileMenuBtn.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+
+            // 深色模式切换
+            const darkModeToggle = document.getElementById('darkModeToggle');
+            darkModeToggle.addEventListener('click', () => {
+                isDarkMode = !isDarkMode;
+                document.body.classList.toggle('dark-mode');
+                darkModeToggle.innerHTML = isDarkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+                localStorage.setItem('darkMode', isDarkMode);
+            });
+
+            // 恢复深色模式设置
+            if (localStorage.getItem('darkMode') === 'true') {
+                isDarkMode = true;
+                document.body.classList.add('dark-mode');
+                darkModeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+            }
+
+            // 刷新按钮
+            document.getElementById('refreshBtn').addEventListener('click', () => {
+                location.reload();
+            });
+
+            // ESC键关闭模态框
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeFileModal();
+                    closeMarkdownModal();
+                }
+            });
+
+            // 平滑滚动
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        target.scrollIntoView({ behavior: 'smooth' });
+                    }
+                });
+            });
+        }
+
+        // 标签页切换
+        function switchTab(tabName) {
+            // 隐藏所有标签页
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // 显示选中的标签页
+            document.getElementById(tabName).classList.add('active');
+
+            // 更新导航栏激活状态
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('tab-active');
+                if (tab.dataset.tab === tabName) {
+                    tab.classList.add('tab-active');
+                }
+            });
+
+            // 关闭移动端菜单
+            document.getElementById('mobileMenu').classList.add('hidden');
+        }
+
+        // 加载统计信息
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/stats');
+                allStats = await response.json();
+                renderStats();
+            } catch (error) {
+                console.error('加载统计失败:', error);
+                // 使用模拟数据
+                allStats = {
+                    common: { name: '公共资料', count: 15, size: 52428800 },
+                    project1: { name: '项目1', count: 8, size: 31457280 },
+                    project2: { name: '项目2', count: 6, size: 20971520 },
+                    project3: { name: '项目3', count: 10, size: 41943040 },
+                    project4: { name: '项目4', count: 7, size: 26214400 },
+                    project5: { name: '项目5', count: 5, size: 15728640 },
+                    project6: { name: '项目6', count: 9, size: 36700160 }
+                };
+                renderStats();
+            }
+        }
+
+        // 渲染统计信息
+        function renderStats() {
+            const container = document.getElementById('statsContainer');
+            if (!container) return;
+
+            container.innerHTML = '';
+
+            Object.entries(allStats).forEach(([key, stat]) => {
+                const card = document.createElement('div');
+                card.className = 'stat-card text-center';
+                card.innerHTML = `
+                    <div class="text-3xl font-bold text-indigo-600 mb-2">${stat.count}</div>
+                    <div class="text-sm text-gray-600">${stat.name}</div>
+                    <div class="text-xs text-gray-400 mt-1">${formatFileSize(stat.size)}</div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // 渲染项目卡片
+        function renderProjects() {
+            const container = document.getElementById('projectsContainer');
+            if (!container) return;
+
+            container.innerHTML = '';
+
+            Object.entries(projects).forEach(([key, project], index) => {
+                const stats = allStats[key] || { count: 0, size: 0 };
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-2xl shadow-lg overflow-hidden card-hover';
+
+                const colorClasses = {
+                    blue: 'from-blue-500 to-blue-600',
+                    purple: 'from-purple-500 to-purple-600',
+                    green: 'from-green-500 to-green-600',
+                    red: 'from-red-500 to-red-600',
+                    yellow: 'from-yellow-500 to-yellow-600',
+                    indigo: 'from-indigo-500 to-indigo-600'
+                };
+
+                card.innerHTML = `
+                    <div class="bg-gradient-to-br ${colorClasses[project.color]} text-white p-6 relative">
+                        ${stats.count > 0 ? '<div class="badge-new">有资料</div>' : ''}
+                        <div class="flex items-center mb-4">
+                            <i class="fas ${project.icon} text-3xl mr-4"></i>
+                            <div>
+                                <h3 class="text-xl font-bold">${project.title}</h3>
+                                <div class="text-sm opacity-90">${project.subtitle}</div>
+                            </div>
+                        </div>
+                        <p class="text-sm opacity-95">${project.description}</p>
+                    </div>
+                    <div class="p-6">
+                        <div class="mb-4">
+                            <h4 class="font-semibold text-gray-800 mb-2">📋 学习任务</h4>
+                            <div class="space-y-1">
+                                ${project.tasks.map((task, i) => `
+                                    <div class="flex items-center text-sm text-gray-600">
+                                        <span class="w-6 h-6 bg-${project.color}-100 text-${project.color}-600 rounded-full flex items-center justify-center text-xs font-bold mr-2">${i+1}</span>
+                                        ${task}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <h4 class="font-semibold text-gray-800 mb-2">🛠️ 技术工具</h4>
+                            <div class="flex flex-wrap gap-2">
+                                ${project.tools.map(tool => `
+                                    <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">${tool}</span>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between pt-4 border-t">
+                            <div class="text-sm text-gray-500">
+                                <i class="fas fa-folder mr-1"></i>
+                                ${stats.count} 个文件
+                                ${stats.size > 0 ? `(${formatFileSize(stats.size)})` : ''}
+                            </div>
+                            <div class="flex space-x-2">
+                                ${project.detailDoc ? `
+                                    <button onclick="showMarkdown('${project.detailDoc}')" class="text-gray-600 hover:text-gray-700 font-medium text-sm">
+                                        <i class="fas fa-file-alt mr-1"></i>详情
+                                    </button>
+                                ` : ''}
+                                <button onclick="showFiles('${key}')" class="text-${project.color}-600 hover:text-${project.color}-700 font-medium text-sm">
+                                    资料 <i class="fas fa-arrow-right ml-1"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // 渲染下载区域
+        function renderDownloadArea() {
+            const container = document.getElementById('downloadContainer');
+            if (!container) return;
+
+            container.innerHTML = `
+                <div class="bg-gray-50 rounded-2xl p-8">
+                    <h3 class="text-2xl font-bold text-gray-800 mb-6">
+                        <i class="fas fa-folder-open text-yellow-500 mr-3"></i>
+                        公共资料
+                    </h3>
+                    <div id="commonFiles" class="file-list">
+                        <div class="text-center py-8 text-gray-400">
+                            <i class="fas fa-spinner spinner mx-auto mb-4"></i>
+                            <p>加载中...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-8">
+                    <h3 class="text-2xl font-bold text-gray-800 mb-6">
+                        <i class="fas fa-tools text-indigo-500 mr-3"></i>
+                        工具软件
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="bg-white p-4 rounded-lg">
+                            <h4 class="font-semibold text-gray-800 mb-2">开发工具</h4>
+                            <ul class="space-y-2 text-sm text-gray-600">
+                                <li><i class="fas fa-check text-green-500 mr-2"></i>Visual Studio Code</li>
+                                <li><i class="fas fa-check text-green-500 mr-2"></i>Chrome DevTools</li>
+                                <li><i class="fas fa-check text-green-500 mr-2"></i>Git for Windows</li>
+                            </ul>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg">
+                            <h4 class="font-semibold text-gray-800 mb-2">AI工具</h4>
+                            <ul class="space-y-2 text-sm text-gray-600">
+                                <li><i class="fas fa-check text-blue-500 mr-2"></i>ChatGPT</li>
+                                <li><i class="fas fa-check text-blue-500 mr-2"></i>Claude</li>
+                                <li><i class="fas fa-check text-blue-500 mr-2"></i>Cursor/Copilot</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // 加载公共文件
+            loadFiles('common');
+        }
+
+        // 显示项目文件
+        async function showFiles(projectKey) {
+            currentProject = projectKey;
+            const project = projects[projectKey];
+
+            document.getElementById('modalTitle').textContent = project.title;
+            document.getElementById('modalSubtitle').textContent = project.subtitle;
+            document.getElementById('fileModal').classList.remove('hidden');
+
+            // 加载文件列表
+            await loadFiles(projectKey, 'modalFiles');
+        }
+
+        // 关闭文件模态框
+        function closeFileModal() {
+            document.getElementById('fileModal').classList.add('hidden');
+        }
+
+        // 显示Markdown文档
+        async function showMarkdown(docPath) {
+            document.getElementById('markdownModalTitle').textContent = docPath.replace(/\.md$/, '');
+            document.getElementById('markdownModal').classList.remove('hidden');
+
+            try {
+                const response = await fetch(docPath);
+                if (!response.ok) throw new Error('无法加载文档');
+
+                const markdownText = await response.text();
+                const htmlContent = marked.parse(markdownText);
+                const cleanHtml = DOMPurify ? DOMPurify.sanitize(htmlContent) : htmlContent;
+
+                document.getElementById('markdownContent').innerHTML = `<div class="markdown-content">${cleanHtml}</div>`;
+            } catch (error) {
+                document.getElementById('markdownContent').innerHTML = `
+                    <div class="text-center py-8 text-red-400">
+                        <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+                        <p>加载失败: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // 关闭Markdown模态框
+        function closeMarkdownModal() {
+            document.getElementById('markdownModal').classList.add('hidden');
+        }
+
+        // 切换Markdown全屏
+        function toggleMarkdownFullscreen() {
+            const modal = document.getElementById('markdownModal');
+            modal.classList.toggle('fixed');
+            modal.classList.toggle('inset-0');
+            modal.classList.toggle('z-50');
+            modal.classList.toggle('p-4');
+        }
+
+        // 加载文件列表
+        async function loadFiles(project, containerId = null) {
+            const container = containerId ? document.getElementById(containerId) : document.getElementById('commonFiles');
+            if (!container) return;
+
+            try {
+                const response = await fetch(`/api/files/${project}`);
+                if (!response.ok) throw new Error('无法获取文件列表');
+
+                const data = await response.json();
+
+                if (data.files.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-8 text-gray-400">
+                            <i class="fas fa-folder-open text-4xl mb-4"></i>
+                            <p>暂无资料</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = data.files.map(file => {
+                    const iconClass = getFileIcon(file.name);
+                    return `
+                        <div class="file-item">
+                            <div class="file-icon ${iconClass}">
+                                <i class="fas ${getFileIconClass(iconClass)}"></i>
+                            </div>
+                            <div class="flex-1">
+                                <div class="font-medium text-gray-800">${file.name}</div>
+                                <div class="text-sm text-gray-500">${formatFileSize(file.size)} • ${formatDate(file.modified)}</div>
+                            </div>
+                            <button onclick="downloadFile('${project}', '${encodeURIComponent(file.name)}')" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+                                <i class="fas fa-download mr-2"></i>下载
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error('加载文件失败:', error);
+                container.innerHTML = `
+                    <div class="text-center py-8 text-red-400">
+                        <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+                        <p>加载失败</p>
+                    </div>
+                `;
+            }
+        }
+
+        // 下载文件
+        function downloadFile(project, filename) {
+            window.location.href = `/api/download/${project}/${filename}`;
+        }
+
+        // 获取文件图标
+        function getFileIcon(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const iconMap = {
+                'pdf': 'pdf',
+                'doc': 'doc',
+                'docx': 'doc',
+                'zip': 'zip',
+                'rar': 'zip',
+                'mp4': 'mp4',
+                'avi': 'mp4',
+                'mov': 'mp4'
+            };
+            return iconMap[ext] || 'default';
+        }
+
+        // 获取文件图标类
+        function getFileIconClass(iconType) {
+            const classMap = {
+                'pdf': 'fa-file-pdf',
+                'doc': 'fa-file-word',
+                'zip': 'fa-file-archive',
+                'mp4': 'fa-file-video',
+                'default': 'fa-file'
+            };
+            return classMap[iconType] || 'fa-file';
+        }
+
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // 格式化日期
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('zh-CN');
+        }
+    </script>
+</body>
+</html>

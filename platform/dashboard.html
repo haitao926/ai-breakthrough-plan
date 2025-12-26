@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>青创赛项目驾驶舱 | AI破壁计划</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        body {
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+            font-family: 'Inter', sans-serif;
+        }
+        .status-todo { @apply bg-gray-100 text-gray-600 border-gray-200; }
+        .status-doing { @apply bg-blue-100 text-blue-700 border-blue-200; }
+        .status-done { @apply bg-green-100 text-green-700 border-green-200; }
+        
+        /* 简单的加载动画 */
+        .sync-spinner {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <!-- 协议检查警告 -->
+    <script>
+        if (window.location.protocol === 'file:') {
+            document.write(`
+                <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;color:white;text-align:center;">
+                    <div style="background:#333;padding:40px;border-radius:10px;box-shadow:0 10px 25px rgba(0,0,0,0.5);">
+                        <h1 style="font-size:24px;margin-bottom:20px;color:#ff4444;">⚠️ 运行模式错误</h1>
+                        <p style="margin-bottom:20px;">检测到您正在直接打开 HTML 文件。</p>
+                        <p style="margin-bottom:20px;">为了使用<b>数据持久化</b>和<b>多人协作</b>功能，<br>请务必通过课程服务器访问：</p>
+                        <a href="http://localhost:8080/dashboard.html" style="background:#3b82f6;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;font-weight:bold;">
+                            点击跳转: http://localhost:8080/dashboard.html
+                        </a>
+                        <p style="margin-top:20px;font-size:12px;color:#aaa;">(请确保 run.bat 或 server.js 已启动)</p>
+                    </div>
+                </div>
+            `);
+        }
+    </script>
+
+    <!-- 登录遮罩 -->
+    <div id="loginModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl w-96 transform transition-all scale-100">
+            <h2 class="text-2xl font-bold mb-2 text-gray-800">🚀 启动项目</h2>
+            <p class="text-gray-500 mb-6 text-sm">输入组名，立即与队友同步</p>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">选择项目</label>
+                    <select id="projectSelect" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                        <option value="project1">项目1 - 体感互动游戏</option>
+                        <option value="project2">项目2 - 产品经理与项目经理</option>
+                        <option value="project3">项目3 - 全栈工程师</option>
+                        <option value="project4">项目4 - 算法工程师</option>
+                        <option value="project5">项目5 - 嵌入式工程师</option>
+                        <option value="project6">项目6 - 综合实践周</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">组号 / Team ID</label>
+                    <input type="text" id="teamInput" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="例如: Team-Alpha">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">你的名字</label>
+                    <input type="text" id="nameInput" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="例如: Alice">
+                </div>
+                <button onclick="login()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors flex items-center justify-center gap-2">
+                    <i class="fas fa-rocket"></i> 进入驾驶舱
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 顶部导航 -->
+    <header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6 shadow-sm z-10">
+        <div class="flex items-center gap-4">
+            <a href="index.html" class="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center justify-center text-gray-600 transition-colors" title="返回首页">
+                <i class="fas fa-home"></i>
+            </a>
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">P6</div>
+            <h1 class="font-bold text-gray-800 text-lg" id="teamNameDisplay">未登录</h1>
+            <span id="syncStatus" class="text-xs text-gray-400 flex items-center gap-1 opacity-0 transition-opacity">
+                <i class="fas fa-sync-alt"></i> 已同步
+            </span>
+        </div>
+        
+        <div class="flex bg-gray-100 p-1 rounded-lg">
+            <button onclick="switchTab('design')" id="btn-design" class="px-4 py-1.5 rounded-md text-sm font-medium transition-all bg-white shadow-sm text-blue-600">
+                <i class="fas fa-pencil-ruler mr-1"></i> 产品设计
+            </button>
+            <button onclick="switchTab('progress')" id="btn-progress" class="px-4 py-1.5 rounded-md text-sm font-medium transition-all text-gray-600 hover:text-gray-900">
+                <i class="fas fa-tasks mr-1"></i> 项目进度
+            </button>
+            <button onclick="switchTab('resources')" id="btn-resources" class="px-4 py-1.5 rounded-md text-sm font-medium transition-all text-gray-600 hover:text-gray-900">
+                <i class="fas fa-folder-open mr-1"></i> 项目资料
+            </button>
+            <button onclick="switchTab('submission')" id="btn-submission" class="px-4 py-1.5 rounded-md text-sm font-medium transition-all text-gray-600 hover:text-gray-900">
+                <i class="fas fa-upload mr-1"></i> 提交作业
+            </button>
+            <button onclick="syncGit()" id="btn-git" class="px-4 py-1.5 rounded-md text-sm font-medium transition-all text-gray-600 hover:text-gray-900 ml-2 border-l border-gray-200 pl-4">
+                <i class="fab fa-git-alt mr-1"></i> 代码同步
+            </button>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <div class="text-right">
+                <div class="text-sm font-bold text-gray-800" id="userNameDisplay">Guest</div>
+                <div class="text-xs text-gray-500">项目经理</div>
+            </div>
+            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Guest" id="userAvatar" class="w-10 h-10 rounded-full border-2 border-white shadow-sm bg-gray-100">
+        </div>
+    </header>
+
+    <!-- 主内容区 -->
+    <main class="flex-1 overflow-hidden relative p-6">
+        
+        <!-- Tab 1: 产品设计 (Product Design) -->
+        <div id="tab-design" class="h-full flex gap-6 transition-opacity duration-300">
+            <!-- 左侧：文本输入 -->
+            <div class="w-1/3 flex flex-col gap-4">
+                <div class="glass-panel p-6 rounded-xl flex-1 flex flex-col">
+                    <h3 class="font-bold text-gray-700 mb-4 flex items-center">
+                        <i class="fas fa-lightbulb text-yellow-500 mr-2"></i> 核心愿景
+                    </h3>
+                    <div class="mb-4">
+                        <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">项目名称</label>
+                        <input type="text" id="projName" class="w-full text-xl font-bold bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none py-1" placeholder="给项目起个响亮的名字...">
+                    </div>
+                    <div class="flex-1">
+                        <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">创新点与核心功能</label>
+                        <textarea id="projVision" class="w-full h-full bg-gray-50 p-3 rounded-lg border border-gray-200 resize-none focus:ring-2 focus:ring-blue-200 outline-none text-sm leading-relaxed" placeholder="1. 我们要解决什么问题？&#10;2. 相比现有的方案，我们的创新点在哪里？&#10;3. 核心功能有哪些？"></textarea>
+                    </div>
+                </div>
+                
+                <div class="glass-panel p-6 rounded-xl h-1/2 flex flex-col">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="font-bold text-gray-700"><i class="fas fa-code-branch text-purple-500 mr-2"></i> 流程逻辑 (Mermaid)</h3>
+                        <a href="https://mermaid.live/" target="_blank" class="text-xs text-blue-500 hover:underline">语法帮助</a>
+                    </div>
+                    <textarea id="mermaidInput" class="flex-1 bg-gray-900 text-green-400 font-mono text-xs p-3 rounded-lg resize-none outline-none border border-gray-700" spellcheck="false">graph TD;
+    User[用户] -->|点击开始| App[前端界面];
+    App -->|请求数据| API[后端API];
+    API -->|查询| DB[(数据库)];
+    DB -->|返回结果| API;
+    API -->|展示| App;</textarea>
+                    <button onclick="renderMermaid()" class="mt-2 w-full bg-purple-600 hover:bg-purple-700 text-white text-sm py-2 rounded-lg transition-colors">
+                        <i class="fas fa-play mr-1"></i> 生成图表
+                    </button>
+                </div>
+            </div>
+
+            <!-- 右侧：图表预览 -->
+            <div class="flex-1 glass-panel rounded-xl p-8 flex items-center justify-center bg-white overflow-auto relative">
+                <div class="absolute top-4 right-4 text-xs text-gray-400">实时预览区域</div>
+                <div id="mermaidOutput" class="w-full h-full flex items-center justify-center"></div>
+            </div>
+        </div>
+
+        <!-- Tab 2: 项目进度 (Progress Table) -->
+        <div id="tab-progress" class="h-full hidden flex-col glass-panel rounded-xl overflow-hidden">
+            <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-white">
+                <h3 class="font-bold text-gray-700"><i class="fas fa-list-check text-blue-500 mr-2"></i> 任务追踪表</h3>
+                <button onclick="addTask()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm">
+                    <i class="fas fa-plus mr-1"></i> 新增任务
+                </button>
+            </div>
+            
+            <div class="flex-1 overflow-auto bg-white">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-gray-50 sticky top-0 z-10">
+                        <tr>
+                            <th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider w-12">#</th>
+                            <th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider w-1/2">任务名称</th>
+                            <th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">负责人</th>
+                            <th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">状态</th>
+                            <th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="taskTableBody" class="divide-y divide-gray-100">
+                        <!-- 动态生成的任务行 -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 底部统计 -->
+            <div class="p-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500 flex justify-between items-center">
+                <span id="taskStats">总任务: 0 | 进行中: 0 | 已完成: 0</span>
+                <span class="text-gray-400">数据每3秒自动同步</span>
+            </div>
+        </div>
+
+        <!-- Tab 3: 项目资料 (Resources) -->
+        <div id="tab-resources" class="h-full hidden flex-col glass-panel rounded-xl overflow-hidden">
+             <div class="p-4 border-b border-gray-100 bg-white">
+                <h3 class="font-bold text-gray-700"><i class="fas fa-folder-open text-yellow-500 mr-2"></i> 项目资料</h3>
+            </div>
+            <div class="flex-1 overflow-auto p-6 bg-white" id="resourcesList">
+                <div class="text-center text-gray-500 mt-10">正在加载资料...</div>
+            </div>
+        </div>
+
+        <!-- Tab 4: 提交作业 (Submission) -->
+        <div id="tab-submission" class="h-full hidden flex-col glass-panel rounded-xl overflow-hidden">
+            <div class="p-4 border-b border-gray-100 bg-white">
+                <h3 class="font-bold text-gray-700"><i class="fas fa-upload text-blue-500 mr-2"></i> 提交作业</h3>
+            </div>
+            <div class="flex-1 flex items-center justify-center bg-white p-6">
+                <div class="w-full max-w-lg">
+                    <div class="bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 p-8 text-center" id="dropZone">
+                        <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
+                        <h3 class="text-lg font-medium text-gray-700 mb-2">拖拽文件到这里</h3>
+                        <p class="text-gray-500 text-sm mb-6">或点击下方按钮选择文件</p>
+                        
+                        <form id="submissionForm" class="space-y-4">
+                            <input type="file" name="file" id="fileInput" class="hidden" required>
+                            <button type="button" onclick="document.getElementById('fileInput').click()" class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                                选择文件
+                            </button>
+                            <div id="selectedFileName" class="text-sm text-gray-600 mt-2 h-6"></div>
+                            
+                            <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors flex items-center justify-center gap-2 mt-4 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <span id="submitBtnText">确认提交</span>
+                                <i id="submitBtnSpinner" class="fas fa-spinner fa-spin hidden"></i>
+                            </button>
+                        </form>
+                    </div>
+                    <div class="mt-6">
+                         <h4 class="font-bold text-gray-700 mb-2">提交历史</h4>
+                         <ul class="text-sm text-gray-600 space-y-2" id="submissionHistory">
+                             <!-- 历史记录 (暂无后端接口，仅前端展示当前会话的) -->
+                         </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+<script>
+    // --- 全局状态 ---
+    let state = {
+        meta: { name: '', vision: '', projectType: 'project1' },
+        design: { mermaid: '' },
+        tasks: []
+    };
+    let currentUser = { team: '', name: '', projectType: 'project1' };
+    let isDirty = false; // 是否有本地修改未保存
+    let lastServerTime = 0;
+
+    // --- 初始化 Mermaid ---
+    mermaid.initialize({ startOnLoad: false, theme: 'default' });
+
+    // --- URL 参数处理 ---
+    document.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const projectParam = urlParams.get('project');
+        if (projectParam) {
+            const select = document.getElementById('projectSelect');
+            if (select && select.querySelector(`option[value="${projectParam}"]`)) {
+                select.value = projectParam;
+            }
+        }
+    });
+
+    // --- 核心逻辑 ---
+
+    function login() {
+        const team = document.getElementById('teamInput').value.trim();
+        const name = document.getElementById('nameInput').value.trim();
+        const project = document.getElementById('projectSelect').value;
+        
+        if (!team || !name) {
+            alert("请输入组号和姓名！");
+            return;
+        }
+
+        currentUser.team = team;
+        currentUser.name = name;
+        currentUser.projectType = project;
+        
+        // 更新UI
+        document.getElementById('teamNameDisplay').textContent = team;
+        document.getElementById('userNameDisplay').textContent = name;
+        document.getElementById('userAvatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`;
+        
+        document.getElementById('loginModal').classList.add('hidden'); // 隐藏登录框
+        
+        // 启动同步循环
+        syncData(); 
+        setInterval(syncData, 3000); // 3秒轮询
+    }
+
+    // --- 数据同步 (Polling) ---
+    async function syncData() {
+        const syncBadge = document.getElementById('syncStatus');
+        
+        // 1. 如果本地有修改，先上传
+        if (isDirty) {
+            syncBadge.innerHTML = '<i class="fas fa-sync-alt sync-spinner"></i> 保存中...';
+            syncBadge.style.opacity = '1';
+            
+            try {
+                // 收集当前UI数据到State
+                state.meta.name = document.getElementById('projName').value;
+                state.meta.vision = document.getElementById('projVision').value;
+                state.design.mermaid = document.getElementById('mermaidInput').value;
+                // 注意：这里我们优先使用 currentUser 的 projectType，如果 state 中没有，就写入
+                if (!state.meta.projectType) state.meta.projectType = currentUser.projectType;
+
+                // tasks 已经是实时更新到 state.tasks 的
+                
+                await fetch(`/api/team/${currentUser.team}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(state)
+                });
+                
+                isDirty = false; // 重置脏标记
+                lastServerTime = Date.now(); // 假定服务器现在是最新的
+                
+                syncBadge.innerHTML = '<i class="fas fa-check"></i> 已保存';
+                setTimeout(() => { syncBadge.style.opacity = '0'; }, 2000);
+            } catch (err) {
+                console.error("Save failed", err);
+                syncBadge.innerHTML = '<i class="fas fa-exclamation-triangle text-red-500"></i> 保存失败';
+            }
+            return; // 此次循环只做保存，不做拉取，避免冲突
+        }
+
+        // 2. 如果本地无修改，拉取服务器最新数据
+        try {
+            const res = await fetch(`/api/team/${currentUser.team}`);
+            const serverData = await res.json();
+            
+            // 简单的冲突解决：如果服务器的时间戳比我们要新，就覆盖本地
+            if (serverData.meta && serverData.meta.updatedAt > lastServerTime) {
+                state = serverData;
+                lastServerTime = serverData.meta.updatedAt;
+                
+                // 如果服务器上有项目类型，更新本地 currentUser
+                if (state.meta.projectType) {
+                    currentUser.projectType = state.meta.projectType;
+                } else {
+                    // 如果服务器没有，把当前的写进去
+                    state.meta.projectType = currentUser.projectType;
+                    markDirty(); 
+                }
+
+                renderUI(); // 刷新界面
+            }
+        } catch (err) {
+            console.error("Fetch failed", err);
+        }
+    }
+
+    // --- 界面渲染 ---
+    function renderUI() {
+        // Tab 1
+        if (document.activeElement !== document.getElementById('projName')) 
+            document.getElementById('projName').value = state.meta.name || '';
+        
+        if (document.activeElement !== document.getElementById('projVision')) 
+            document.getElementById('projVision').value = state.meta.vision || '';
+            
+        if (document.activeElement !== document.getElementById('mermaidInput')) {
+            document.getElementById('mermaidInput').value = state.design.mermaid || 'graph TD;\n    A-->B;';
+            renderMermaid(); // 重新画图
+        }
+
+        // Tab 2
+        const tbody = document.getElementById('taskTableBody');
+        tbody.innerHTML = '';
+        
+        let doneCount = 0;
+        
+        state.tasks.forEach((task, index) => {
+            if (task.status === 'done') doneCount++;
+            
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-gray-50 transition-colors group";
+            
+            const statusClass = task.status === 'done' ? 'bg-green-100 text-green-800' :
+                              (task.status === 'doing' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800');
+            
+            const statusLabel = task.status === 'done' ? '已完成' :
+                              (task.status === 'doing' ? '进行中' : '待办');
+
+            tr.innerHTML = `
+                <td class="p-4 text-gray-400 font-mono text-xs">${index + 1}</td>
+                <td class="p-4">
+                    <input type="text" value="${task.title}" onchange="updateTask(${index}, 'title', this.value)" 
+                           class="w-full bg-transparent border-none outline-none font-medium text-gray-700 focus:text-blue-600" placeholder="任务名称...">
+                </td>
+                <td class="p-4">
+                    <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500">
+                            ${task.assignee ? task.assignee[0].toUpperCase() : '?'} 
+                        </div>
+                        <input type="text" value="${task.assignee}" onchange="updateTask(${index}, 'assignee', this.value)"
+                               class="bg-transparent border-none outline-none text-sm text-gray-600 w-24" placeholder="负责人">
+                    </div>
+                </td>
+                <td class="p-4">
+                    <button onclick="toggleStatus(${index})" class="px-3 py-1 rounded-full text-xs font-bold ${statusClass}">
+                        ${statusLabel}
+                    </button>
+                </td>
+                <td class="p-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onclick="deleteTask(${index})" class="text-red-400 hover:text-red-600">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+        
+        // 更新统计
+        document.getElementById('taskStats').textContent = 
+            `总任务: ${state.tasks.length} | 进行中: ${state.tasks.filter(t=>t.status==='doing').length} | 已完成: ${doneCount}`;
+    }
+
+    async function renderMermaid() {
+        const input = document.getElementById('mermaidInput').value;
+        const output = document.getElementById('mermaidOutput');
+        try {
+            output.innerHTML = '';
+            const { svg } = await mermaid.render('mermaidSvg', input);
+            output.innerHTML = svg;
+        } catch (e) {
+            output.innerHTML = `<div class="text-red-400 text-sm">语法错误: ${e.message}</div>`;
+        }
+    }
+
+    // --- 交互操作 ---
+
+    function switchTab(tab) {
+        // Hide all tabs
+        ['design', 'progress', 'resources', 'submission'].forEach(t => {
+            const el = document.getElementById(`tab-${t}`);
+            if(el) {
+                el.classList.add('hidden');
+                el.classList.remove('flex');
+            }
+            const btn = document.getElementById(`btn-${t}`);
+            if(btn) {
+                btn.className = "px-4 py-1.5 rounded-md text-sm font-medium transition-all text-gray-600 hover:text-gray-900";
+            }
+        });
+
+        // Show selected tab
+        const targetEl = document.getElementById(`tab-${tab}`);
+        if(targetEl) {
+            targetEl.classList.remove('hidden');
+            targetEl.classList.add('flex');
+        }
+        
+        const targetBtn = document.getElementById(`btn-${tab}`);
+        if(targetBtn) {
+             targetBtn.className = "px-4 py-1.5 rounded-md text-sm font-medium transition-all bg-white shadow-sm text-blue-600";
+        }
+
+        if (tab === 'resources') {
+            loadResources();
+        }
+    }
+
+    async function loadResources() {
+        const listDiv = document.getElementById('resourcesList');
+        const project = currentUser.projectType || 'project1';
+        listDiv.innerHTML = `<div class="text-center text-gray-500 mt-10"><i class="fas fa-spinner fa-spin mr-2"></i> 正在加载 ${project} 的资料...</div>`;
+
+        try {
+            const res = await fetch(`/api/files/${project}`);
+            const data = await res.json();
+            
+            if (data.files && data.files.length > 0) {
+                let html = '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">';
+                data.files.forEach(file => {
+                    const icon = getFileIcon(file.type);
+                    html += `
+                        <a href="/api/download/${project}/${file.name}" target="_blank" class="block bg-gray-50 hover:bg-white border border-gray-200 hover:border-blue-300 rounded-lg p-4 transition-all shadow-sm hover:shadow-md group">
+                            <div class="flex items-start gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-xl shadow-sm text-gray-600 group-hover:text-blue-600 transition-colors">
+                                    ${icon}
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="font-medium text-gray-800 truncate mb-1" title="${file.name}">${file.name}</h4>
+                                    <p class="text-xs text-gray-500 flex items-center justify-between">
+                                        <span>${formatSize(file.size)}</span>
+                                        <span>${new Date(file.modified).toLocaleDateString()}</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </a>
+                    `;
+                });
+                html += '</div>';
+                listDiv.innerHTML = html;
+            } else {
+                listDiv.innerHTML = `<div class="text-center text-gray-400 mt-10">
+                    <i class="fas fa-folder-open text-4xl mb-4"></i>
+                    <p>该项目暂无资料</p>
+                </div>`;
+            }
+        } catch (err) {
+            console.error(err);
+            listDiv.innerHTML = `<div class="text-center text-red-500 mt-10">加载失败</div>`;
+        }
+    }
+
+    // Submission Logic
+    const fileInput = document.getElementById('fileInput');
+    const fileNameDisplay = document.getElementById('selectedFileName');
+    const submissionForm = document.getElementById('submissionForm');
+
+    if(fileInput) {
+        fileInput.addEventListener('change', (e) => {
+             if (e.target.files.length > 0) {
+                fileNameDisplay.textContent = `已选择: ${e.target.files[0].name}`;
+            } else {
+                fileNameDisplay.textContent = '';
+            }
+        });
+    }
+
+    if(submissionForm) {
+        submissionForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = document.getElementById('submitBtn');
+            const btnText = document.getElementById('submitBtnText');
+            const btnSpinner = document.getElementById('submitBtnSpinner');
+            
+            if(!fileInput.files.length) {
+                alert('请先选择文件');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            btnText.textContent = '正在上传...';
+            btnSpinner.classList.remove('hidden');
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('studentName', currentUser.name);
+            formData.append('project', currentUser.projectType);
+
+            try {
+                const res = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await res.json();
+                
+                if (result.success) {
+                    alert('上传成功！');
+                    submissionForm.reset();
+                    fileNameDisplay.textContent = '';
+                    // Add to history list (mock)
+                    const historyList = document.getElementById('submissionHistory');
+                    const li = document.createElement('li');
+                    li.innerHTML = `<i class="fas fa-check-circle text-green-500 mr-2"></i> ${fileInput.files[0]?.name || result.filename} <span class="text-xs text-gray-400 ml-2">刚刚</span>`;
+                    historyList.prepend(li);
+                } else {
+                    alert('上传失败: ' + result.error);
+                }
+            } catch (err) {
+                console.error(err);
+                alert('网络请求失败');
+            } finally {
+                submitBtn.disabled = false;
+                btnText.textContent = '确认提交';
+                btnSpinner.classList.add('hidden');
+            }
+        });
+    }
+
+    function getFileIcon(type) {
+        const icons = {
+            'pdf': '<i class="fas fa-file-pdf text-red-500"></i>',
+            'doc': '<i class="fas fa-file-word text-blue-500"></i>',
+            'docx': '<i class="fas fa-file-word text-blue-500"></i>',
+            'ppt': '<i class="fas fa-file-powerpoint text-orange-500"></i>',
+            'pptx': '<i class="fas fa-file-powerpoint text-orange-500"></i>',
+            'zip': '<i class="fas fa-file-archive text-yellow-600"></i>',
+            'rar': '<i class="fas fa-file-archive text-yellow-600"></i>',
+            'folder': '<i class="fas fa-folder text-blue-400"></i>'
+        };
+        return icons[type] || '<i class="fas fa-file text-gray-400"></i>';
+    }
+
+    function formatSize(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function addTask() {
+        state.tasks.push({
+            title: '新任务...',
+            assignee: currentUser.name, // 默认给自己
+            status: 'todo'
+        });
+        markDirty();
+        renderUI();
+    }
+
+    function updateTask(index, field, value) {
+        state.tasks[index][field] = value;
+        markDirty();
+    }
+
+    function toggleStatus(index) {
+        const statuses = ['todo', 'doing', 'done'];
+        const current = statuses.indexOf(state.tasks[index].status);
+        state.tasks[index].status = statuses[(current + 1) % 3];
+        markDirty();
+        renderUI();
+    }
+
+    function deleteTask(index) {
+        if(confirm("确定删除这个任务吗？")) {
+            state.tasks.splice(index, 1);
+            markDirty();
+            renderUI();
+        }
+    }
+
+    function markDirty() {
+        isDirty = true;
+        document.getElementById('syncStatus').style.opacity = '1';
+        document.getElementById('syncStatus').innerHTML = '<i class="fas fa-pencil-alt"></i> 修改未保存';
+    }
+
+    // 监听输入框变化
+    ['projName', 'projVision', 'mermaidInput'].forEach(id => {
+        document.getElementById(id).addEventListener('input', markDirty);
+    });
+
+    // --- Git 同步功能 ---
+    async function syncGit() {
+        const btn = document.getElementById('btn-git');
+        const originalHtml = btn.innerHTML;
+        
+        // 1. 设置加载状态
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> 处理中...';
+        btn.classList.remove('text-gray-600');
+        btn.classList.add('text-blue-600', 'bg-blue-50');
+
+        try {
+            // 2. 调用后端 API
+            const res = await fetch('/api/git/sync', { method: 'POST' });
+            const data = await res.json();
+
+            if (data.success) {
+                // 3. 成功反馈
+                // 区分是"完全同步"还是"仅本地保存"
+                const icon = data.warning === 'no_remote' ? 'fa-save' : 'fa-cloud-upload-alt';
+                const colorClass = data.warning === 'no_remote' ? 'text-yellow-600 bg-yellow-50' : 'text-green-600 bg-green-50';
+                
+                btn.innerHTML = `<i class="fas ${icon} mr-1"></i> ${data.message}`;
+                btn.classList.remove('text-blue-600', 'bg-blue-50');
+                btn.classList.add(...colorClass.split(' '));
+                
+                // 3秒后恢复
+                setTimeout(() => {
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                    btn.className = "px-4 py-1.5 rounded-md text-sm font-medium transition-all text-gray-600 hover:text-gray-900 ml-2 border-l border-gray-200 pl-4";
+                }, 3000);
+            } else {
+                // 4. 失败反馈
+                console.error(data.error);
+                alert('同步遇到问题：\n' + data.message + '\n\n详情: ' + (data.error || '未知错误'));
+                btn.innerHTML = '<i class="fas fa-exclamation-triangle mr-1"></i> 失败';
+                btn.classList.add('text-red-600');
+                setTimeout(() => {
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                    btn.classList.remove('text-red-600');
+                }, 3000);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('网络请求失败');
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
+    }
+
+</script>
+</body>
+</html>
