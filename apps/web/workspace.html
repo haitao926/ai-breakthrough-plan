@@ -147,11 +147,12 @@
                     <h1 class="text-3xl font-bold text-gray-900" id="step-title">Tool Title</h1>
                     <p class="text-gray-500 mt-1" id="step-desc">Tool Description</p>
                 </div>
-                <!-- AI Status -->
-                <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-gray-200 shadow-sm">
-                    <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span class="text-xs font-bold text-gray-600">AI 助手在线</span>
-                </div>
+                <!-- AI Status / Toggle -->
+                <button onclick="toggleAi()" id="ai-toggle-btn" class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-gray-200 shadow-sm hover:bg-gray-50 transition">
+                    <div id="ai-status-dot" class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span id="ai-status-text" class="text-xs font-bold text-gray-600">AI 助手在线</span>
+                    <i class="fas fa-chevron-right text-xs text-gray-400 ml-1"></i>
+                </button>
             </header>
 
             <div class="flex-1 flex gap-6 min-h-0">
@@ -164,10 +165,10 @@
                 </div>
 
                 <!-- AI Sidebar -->
-                <div class="w-80 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden flex-none">
+                <div id="ai-sidebar" class="w-80 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden flex-none transition-all duration-300">
                     <div class="p-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
                         <span class="text-xs font-bold text-gray-500 uppercase">AI Copilot</span>
-                        <button onclick="document.getElementById('ai-chat-history').innerHTML = ''" class="text-gray-400 hover:text-gray-600"><i class="fas fa-trash-alt"></i></button>
+                        <button onclick="toggleAi()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
                     </div>
                     <div class="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50" id="ai-chat-history">
                         <!-- Chat bubbles go here -->
@@ -559,6 +560,42 @@
                 // Could verify milestone status here
             }
         };
+
+        // AI Toggle Logic
+        window.toggleAi = () => {
+            const sidebar = document.getElementById('ai-sidebar');
+            const dot = document.getElementById('ai-status-dot');
+            const text = document.getElementById('ai-status-text');
+            
+            const isHidden = sidebar.classList.toggle('hidden');
+            
+            if (isHidden) {
+                dot.classList.remove('bg-green-500', 'animate-pulse');
+                dot.classList.add('bg-gray-400');
+                text.textContent = "呼叫 AI";
+                localStorage.setItem('ai_visible', 'false');
+            } else {
+                dot.classList.remove('bg-gray-400');
+                dot.classList.add('bg-green-500', 'animate-pulse');
+                text.textContent = "AI 助手在线";
+                localStorage.setItem('ai_visible', 'true');
+            }
+        };
+
+        // Restore AI State
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedState = localStorage.getItem('ai_visible');
+            if (savedState === 'false') {
+                // Apply hidden state initially without animation if possible
+                const sidebar = document.getElementById('ai-sidebar');
+                if(sidebar) {
+                    sidebar.classList.add('hidden');
+                    document.getElementById('ai-status-dot').classList.remove('bg-green-500', 'animate-pulse');
+                    document.getElementById('ai-status-dot').classList.add('bg-gray-400');
+                    document.getElementById('ai-status-text').textContent = "呼叫 AI";
+                }
+            }
+        });
 
         // --- 2. Controller Logic ---
         (function() {
