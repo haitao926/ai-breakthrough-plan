@@ -66,9 +66,9 @@
                     <a href="downloads.html" class="text-gray-600 hover:text-indigo-600 font-medium transition">资源与工具</a>
                 </div>
                 <div class="flex gap-3 items-center">
-                    <a href="workspace.html" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition text-sm font-bold shadow-md flex items-center">
-                        <i class="fas fa-rocket mr-2"></i> 进入工坊
-                    </a>
+                    <button onclick="openSubmitModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition text-sm font-bold shadow-md flex items-center">
+                        <i class="fas fa-cloud-upload-alt mr-2"></i> 上传作品
+                    </button>
                 </div>
             </div>
         </div>
@@ -192,7 +192,7 @@
                             </div>
                             <h3 class="text-xl font-bold text-gray-500">暂无展示作品</h3>
                             <p class="text-gray-400 mt-2">快去提交你的第一个作品吧！</p>
-                            <a href="workspace.html" class="inline-block mt-6 px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">进入工坊</a>
+                            <button onclick="openSubmitModal()" class="inline-block mt-6 px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">立即上传</button>
                         </div>
                     `;
                     return;
