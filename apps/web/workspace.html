@@ -235,8 +235,8 @@
             goal_definition: function(c, p) {
                 c.innerHTML = `<iframe src="tools/charter.html?project=${p.id}" class="w-full h-full border-0 rounded-xl"></iframe>`;
             },
-            architecture: function(c) {
-                c.innerHTML = `<iframe src="tools/architect.html" class="w-full h-full border-0"></iframe>`;
+            architecture: function(c, p) {
+                c.innerHTML = `<iframe src="tools/architect.html?project=${p.id}" class="w-full h-full border-0 rounded-xl"></iframe>`;
             },
             wbs_planning: async function(c, p) {
                 c.innerHTML = '<div class="h-full flex items-center justify-center"><i class="fas fa-spinner fa-spin text-3xl text-gray-300"></i></div>';

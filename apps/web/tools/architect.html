@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>架构绘图师 | Architect</title>
+    <!-- Redirect removed -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&family=JetBrains+Mono:wght@400&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .code-font { font-family: 'JetBrains Mono', monospace; }
+        
+        /* 拆分面板 */
+        .split-pane { display: grid; grid-template-columns: 350px 1fr; height: calc(100vh - 56px); }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden bg-white">
+
+    <!-- 顶部导航 -->
+    <nav class="bg-gray-900 text-white border-b border-gray-800 px-4 py-3 flex justify-between items-center shrink-0 z-50">
+        <div class="flex items-center gap-3">
+            <a href="../tools.html" class="text-gray-400 hover:text-white transition"><i class="fas fa-arrow-left"></i></a>
+            <h1 class="font-bold text-lg flex items-center">
+                <i class="fas fa-project-diagram text-green-400 mr-2"></i> 架构绘图师
+            </h1>
+        </div>
+        <div class="flex items-center gap-3">
+            <button onclick="copyCode()" class="text-xs bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded transition border border-gray-700">
+                <i class="far fa-copy mr-1"></i> 复制代码
+            </button>
+            <button onclick="downloadSVG()" class="text-xs bg-green-600 hover:bg-green-700 px-3 py-1.5 rounded transition font-bold">
+                <i class="fas fa-download mr-1"></i> 导出 SVG
+            </button>
+        </div>
+    </nav>
+
+    <!-- 主体 -->
+    <div class="split-pane">
+        
+        <!-- 左侧：代码编辑 -->
+        <div class="flex flex-col bg-gray-900 border-r border-gray-800">
+            <!-- 模板工具栏 -->
+            <div class="p-3 border-b border-gray-800 flex gap-2 overflow-x-auto">
+                <button onclick="insertTemplate('flow')" class="px-3 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs rounded border border-gray-700 whitespace-nowrap">流程图</button>
+                <button onclick="insertTemplate('sequence')" class="px-3 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs rounded border border-gray-700 whitespace-nowrap">时序图</button>
+                <button onclick="insertTemplate('class')" class="px-3 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs rounded border border-gray-700 whitespace-nowrap">类图</button>
+                <button onclick="insertTemplate('gantt')" class="px-3 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs rounded border border-gray-700 whitespace-nowrap">甘特图</button>
+            </div>
+            
+            <!-- 编辑器 -->
+            <textarea id="editor" class="flex-1 bg-gray-900 text-green-400 p-4 text-sm code-font outline-none resize-none leading-relaxed" spellcheck="false"></textarea>
+            
+            <!-- 状态栏 -->
+            <div class="p-2 bg-gray-950 text-xs text-gray-500 flex justify-between">
+                <span>Mermaid v10.x</span>
+                <span id="status">Ready</span>
+            </div>
+        </div>
+
+        <!-- 右侧：预览 -->
+        <div class="bg-gray-50 relative overflow-auto flex items-center justify-center" id="preview-container">
+            <div id="output" class="p-8 transform transition-transform origin-center"></div>
+            
+            <!-- 缩放控制 -->
+            <div class="absolute bottom-4 right-4 flex gap-2">
+                <button onclick="zoom(-0.1)" class="w-8 h-8 bg-white rounded shadow text-gray-600 hover:text-blue-600"><i class="fas fa-minus"></i></button>
+                <button onclick="zoom(0.1)" class="w-8 h-8 bg-white rounded shadow text-gray-600 hover:text-blue-600"><i class="fas fa-plus"></i></button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: false, theme: 'default' });
+
+        const editor = document.getElementById('editor');
+        const output = document.getElementById('output');
+        const status = document.getElementById('status');
+        let currentScale = 1;
+
+        // 默认模板
+        const TEMPLATES = {
+            flow: `graph TD
+    A[用户] -->|输入| B(前端)
+    B -->|API请求| C{后端服务}
+    C -->|查询| D[(数据库)]
+    C -->|返回| B
+    B -->|展示| A`,
+            sequence: `sequenceDiagram
+    participant User
+    participant App
+    participant Server
+    User->>App: 点击登录
+    App->>Server: POST /login
+    Server-->>App: 200 OK (Token)
+    App-->>User: 跳转首页`,
+            class: `classDiagram
+    class User {
+        +String name
+        +login()
+    }
+    class Project {
+        +String title
+        +save()
+    }
+    User "1" --> "*" Project : 创建`,
+            gantt: `gantt
+    title 项目开发计划
+    section 策划
+    需求分析 :a1, 2023-01-01, 3d
+    section 开发
+    前端搭建 :after a1, 5d
+    后端API : 5d`
+        };
+
+        // Project specific key
+        const urlParams = new URLSearchParams(window.location.search);
+        const projectId = urlParams.get('project');
+        const DATA_KEY = projectId ? `ai_course_architect_${projectId}` : 'ai_course_architect';
+
+        // Load or Init
+        editor.value = localStorage.getItem(DATA_KEY) || TEMPLATES.flow;
+        render();
+
+        // Auto Render & Save
+        editor.addEventListener('input', () => {
+            status.textContent = 'Rendering...';
+            localStorage.setItem(DATA_KEY, editor.value);
+            render();
+        });
+
+        async function render() {
+            try {
+                const { svg } = await mermaid.render('mermaidSvg', editor.value);
+                output.innerHTML = svg;
+                status.textContent = 'Rendered successfully';
+                status.className = 'text-green-500';
+            } catch (e) {
+                status.textContent = 'Syntax Error';
+                status.className = 'text-red-500';
+                // Keep old SVG if error to prevent flickering
+            }
+        }
+
+        function insertTemplate(type) {
+            if(confirm("覆盖当前代码？")) {
+                editor.value = TEMPLATES[type];
+                render();
+            }
+        }
+
+        function zoom(delta) {
+            currentScale += delta;
+            if(currentScale < 0.5) currentScale = 0.5;
+            output.style.transform = `scale(${currentScale})`;
+        }
+
+        function copyCode() {
+            navigator.clipboard.writeText(editor.value).then(() => alert("代码已复制"));
+        }
+
+        function downloadSVG() {
+            const svgData = output.innerHTML;
+            const blob = new Blob([svgData], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'architecture.svg';
+            a.click();
+        }
+    </script>
+</body>
+</html>
