@@ -11,6 +11,7 @@
         body { font-family: 'Inter', sans-serif; background: #f8fafc; }
         .input-group:focus-within label { color: #4f46e5; }
         .input-group:focus-within i { color: #4f46e5; }
+        .mode-btn.active { background-color: #e0e7ff; color: #4f46e5; border-color: #4f46e5; font-weight: bold; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -23,6 +24,13 @@
                 <i class="fas fa-file-signature text-purple-600 mr-2"></i> 项目立项书
             </h1>
         </div>
+        
+        <!-- Mode Toggle -->
+        <div class="flex bg-gray-100 p-1 rounded-lg">
+            <button onclick="setMode('product')" id="btn-product" class="mode-btn px-3 py-1 text-xs rounded-md text-gray-500 border border-transparent transition">工程产品</button>
+            <button onclick="setMode('research')" id="btn-research" class="mode-btn px-3 py-1 text-xs rounded-md text-gray-500 border border-transparent transition">课题探究</button>
+        </div>
+
         <div class="flex items-center gap-3">
             <span id="saveStatus" class="text-xs text-gray-400">自动保存中...</span>
             <button onclick="exportPDF()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-sm transition">
@@ -43,36 +51,36 @@
         <!-- 核心四问矩阵 -->
         <div class="grid md:grid-cols-2 gap-6">
             
-            <!-- 1. 用户 -->
+            <!-- 1. 用户 / 研究对象 -->
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 input-group hover:shadow-md transition duration-300">
-                <label class="block text-xs font-bold text-gray-500 uppercase mb-3 flex items-center transition-colors">
+                <label id="lbl-q1" class="block text-xs font-bold text-gray-500 uppercase mb-3 flex items-center transition-colors">
                     <i class="fas fa-user-circle mr-2 text-lg"></i> 1. 目标用户 (Who)
                 </label>
-                <textarea id="projPersona" class="w-full h-32 text-base resize-none outline-none text-gray-700 bg-transparent placeholder-gray-300 leading-relaxed" placeholder="描述你的典型用户画像。&#10;例如：高一（3）班经常忘记带饭卡的走读生..."></textarea>
+                <textarea id="projPersona" class="w-full h-32 text-base resize-none outline-none text-gray-700 bg-transparent placeholder-gray-300 leading-relaxed" placeholder="Loading..."></textarea>
             </div>
 
-            <!-- 2. 痛点 -->
+            <!-- 2. 痛点 / 探究问题 -->
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 input-group hover:shadow-md transition duration-300">
-                <label class="block text-xs font-bold text-gray-500 uppercase mb-3 flex items-center transition-colors">
+                <label id="lbl-q2" class="block text-xs font-bold text-gray-500 uppercase mb-3 flex items-center transition-colors">
                     <i class="fas fa-exclamation-triangle mr-2 text-lg"></i> 2. 核心痛点 (Why)
                 </label>
-                <textarea id="projPain" class="w-full h-32 text-base resize-none outline-none text-gray-700 bg-transparent placeholder-gray-300 leading-relaxed" placeholder="他们遇到了什么麻烦？&#10;例如：午休时间只有40分钟，排队充卡要花15分钟..."></textarea>
+                <textarea id="projPain" class="w-full h-32 text-base resize-none outline-none text-gray-700 bg-transparent placeholder-gray-300 leading-relaxed" placeholder="Loading..."></textarea>
             </div>
 
-            <!-- 3. 方案 -->
+            <!-- 3. 方案 / 研究方法 -->
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 input-group hover:shadow-md transition duration-300">
-                <label class="block text-xs font-bold text-gray-500 uppercase mb-3 flex items-center transition-colors">
+                <label id="lbl-q3" class="block text-xs font-bold text-gray-500 uppercase mb-3 flex items-center transition-colors">
                     <i class="fas fa-lightbulb mr-2 text-lg"></i> 3. 解决方案 (How)
                 </label>
-                <textarea id="projSolution" class="w-full h-32 text-base resize-none outline-none text-gray-700 bg-transparent placeholder-gray-300 leading-relaxed" placeholder="我们要开发什么？&#10;例如：基于人脸识别的无感支付终端，部署在食堂窗口..."></textarea>
+                <textarea id="projSolution" class="w-full h-32 text-base resize-none outline-none text-gray-700 bg-transparent placeholder-gray-300 leading-relaxed" placeholder="Loading..."></textarea>
             </div>
 
-            <!-- 4. 价值 -->
+            <!-- 4. 价值 / 预期成果 -->
             <div class="bg-gradient-to-br from-purple-600 to-indigo-700 p-6 rounded-2xl shadow-lg text-white">
-                <label class="block text-xs font-bold text-purple-200 uppercase mb-3 flex items-center">
+                <label id="lbl-q4" class="block text-xs font-bold text-purple-200 uppercase mb-3 flex items-center">
                     <i class="fas fa-bullhorn mr-2 text-lg"></i> 4. 电梯演讲 (Value)
                 </label>
-                <textarea id="projValue" class="w-full h-32 text-lg font-medium resize-none outline-none text-white bg-transparent placeholder-purple-300/50 leading-relaxed" placeholder="一句话打动评委：&#10;我们的产品是______，为了解决______问题，它能够______。"></textarea>
+                <textarea id="projValue" class="w-full h-32 text-lg font-medium resize-none outline-none text-white bg-transparent placeholder-purple-300/50 leading-relaxed" placeholder="Loading..."></textarea>
             </div>
 
         </div>
@@ -80,21 +88,70 @@
     </main>
 
     <script>
-        // 简单的数据持久化逻辑
+        // Data & State
         const fields = ['projName', 'projPersona', 'projPain', 'projSolution', 'projValue'];
         const urlParams = new URLSearchParams(window.location.search);
         const projectId = urlParams.get('project');
         const DATA_KEY = projectId ? `ai_course_charter_${projectId}` : 'ai_course_charter';
+        
+        let currentMode = 'product'; // 'product' or 'research'
+
+        // Configurations
+        const CONFIG = {
+            product: {
+                q1: { label: '<i class="fas fa-user-circle mr-2 text-lg"></i> 1. 目标用户 (Who)', ph: '描述你的典型用户画像。\n例如：高一（3）班经常忘记带饭卡的走读生...' },
+                q2: { label: '<i class="fas fa-exclamation-triangle mr-2 text-lg"></i> 2. 核心痛点 (Why)', ph: '他们遇到了什么麻烦？\n例如：午休时间只有40分钟，排队充卡要花15分钟...' },
+                q3: { label: '<i class="fas fa-lightbulb mr-2 text-lg"></i> 3. 解决方案 (How)', ph: '我们要开发什么？\n例如：基于人脸识别的无感支付终端，部署在食堂窗口...' },
+                q4: { label: '<i class="fas fa-bullhorn mr-2 text-lg"></i> 4. 电梯演讲 (Value)', ph: '一句话打动评委：\n我们的产品是______，为了解决______问题，它能够______。' }
+            },
+            research: {
+                q1: { label: '<i class="fas fa-microscope mr-2 text-lg"></i> 1. 研究对象 (Object)', ph: '你的研究主体是什么？\n例如：校园内不同光照条件下的植物生长情况...' },
+                q2: { label: '<i class="fas fa-question-circle mr-2 text-lg"></i> 2. 探究问题 (Question)', ph: '你想解决什么科学问题或验证什么假设？\n例如：红光照射是否比蓝光更能促进多肉植物生长？' },
+                q3: { label: '<i class="fas fa-vial mr-2 text-lg"></i> 3. 研究方法 (Method)', ph: '你打算怎么做实验？\n例如：设置对照组，控制变量（光照强度、水分），每日记录...' },
+                q4: { label: '<i class="fas fa-clipboard-check mr-2 text-lg"></i> 4. 预期成果 (Outcome)', ph: '你希望得到什么结论或产出？\n例如：一份关于光照对植物生长影响的实验报告和数据图表。' }
+            }
+        };
 
         // Load
         const saved = JSON.parse(localStorage.getItem(DATA_KEY) || '{}');
         fields.forEach(f => {
             if(saved[f]) document.getElementById(f).value = saved[f];
         });
+        
+        // Restore Mode
+        if (saved.mode && CONFIG[saved.mode]) {
+            setMode(saved.mode);
+        } else {
+            setMode('product');
+        }
 
-        // Auto Save
-        document.body.addEventListener('input', () => {
-            const data = {};
+        // Functions
+        function setMode(mode) {
+            currentMode = mode;
+            
+            // UI Toggle
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`btn-${mode}`).classList.add('active');
+
+            // Labels & Placeholders
+            const c = CONFIG[mode];
+            document.getElementById('lbl-q1').innerHTML = c.q1.label;
+            document.getElementById('projPersona').placeholder = c.q1.ph;
+            
+            document.getElementById('lbl-q2').innerHTML = c.q2.label;
+            document.getElementById('projPain').placeholder = c.q2.ph;
+            
+            document.getElementById('lbl-q3').innerHTML = c.q3.label;
+            document.getElementById('projSolution').placeholder = c.q3.ph;
+            
+            document.getElementById('lbl-q4').innerHTML = c.q4.label;
+            document.getElementById('projValue').placeholder = c.q4.ph;
+
+            saveData();
+        }
+
+        function saveData() {
+            const data = { mode: currentMode };
             fields.forEach(f => data[f] = document.getElementById(f).value);
             localStorage.setItem(DATA_KEY, JSON.stringify(data));
             
@@ -105,10 +162,13 @@
                 status.textContent = '自动保存中...';
                 status.classList.remove('text-green-500');
             }, 1000);
-        });
+        }
+
+        // Auto Save Listener
+        document.body.addEventListener('input', saveData);
 
         function exportPDF() {
-            window.print(); // 最简单的导出方式
+            window.print();
         }
     </script>
 </body>
