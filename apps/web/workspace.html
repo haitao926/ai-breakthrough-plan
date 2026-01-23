@@ -255,19 +255,45 @@
             },
             architecture: function(c, p) {
                 const tasks = [
-                    { id: 'arch_framework', label: '1. 项目框架图', desc: '展示系统整体结构与模块关系' },
-                    { id: 'arch_roadmap', label: '2. 实施路线图', desc: '规划项目开发的阶段与时间节点' },
-                    { id: 'arch_tech', label: '3. 关键技术/硬件', desc: '核心算法流程或硬件连接图' }
+                    { id: 'arch_framework', label: '1. 项目框架图', desc: '展示系统整体结构与模块关系', sub_key: `sub_arch_framework_${p.id}` },
+                    { id: 'arch_roadmap', label: '2. 实施路线图', desc: '规划项目开发的阶段与时间节点', sub_key: `sub_arch_roadmap_${p.id}` },
+                    { id: 'arch_tech', label: '3. 关键技术/硬件', desc: '核心算法流程或硬件连接图', sub_key: `sub_arch_tech_${p.id}` }
                 ];
                 
-                // Helper to manage active state (visual only since tool is external)
-                window.setActiveArchTask = (el) => {
-                    document.querySelectorAll('.arch-task-btn').forEach(b => {
-                        b.classList.remove('bg-indigo-50', 'text-indigo-700', 'border-indigo-200');
-                        b.classList.add('bg-white', 'text-gray-600', 'border-transparent');
-                    });
-                    el.classList.remove('bg-white', 'text-gray-600', 'border-transparent');
-                    el.classList.add('bg-indigo-50', 'text-indigo-700', 'border-indigo-200');
+                // Helper: Trigger File Upload
+                window.triggerArchUpload = (id) => document.getElementById(`file-${id}`).click();
+                
+                // Helper: Handle File Change
+                window.handleArchUpload = (el, subKey) => {
+                    if(el.files && el.files[0]) {
+                        // Simulate Upload
+                        localStorage.setItem(subKey, 'true'); // Flag as submitted
+                        localStorage.setItem(subKey + '_name', el.files[0].name); // Store name
+                        // Refresh UI (simple re-render or class toggle)
+                        el.closest('.arch-task-btn').classList.add('border-green-500', 'bg-green-50');
+                        el.closest('.arch-task-btn').querySelector('.status-icon').innerHTML = '<i class="fas fa-check-circle text-green-600 text-lg"></i>';
+                        alert(`"${el.files[0].name}" 已关联到立项材料中。`);
+                    }
+                };
+
+                const renderTaskItem = (t, idx) => {
+                    const isDone = localStorage.getItem(t.sub_key) === 'true';
+                    const fileName = localStorage.getItem(t.sub_key + '_name');
+                    
+                    return `
+                    <div class="arch-task-btn w-full text-left p-3 rounded-xl border ${isDone ? 'border-green-500 bg-green-50' : 'bg-white border-transparent'} shadow-sm hover:shadow-md transition group relative overflow-hidden mb-3">
+                        <div class="relative z-10 pr-8">
+                            <div class="font-bold text-sm mb-0.5 truncate text-gray-800">${t.label}</div>
+                            <div class="text-[10px] text-gray-500 leading-tight">${t.desc}</div>
+                            ${isDone ? `<div class="text-[10px] text-green-600 mt-1 truncate"><i class="fas fa-file-alt mr-1"></i> ${fileName}</div>` : ''}
+                        </div>
+                        
+                        <!-- Upload Action -->
+                        <div class="absolute right-2 top-1/2 transform -translate-y-1/2 status-icon cursor-pointer p-2 hover:bg-gray-100 rounded-full transition" onclick="triggerArchUpload('${t.id}')" title="上传图纸">
+                            ${isDone ? '<i class="fas fa-check-circle text-green-600 text-lg"></i>' : '<i class="fas fa-cloud-upload-alt text-gray-400 hover:text-indigo-600 text-lg"></i>'}
+                        </div>
+                        <input type="file" id="file-${t.id}" class="hidden" onchange="handleArchUpload(this, '${t.sub_key}')">
+                    </div>`;
                 };
 
                 c.innerHTML = `
@@ -276,26 +302,20 @@
                     <div class="w-56 bg-gray-50 border-r border-gray-200 flex flex-col p-4 shrink-0 overflow-y-auto">
                         <div class="mb-6">
                             <h3 class="font-bold text-gray-800 mb-1">架构设计任务</h3>
-                            <p class="text-xs text-gray-500">请完成以下 3 张关键图表</p>
+                            <p class="text-xs text-gray-500">完成图纸绘制后，直接在此上传</p>
                         </div>
                         
-                        <div class="space-y-3 flex-1">
-                            ${tasks.map((t, idx) => `
-                            <button onclick="setActiveArchTask(this)" class="arch-task-btn w-full text-left p-3 rounded-xl border ${idx===0 ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-white text-gray-600 border-transparent'} shadow-sm hover:shadow-md transition group relative overflow-hidden">
-                                <div class="relative z-10">
-                                    <div class="font-bold text-sm mb-0.5 truncate" title="${t.label}">${t.label}</div>
-                                    <div class="text-[10px] opacity-80 leading-tight">${t.desc}</div>
-                                </div>
-                                <div class="absolute right-0 top-0 p-2 opacity-0 group-hover:opacity-100 transition text-indigo-400">
-                                    <i class="fas fa-pen text-xs"></i>
-                                </div>
-                            </button>
-                            `).join('')}
+                        <div class="flex-1">
+                            ${tasks.map((t, idx) => renderTaskItem(t, idx)).join('')}
                         </div>
 
                         <div class="mt-6 bg-blue-50 p-3 rounded-xl border border-blue-100 text-[10px] text-blue-800 leading-relaxed">
                             <i class="fas fa-info-circle mr-1 font-bold"></i>
-                            绘制完成后，请务必<strong>导出图片</strong>，以便在后续评审中使用。
+                            <strong>流程提示：</strong><br>
+                            1. 右侧绘图<br>
+                            2. 导出图片<br>
+                            3. 点击上方 <i class="fas fa-cloud-upload-alt text-gray-400"></i> 图标上传<br>
+                            <br>上传后将自动同步至立项评审汇总页。
                         </div>
                     </div>
                     
@@ -446,9 +466,18 @@
                 const checkStatus = (taskId) => {
                     const keyMap = {
                         'goal_definition': `ai_course_charter_${p.id}`,
-                        'wbs_planning': null, // WBS is stored in API, so we assume 'Linked' if accessed
+                        'wbs_planning': `ai_course_wbs_${p.id}`, // Placeholder
                         'kanban': `ai_course_kanban_${p.id}`
                     };
+
+                    if (taskId === 'architecture') {
+                        // Check if any of the 3 architecture diagrams are uploaded
+                        const m1 = localStorage.getItem(`sub_arch_framework_${p.id}`);
+                        const m2 = localStorage.getItem(`sub_arch_roadmap_${p.id}`);
+                        const m3 = localStorage.getItem(`sub_arch_tech_${p.id}`);
+                        return (m1 || m2 || m3) ? true : false;
+                    }
+
                     if(keyMap[taskId]) {
                         return localStorage.getItem(keyMap[taskId]) ? true : false;
                     }
