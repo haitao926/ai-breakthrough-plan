@@ -528,8 +528,9 @@
                 const checkStatus = (taskId) => {
                     const keyMap = {
                         'goal_definition': `ai_course_charter_${p.id}`,
-                        'wbs_planning': `ai_course_wbs_${p.id}`, // Placeholder
-                        'kanban': `ai_course_kanban_${p.id}`
+                        'wbs_planning': `ai_course_wbs_${p.id}`, 
+                        'kanban': `ai_course_kanban_${p.id}`,
+                        'devlog': `ai_course_devlog_${p.id}`
                     };
 
                     if (taskId === 'architecture') {
@@ -609,6 +610,7 @@
         window.addTask = async (pid) => {
             const val=document.getElementById('new-task-input').value;if(!val)return;
             await window.auth.apiFetch(`/projects/${pid}/milestones`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:val,description:'m1'})});
+            localStorage.setItem(`ai_course_wbs_${pid}`, 'true'); // Flag for Gateway
             // Refresh
             const dummyC = document.getElementById('main-content-area');
             renderFunctions.wbs_planning(dummyC, {id: pid});
@@ -616,6 +618,7 @@
         window.submitLog = async (pid) => {
             const c=document.getElementById('log-in').value; if(!c)return;
             await window.auth.apiFetch(`/projects/${pid}/logs`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:c})});
+            localStorage.setItem(`ai_course_devlog_${pid}`, 'true'); // Flag for Gateway
             const dummyC = document.getElementById('main-content-area');
             renderFunctions.devlog(dummyC, {id: pid});
         };
