@@ -6,6 +6,7 @@
     <title>教学展示墙 | HAI Tech Lab</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="js/auth.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
         body { font-family: 'Inter', sans-serif; }
@@ -118,6 +119,37 @@
     <div id="image-modal" class="fixed inset-0 bg-black/90 z-[100] hidden flex items-center justify-center p-4" onclick="closeModal()">
         <img id="modal-img" src="" class="max-w-full max-h-full rounded shadow-2xl">
         <button class="absolute top-4 right-4 text-white hover:text-gray-300 text-4xl" onclick="closeModal()">&times;</button>
+    </div>
+
+    <!-- Submit Modal -->
+    <div id="submit-modal" class="fixed inset-0 bg-black/50 z-[100] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 transform transition-all scale-100">
+            <h3 class="text-xl font-bold text-gray-900 mb-6">提交作品到展示墙</h3>
+            <form id="showcase-form" onsubmit="handleShowcaseSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">选择项目</label>
+                    <select id="submit-project" name="project" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white" required>
+                        <option value="">加载中...</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">作品标题</label>
+                    <input id="submit-title" name="title" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" required placeholder="例如：我的智能小车">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">上传文件</label>
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:bg-gray-50 transition cursor-pointer" onclick="document.getElementById('submit-file').click()">
+                        <i class="fas fa-cloud-upload-alt text-2xl text-gray-400 mb-2"></i>
+                        <p class="text-xs text-gray-500" id="file-label">点击选择图片或文档</p>
+                        <input type="file" id="submit-file" name="file" class="hidden" onchange="document.getElementById('file-label').textContent = this.files[0]?.name || '点击选择图片或文档'" required>
+                    </div>
+                </div>
+                <div class="pt-4 flex gap-3 justify-end">
+                    <button type="button" onclick="document.getElementById('submit-modal').classList.add('hidden')" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition font-medium">取消</button>
+                    <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-bold shadow-md">确认提交</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <script>
@@ -324,7 +356,7 @@
                 </div>
                 <h3 class="font-bold text-gray-500 mb-1">展示你的作品</h3>
                 <p class="text-xs text-gray-400 mb-4">上传截图，让大家看到你的创意</p>
-                <a href="workspace.html" class="text-indigo-600 text-sm font-bold hover:underline">进入工坊提交</a>
+                <button onclick="openSubmitModal()" class="text-indigo-600 text-sm font-bold hover:underline">立即上传作品</button>
              `;
              grid.appendChild(placeholder);
         }
@@ -358,6 +390,83 @@
         function closeModal() {
             document.getElementById('image-modal').classList.add('hidden');
             document.getElementById('modal-img').src = '';
+        }
+
+        // Submission Logic
+        async function openSubmitModal() {
+            const user = window.auth.getAuthUser();
+            if (!user) {
+                alert('请先登录后再提交作品');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const modal = document.getElementById('submit-modal');
+            const select = document.getElementById('submit-project');
+            
+            modal.classList.remove('hidden');
+            select.innerHTML = '<option>加载中...</option>';
+
+            try {
+                const res = await window.auth.apiFetch('/projects');
+                const data = await res.json();
+                const projects = data.projects || [];
+                
+                if (projects.length === 0) {
+                    select.innerHTML = '<option value="">暂无参与的项目</option>';
+                    return;
+                }
+
+                select.innerHTML = projects.map(p => `<option value="${p.id}">${p.title}</option>`).join('');
+            } catch (err) {
+                console.error(err);
+                select.innerHTML = '<option value="">加载失败</option>';
+            }
+        }
+
+        async function handleShowcaseSubmit(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            const originalText = btn.innerText;
+            btn.disabled = true;
+            btn.innerText = '上传中...';
+
+            try {
+                const formData = new FormData(e.target);
+                const projectId = formData.get('project');
+                const file = formData.get('file');
+                
+                if (!projectId || !file) throw new Error('信息不完整');
+
+                formData.append('type', 'showcase');
+                // Title is already in formData
+                // Content defaults to empty
+                formData.append('content', 'User submission from showcase wall');
+
+                const res = await window.auth.apiFetch(`/projects/${projectId}/submissions`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error || '提交失败');
+                }
+
+                alert('作品提交成功！');
+                document.getElementById('submit-modal').classList.add('hidden');
+                e.target.reset();
+                document.getElementById('file-label').textContent = '点击选择图片或文档';
+                
+                // Reload
+                await loadSubmissions();
+
+            } catch (err) {
+                alert(err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = originalText;
+            }
         }
     </script>
 </body>
