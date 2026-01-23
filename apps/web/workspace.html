@@ -227,10 +227,27 @@
     <!-- Scripts -->
     <script src="js/auth.js"></script>
     <script>
-        // --- 1. Tool Logic (Adapted from smart_workspace) ---
-        // These function must be globally available or part of the IIFE closure if carefully managed.
-        // We will define render functions here.
-        
+        // Definition of Tools per Stage
+        const stageTools = {
+            'inception': [
+                { id: 'goal_definition', name: '目标定调', icon: 'fas fa-bullseye' },
+                { id: 'architecture', name: '架构设计', icon: 'fas fa-sitemap' },
+                { id: 'wbs_planning', name: '路径规划', icon: 'fas fa-tasks' },
+                { id: 'gateway_proposal', name: '立项评审', icon: 'fas fa-flag', isGateway: true }
+            ],
+            'implementation': [
+                { id: 'kanban', name: '任务看板', icon: 'fas fa-columns' },
+                { id: 'devlog', name: '实验日志', icon: 'fas fa-book' },
+                { id: 'resources', name: '物资支持', icon: 'fas fa-box-open' },
+                { id: 'gateway_midterm', name: '中期检查', icon: 'fas fa-flag', isGateway: true }
+            ],
+            'conclusion': [
+                { id: 'delivery_proposal', name: '报告生成', icon: 'fas fa-file-alt' },
+                { id: 'delivery_final', name: '模拟答辩', icon: 'fas fa-chalkboard-teacher' },
+                { id: 'gateway_final', name: '结题验收', icon: 'fas fa-flag', isGateway: true }
+            ]
+        };
+
         const renderFunctions = {
             goal_definition: function(c, p) {
                 c.innerHTML = `<iframe src="tools/charter.html?project=${p.id}" class="w-full h-full border-0 rounded-xl"></iframe>`;
@@ -501,27 +518,6 @@
             let projects = [];
             let currentProjectId = null;
             let currentToolId = null;
-
-            // Definition of Tools per Stage
-            const stageTools = {
-                'inception': [
-                    { id: 'goal_definition', name: '目标定调', icon: 'fas fa-bullseye' },
-                    { id: 'architecture', name: '架构设计', icon: 'fas fa-sitemap' },
-                    { id: 'wbs_planning', name: '路径规划', icon: 'fas fa-tasks' },
-                    { id: 'gateway_proposal', name: '立项评审', icon: 'fas fa-flag', isGateway: true }
-                ],
-                'implementation': [
-                    { id: 'kanban', name: '任务看板', icon: 'fas fa-columns' },
-                    { id: 'devlog', name: '实验日志', icon: 'fas fa-book' },
-                    { id: 'resources', name: '物资支持', icon: 'fas fa-box-open' },
-                    { id: 'gateway_midterm', name: '中期检查', icon: 'fas fa-flag', isGateway: true }
-                ],
-                'conclusion': [
-                    { id: 'delivery_proposal', name: '报告生成', icon: 'fas fa-file-alt' },
-                    { id: 'delivery_final', name: '模拟答辩', icon: 'fas fa-chalkboard-teacher' },
-                    { id: 'gateway_final', name: '结题验收', icon: 'fas fa-flag', isGateway: true }
-                ]
-            };
 
             async function init() {
                 currentUser = requireAuth('student');
