@@ -366,19 +366,74 @@
                 }catch(e){}
             },
             gateway: function(c, p, type, label) {
-                c.innerHTML = `<div class="h-full flex flex-col items-center justify-center p-8">
-                    <div class="bg-white p-10 rounded-2xl shadow-sm border border-gray-200 max-w-lg w-full text-center">
-                        <div class="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center text-2xl mx-auto mb-6"><i class="fas fa-flag-checkered"></i></div>
-                        <h3 class="text-2xl font-bold text-gray-900 mb-2">${label}</h3>
-                        <p class="text-gray-500 mb-8">请整理好所有相关材料（报告、演示文稿、代码包等）打包上传。AI 顾问将进行初步审查。</p>
-                        
-                        <label class="block w-full border-2 border-dashed border-gray-300 rounded-xl p-8 mb-6 hover:border-indigo-500 hover:bg-indigo-50 transition cursor-pointer group">
-                            <input type="file" id="gateway-file" class="hidden">
-                            <i class="fas fa-cloud-upload-alt text-3xl text-gray-300 group-hover:text-indigo-500 mb-3 block"></i>
-                            <span class="text-sm font-bold text-gray-400 group-hover:text-indigo-600">点击上传文件</span>
-                        </label>
+                // Identify the current phase based on the gateway type
+                let phaseTasks = [];
+                if(type === 'gateway_proposal') phaseTasks = stageTools['inception'];
+                else if(type === 'gateway_midterm') phaseTasks = stageTools['implementation'];
+                else if(type === 'gateway_final') phaseTasks = stageTools['conclusion'];
+                
+                // Filter out the gateway task itself
+                const deliverables = phaseTasks.filter(t => !t.isGateway);
 
-                        <button onclick="submitGateway('${p.id}', '${type}')" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 shadow-md transition">确认提交评审</button>
+                // Helper to check local status
+                const checkStatus = (taskId) => {
+                    const keyMap = {
+                        'goal_definition': `ai_course_charter_${p.id}`,
+                        'wbs_planning': null, // WBS is stored in API, so we assume 'Linked' if accessed
+                        'kanban': `ai_course_kanban_${p.id}`
+                    };
+                    if(keyMap[taskId]) {
+                        return localStorage.getItem(keyMap[taskId]) ? true : false;
+                    }
+                    return false; // Default for others
+                };
+
+                const renderDeliverableItem = (task) => {
+                    const hasData = checkStatus(task.id);
+                    const statusHtml = hasData 
+                        ? `<span class="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded border border-green-100"><i class="fas fa-check mr-1"></i>已检测到数据</span>` 
+                        : `<span class="text-xs font-bold text-gray-400 bg-gray-50 px-2 py-1 rounded border border-gray-100">待提交</span>`;
+                    
+                    return `
+                    <div class="bg-white p-4 rounded-xl border border-gray-200 flex items-center justify-between shadow-sm hover:shadow-md transition group">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-lg">
+                                <i class="${task.icon}"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-gray-800 text-sm">${task.name}</h4>
+                                <p class="text-xs text-gray-400 mt-0.5">提交该环节的执行结果或佐证材料</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            ${statusHtml}
+                            <label class="cursor-pointer px-3 py-1.5 text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition flex items-center">
+                                <i class="fas fa-cloud-upload-alt mr-2"></i> 上传附件
+                                <input type="file" class="hidden" onchange="markAsUploaded(this, '${task.id}')">
+                            </label>
+                        </div>
+                    </div>`;
+                };
+
+                c.innerHTML = `
+                <div class="h-full flex flex-col max-w-4xl mx-auto p-6">
+                    <div class="text-center mb-10">
+                        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-100 text-indigo-600 mb-4 text-2xl">
+                            <i class="fas fa-clipboard-check"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-gray-900">${label}</h2>
+                        <p class="text-gray-500 mt-2">请确认以下各环节任务已完成，并补充必要的佐证材料。</p>
+                    </div>
+
+                    <div class="flex-1 overflow-y-auto space-y-4 mb-8 px-4">
+                        ${deliverables.map(t => renderDeliverableItem(t)).join('')}
+                    </div>
+
+                    <div class="border-t border-gray-100 pt-6 flex justify-end gap-4">
+                        <button class="px-6 py-2.5 text-gray-500 font-bold hover:text-gray-700">保存草稿</button>
+                        <button onclick="submitGatewayFinal('${p.id}', '${type}')" class="px-8 py-2.5 bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-indigo-700 transform hover:-translate-y-0.5 transition">
+                            <i class="fas fa-paper-plane mr-2"></i> 正式提交评审
+                        </button>
                     </div>
                 </div>`;
             }
@@ -416,6 +471,27 @@
             const file=document.getElementById('gateway-file').files[0];
             if(!file) return alert('请选择文件');
             alert('模拟提交成功！文件已发送至评审端。');
+        };
+        
+        // New Gateway Handlers
+        window.markAsUploaded = (input, taskId) => {
+            if (input.files && input.files[0]) {
+                const container = input.closest('.group');
+                const statusEl = container.querySelector('span'); // The status span
+                statusEl.className = "text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded border border-green-100";
+                statusEl.innerHTML = `<i class="fas fa-check-circle mr-1"></i> 已上传: ${input.files[0].name.substring(0, 10)}...`;
+            }
+        };
+
+        window.submitGatewayFinal = async (pid, type) => {
+            // In a real app, we would gather all the 'uploaded' files or checked statuses here.
+            // For now, we simulate a successful Phase Review submission.
+            if(confirm('确认提交所有材料进入评审流程吗？提交后将无法修改。')) {
+                // Simulate API call
+                await new Promise(r => setTimeout(r, 1000));
+                alert('提交成功！AI 评审顾问将在 3 分钟内反馈评审意见。');
+                // Could verify milestone status here
+            }
         };
 
         // --- 2. Controller Logic ---
