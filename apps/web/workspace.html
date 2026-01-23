@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>科创控制台 | Innovation Console</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #f8fafc; }
+        
+        /* Sidebar Styles */
+        .stage-header {
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #94a3b8;
+            padding: 1.5rem 1.5rem 0.5rem;
+        }
+        
+        .project-item {
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+        .project-item:hover {
+            background-color: #f8fafc;
+        }
+        .project-item.active {
+            background-color: #eff6ff;
+            border-left-color: #4f46e5;
+        }
+        .project-item.active .project-name {
+            color: #4f46e5;
+            font-weight: 700;
+        }
+
+        .task-list {
+            display: none;
+            background-color: #f8fafc;
+            padding: 0.5rem 0;
+        }
+        .project-item.active .task-list {
+            display: block;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 1.5rem 0.5rem 2.5rem;
+            font-size: 0.875rem;
+            color: #64748b;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .task-item:hover {
+            color: #334155;
+            background-color: #e2e8f0;
+        }
+        .task-item.active {
+            color: #4f46e5;
+            background-color: #e0e7ff;
+            font-weight: 600;
+        }
+        .task-item i {
+            width: 1.25rem;
+            text-align: center;
+            margin-right: 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        /* WBS Styles */
+        .wbs-card { cursor: grab; transition: all 0.2s; border-left: 3px solid transparent; }
+        .wbs-card:active { cursor: grabbing; }
+        .wbs-card:hover { border-left-color: #6366f1; background-color: #fafafa; }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden">
+
+    <!-- Sidebar -->
+    <aside class="w-72 bg-white border-r border-gray-200 flex flex-col z-20 shrink-0">
+        <!-- Logo -->
+        <div class="h-16 flex items-center px-6 border-b border-gray-100 shrink-0">
+            <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold mr-3">
+                <i class="fas fa-rocket"></i>
+            </div>
+            <span class="font-bold text-gray-800 tracking-tight">科创控制台</span>
+        </div>
+
+        <!-- Project Tree -->
+        <div class="flex-1 overflow-y-auto" id="sidebar-content">
+            <div class="p-6 text-center text-gray-400">
+                <i class="fas fa-spinner fa-spin mb-2"></i>
+                <p class="text-xs">加载项目数据...</p>
+            </div>
+        </div>
+
+        <!-- Bottom User Profile -->
+        <div class="p-4 border-t border-gray-100 bg-gray-50 shrink-0">
+             <div class="flex gap-2 mb-4">
+                <a href="index.html" class="flex-1 flex items-center justify-center py-2 text-xs font-bold text-gray-600 bg-white border border-gray-200 rounded-lg hover:text-indigo-600 hover:border-indigo-200 transition">
+                    <i class="fas fa-home mr-2"></i> 首页
+                </a>
+                <button onclick="document.getElementById('createModal').classList.remove('hidden')" class="flex-1 flex items-center justify-center py-2 text-xs font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition">
+                    <i class="fas fa-plus mr-2"></i> 新建
+                </button>
+            </div>
+
+            <div class="flex items-center gap-3 pt-2">
+                <img id="userAvatar" src="" class="w-9 h-9 rounded-full bg-gray-200">
+                <div class="flex-1 min-w-0">
+                    <p id="userName" class="text-sm font-bold text-gray-900 truncate">加载中...</p>
+                    <button onclick="logout()" class="text-xs text-red-500 hover:text-red-700">退出登录</button>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto bg-gray-50 p-8 relative flex flex-col">
+        
+        <!-- Welcome / Empty State -->
+        <div id="welcome-view" class="h-full flex flex-col items-center justify-center text-center">
+            <div class="w-24 h-24 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center text-5xl mb-6 shadow-sm">
+                <i class="fas fa-laptop-code"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-900 mb-2">欢迎来到探究工坊</h1>
+            <p class="text-gray-500 max-w-md mx-auto mb-8">请在左侧侧边栏选择一个项目，开始你的创新之旅。项目已按阶段（立项、实施、结题）自动分类。</p>
+            <button onclick="document.getElementById('createModal').classList.remove('hidden')" class="px-6 py-3 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 hover:border-gray-400 transition shadow-sm">
+                <i class="fas fa-plus mr-2"></i> 发起新项目
+            </button>
+        </div>
+
+        <!-- Tool Workspace (Hidden by default) -->
+        <div id="workspace-view" class="hidden flex-1 flex flex-col h-full">
+            <header class="flex justify-between items-start mb-6 shrink-0">
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="px-2 py-0.5 rounded text-xs font-bold bg-gray-200 text-gray-600 uppercase" id="current-project-phase">Phase</span>
+                        <h2 class="text-sm font-bold text-gray-500" id="current-project-name">Project Name</h2>
+                    </div>
+                    <h1 class="text-3xl font-bold text-gray-900" id="step-title">Tool Title</h1>
+                    <p class="text-gray-500 mt-1" id="step-desc">Tool Description</p>
+                </div>
+                <!-- AI Status -->
+                <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-gray-200 shadow-sm">
+                    <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span class="text-xs font-bold text-gray-600">AI 助手在线</span>
+                </div>
+            </header>
+
+            <div class="flex-1 flex gap-6 min-h-0">
+                <!-- Main Tool Area -->
+                <div class="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative flex flex-col" id="main-content-area">
+                    <div class="text-center py-20 text-gray-400">
+                        <i class="fas fa-spinner fa-spin text-3xl mb-4"></i>
+                        <p>加载工具中...</p>
+                    </div>
+                </div>
+
+                <!-- AI Sidebar -->
+                <div class="w-80 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden flex-none">
+                    <div class="p-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+                        <span class="text-xs font-bold text-gray-500 uppercase">AI Copilot</span>
+                        <button onclick="document.getElementById('ai-chat-history').innerHTML = ''" class="text-gray-400 hover:text-gray-600"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50" id="ai-chat-history">
+                        <!-- Chat bubbles go here -->
+                    </div>
+                    <div class="p-3 border-t border-gray-100 bg-white">
+                        <div class="flex gap-2 mb-2 overflow-x-auto no-scrollbar" id="ai-quick-actions">
+                            <!-- Quick buttons -->
+                        </div>
+                        <div class="relative">
+                            <input type="text" id="ai-input" class="w-full pl-3 pr-10 py-2.5 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition" placeholder="问 AI 任何问题...">
+                            <button onclick="sendAiMsg()" class="absolute right-1.5 top-1.5 w-7 h-7 bg-gray-900 text-white rounded flex items-center justify-center hover:bg-gray-700 transition"><i class="fas fa-arrow-up text-xs"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Create Modal -->
+    <div id="createModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-8">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-gray-900">发起新项目</h3>
+                <button onclick="document.getElementById('createModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 text-2xl transition">&times;</button>
+            </div>
+            <form id="createForm" onsubmit="handleCreate(event)" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">项目名称 <span class="text-red-500">*</span></label>
+                    <input name="title" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" required placeholder="给你的项目起个响亮的名字">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">班级 / 组别</label>
+                        <input name="className" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="例如：701班 第3组">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">核心成员</label>
+                        <input name="teamMembers" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="姓名1, 姓名2...">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">一句话简介 <span class="text-red-500">*</span></label>
+                    <input name="summary" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" required placeholder="这个项目是做什么的？解决什么问题？">
+                </div>
+
+                <div class="pt-4 flex justify-end gap-3">
+                    <button type="button" onclick="document.getElementById('createModal').classList.add('hidden')" class="px-6 py-2 text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition">取消</button>
+                    <button type="submit" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold shadow-md transition transform active:scale-95">创建并开始</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/auth.js"></script>
+    <script>
+        // --- 1. Tool Logic (Adapted from smart_workspace) ---
+        // These function must be globally available or part of the IIFE closure if carefully managed.
+        // We will define render functions here.
+        
+        const renderFunctions = {
+            goal_definition: function(c, p) {
+                c.innerHTML = `<iframe src="tools/charter.html?project=${p.id}" class="w-full h-full border-0 rounded-xl"></iframe>`;
+            },
+            architecture: function(c) {
+                c.innerHTML = `<iframe src="tools/architect.html" class="w-full h-full border-0"></iframe>`;
+            },
+            wbs_planning: async function(c, p) {
+                c.innerHTML = '<div class="h-full flex items-center justify-center"><i class="fas fa-spinner fa-spin text-3xl text-gray-300"></i></div>';
+                let tasks = [];
+                try {
+                    const res = await window.auth.apiFetch(`/projects/${p.id}/milestones`);
+                    const d = await res.json();
+                    tasks = d.milestones || [];
+                } catch(e) { console.error(e); }
+
+                // Group tasks
+                const phases = { m1: [], m2: [], m3: [] };
+                tasks.forEach(t => { if(phases[t.description]) phases[t.description].push(t); else phases.m1.push(t); }); // default to m1
+
+                const colClass = "flex-1 bg-gray-50 rounded-xl p-4 flex flex-col h-full border border-gray-100";
+                const listClass = "flex-1 overflow-y-auto space-y-2 min-h-0 pt-2";
+                
+                c.innerHTML = `
+                    <div class="flex flex-col h-full p-6">
+                        <div class="flex gap-4 mb-6">
+                            <input id="new-task-input" class="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" placeholder="添加新任务 (例如: 购买传感器)...">
+                            <button onclick="addTask('${p.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 rounded-xl font-bold transition shadow-sm"><i class="fas fa-plus mr-2"></i>添加</button>
+                        </div>
+                        <div class="flex-1 grid grid-cols-3 gap-6 overflow-hidden min-h-0">
+                            <div class="${colClass}">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="font-bold text-gray-700"><span class="w-2 h-2 rounded-full bg-indigo-500 inline-block mr-2"></span>里程碑 1: 原型</h4>
+                                    <span class="text-xs font-bold bg-white px-2 py-1 rounded text-gray-500 border">${phases.m1.length}</span>
+                                </div>
+                                <div id="wbs-m1" class="${listClass}" data-phase="m1">
+                                    ${phases.m1.map(t=>renderTaskCard(t)).join('')}
+                                </div>
+                            </div>
+                            <div class="${colClass}">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="font-bold text-gray-700"><span class="w-2 h-2 rounded-full bg-blue-500 inline-block mr-2"></span>里程碑 2: 测试</h4>
+                                    <span class="text-xs font-bold bg-white px-2 py-1 rounded text-gray-500 border">${phases.m2.length}</span>
+                                </div>
+                                <div id="wbs-m2" class="${listClass}" data-phase="m2">
+                                    ${phases.m2.map(t=>renderTaskCard(t)).join('')}
+                                </div>
+                            </div>
+                            <div class="${colClass}">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="font-bold text-gray-700"><span class="w-2 h-2 rounded-full bg-green-500 inline-block mr-2"></span>里程碑 3: 交付</h4>
+                                    <span class="text-xs font-bold bg-white px-2 py-1 rounded text-gray-500 border">${phases.m3.length}</span>
+                                </div>
+                                <div id="wbs-m3" class="${listClass}" data-phase="m3">
+                                    ${phases.m3.map(t=>renderTaskCard(t)).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+
+                // Init Sortable
+                ['wbs-m1','wbs-m2','wbs-m3'].forEach(id=>{
+                    new Sortable(document.getElementById(id), {
+                        group: 'wbs',
+                        animation: 150,
+                        ghostClass: 'opacity-50',
+                        onAdd: async (evt) => {
+                            const taskId = evt.item.getAttribute('data-id');
+                            const newPhase = evt.to.getAttribute('data-phase');
+                            // API call to update phase (using 'description' field for phase storage for now)
+                            await window.auth.apiFetch(`/milestones/${taskId}`, {
+                                method: 'PATCH',
+                                headers: {'Content-Type':'application/json'},
+                                body: JSON.stringify({description: newPhase}) // Hack: storing phase in description
+                            });
+                        }
+                    });
+                });
+            },
+            kanban: function(c) {
+                c.innerHTML = `<iframe src="tools/kanban.html" class="w-full h-full border-0"></iframe>`;
+            },
+            devlog: async function(c, p) {
+                c.innerHTML = `<div class="flex flex-col h-full p-6">
+                    <div class="mb-6 bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                        <textarea id="log-in" class="w-full border-0 outline-none resize-none text-gray-700" rows="3" placeholder="今天做了什么？遇到了什么问题？记录下来..."></textarea>
+                        <div class="flex justify-between items-center mt-2 pt-2 border-t border-gray-100">
+                            <button class="text-gray-400 hover:text-gray-600"><i class="fas fa-image"></i></button>
+                            <button onclick="submitLog('${p.id}')" class="bg-indigo-600 text-white px-4 py-1.5 rounded-lg font-bold text-sm hover:bg-indigo-700">发布日志</button>
+                        </div>
+                    </div>
+                    <div id="log-list" class="flex-1 overflow-auto space-y-4 pr-2">Loading...</div>
+                </div>`;
+                try {
+                    const res = await window.auth.apiFetch(`/projects/${p.id}/logs`);
+                    const data = await res.json();
+                    const logs = data.logs || [];
+                    document.getElementById('log-list').innerHTML = logs.length ? logs.map(l => `
+                        <div class="bg-white border border-gray-200 p-5 rounded-xl shadow-sm">
+                            <div class="flex items-center mb-3">
+                                <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3 text-xs font-bold text-gray-500">ME</div>
+                                <div><div class="text-sm font-bold text-gray-900">我</div><div class="text-xs text-gray-400">${moment(l.created_at).fromNow()}</div></div>
+                            </div>
+                            <div class="prose prose-sm text-gray-700">${marked.parse(l.content)}</div>
+                        </div>
+                    `).join('') : '<div class="text-center text-gray-400 py-10">暂无日志，开始记录第一条吧！</div>';
+                } catch(e) {}
+            },
+            resources: async function(c, p) {
+                 c.innerHTML = `<div class="h-full p-6 flex flex-col">
+                    <div class="flex gap-4 mb-6">
+                        <input id="res-name" class="flex-1 border border-gray-200 p-3 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" placeholder="需要的物资名称 (如: Raspberry Pi 4B)">
+                        <button onclick="submitRes('${p.id}')" class="bg-indigo-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-indigo-700">提交申请</button>
+                    </div>
+                    <div class="bg-white border border-gray-200 rounded-xl overflow-hidden flex-1">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-gray-50 text-gray-500 border-b border-gray-100">
+                                <tr><th class="p-4 font-bold">物资名称</th><th class="p-4 font-bold">申请时间</th><th class="p-4 font-bold">状态</th></tr>
+                            </thead>
+                            <tbody id="res-list" class="divide-y divide-gray-100"><tr><td colspan="3" class="p-4 text-center text-gray-400">Loading...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>`;
+                try{
+                    const res=await window.auth.apiFetch(`/projects/${p.id}/resources`);
+                    const data=await res.json();
+                    document.getElementById('res-list').innerHTML = (data.requests||[]).length ? (data.requests||[]).map(r=>`
+                        <tr class="hover:bg-gray-50">
+                            <td class="p-4 font-medium text-gray-900">${r.item_name}</td>
+                            <td class="p-4 text-gray-500">${moment(r.created_at).format('YYYY-MM-DD')}</td>
+                            <td class="p-4"><span class="px-2 py-1 rounded text-xs font-bold ${getStatusClass(r.status)}">${r.status}</span></td>
+                        </tr>`).join('') : '<tr><td colspan="3" class="p-10 text-center text-gray-400">暂无申请记录</td></tr>';
+                }catch(e){}
+            },
+            gateway: function(c, p, type, label) {
+                c.innerHTML = `<div class="h-full flex flex-col items-center justify-center p-8">
+                    <div class="bg-white p-10 rounded-2xl shadow-sm border border-gray-200 max-w-lg w-full text-center">
+                        <div class="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center text-2xl mx-auto mb-6"><i class="fas fa-flag-checkered"></i></div>
+                        <h3 class="text-2xl font-bold text-gray-900 mb-2">${label}</h3>
+                        <p class="text-gray-500 mb-8">请整理好所有相关材料（报告、演示文稿、代码包等）打包上传。AI 顾问将进行初步审查。</p>
+                        
+                        <label class="block w-full border-2 border-dashed border-gray-300 rounded-xl p-8 mb-6 hover:border-indigo-500 hover:bg-indigo-50 transition cursor-pointer group">
+                            <input type="file" id="gateway-file" class="hidden">
+                            <i class="fas fa-cloud-upload-alt text-3xl text-gray-300 group-hover:text-indigo-500 mb-3 block"></i>
+                            <span class="text-sm font-bold text-gray-400 group-hover:text-indigo-600">点击上传文件</span>
+                        </label>
+
+                        <button onclick="submitGateway('${p.id}', '${type}')" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 shadow-md transition">确认提交评审</button>
+                    </div>
+                </div>`;
+            }
+        };
+
+        // Render Helper
+        function renderTaskCard(t) {
+            return `<div class="wbs-card bg-white p-3 rounded-lg shadow-sm border border-gray-200 text-sm font-medium text-gray-700 mb-2 select-none" data-id="${t.id}">${t.title}</div>`;
+        }
+        function getStatusClass(s) {
+            return s === 'approved' ? 'bg-green-100 text-green-700' : (s === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700');
+        }
+
+        // Global Action Proxies
+        window.addTask = async (pid) => {
+            const val=document.getElementById('new-task-input').value;if(!val)return;
+            await window.auth.apiFetch(`/projects/${pid}/milestones`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:val,description:'m1'})});
+            // Refresh
+            const dummyC = document.getElementById('main-content-area');
+            renderFunctions.wbs_planning(dummyC, {id: pid});
+        };
+        window.submitLog = async (pid) => {
+            const c=document.getElementById('log-in').value; if(!c)return;
+            await window.auth.apiFetch(`/projects/${pid}/logs`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:c})});
+            const dummyC = document.getElementById('main-content-area');
+            renderFunctions.devlog(dummyC, {id: pid});
+        };
+        window.submitRes = async (pid) => {
+            const n=document.getElementById('res-name').value; if(!n)return;
+            await window.auth.apiFetch(`/projects/${pid}/resources`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_name:n,quantity:1})});
+            const dummyC = document.getElementById('main-content-area');
+            renderFunctions.resources(dummyC, {id: pid});
+        };
+        window.submitGateway = async (pid, type) => {
+            const file=document.getElementById('gateway-file').files[0];
+            if(!file) return alert('请选择文件');
+            alert('模拟提交成功！文件已发送至评审端。');
+        };
+
+        // --- 2. Controller Logic ---
+        (function() {
+            const { apiFetch, requireAuth } = window.auth;
+            let currentUser = null;
+            let projects = [];
+            let currentProjectId = null;
+            let currentToolId = null;
+
+            // Definition of Tools per Stage
+            const stageTools = {
+                'inception': [
+                    { id: 'goal_definition', name: '目标定调', icon: 'fas fa-bullseye' },
+                    { id: 'architecture', name: '架构设计', icon: 'fas fa-sitemap' },
+                    { id: 'wbs_planning', name: '路径规划', icon: 'fas fa-tasks' },
+                    { id: 'gateway_proposal', name: '立项评审', icon: 'fas fa-flag', isGateway: true }
+                ],
+                'implementation': [
+                    { id: 'kanban', name: '任务看板', icon: 'fas fa-columns' },
+                    { id: 'devlog', name: '实验日志', icon: 'fas fa-book' },
+                    { id: 'resources', name: '物资支持', icon: 'fas fa-box-open' },
+                    { id: 'gateway_midterm', name: '中期检查', icon: 'fas fa-flag', isGateway: true }
+                ],
+                'conclusion': [
+                    { id: 'delivery_proposal', name: '报告生成', icon: 'fas fa-file-alt' },
+                    { id: 'delivery_final', name: '模拟答辩', icon: 'fas fa-chalkboard-teacher' },
+                    { id: 'gateway_final', name: '结题验收', icon: 'fas fa-flag', isGateway: true }
+                ]
+            };
+
+            async function init() {
+                currentUser = requireAuth('student');
+                if (!currentUser) return;
+                
+                document.getElementById('userName').textContent = currentUser.name || currentUser.email;
+                document.getElementById('userAvatar').src = currentUser.avatar_url || `https://api.dicebear.com/7.x/identicon/svg?seed=${currentUser.id}`;
+
+                await loadProjects();
+                
+                // Handle URL params
+                const params = new URLSearchParams(window.location.search);
+                if (params.get('project')) {
+                    selectProject(params.get('project'));
+                }
+            }
+
+            async function loadProjects() {
+                try {
+                    const res = await apiFetch('/projects');
+                    if (!res.ok) throw new Error('Failed');
+                    const data = await res.json();
+                    projects = data.projects || [];
+                    renderSidebar();
+                } catch (e) {
+                    console.error(e);
+                    document.getElementById('sidebar-content').innerHTML = '<div class="p-4 text-red-500 text-xs">加载失败</div>';
+                }
+            }
+
+            function renderSidebar() {
+                const container = document.getElementById('sidebar-content');
+                container.innerHTML = '';
+
+                // Group Projects by Phase (Mapping status to phase)
+                const phases = {
+                    'inception': { label: '第一阶段：立项', items: [] },
+                    'implementation': { label: '第二阶段：实施', items: [] },
+                    'conclusion': { label: '第三阶段：结题', items: [] }
+                };
+
+                // Simple mapping logic
+                projects.forEach(p => {
+                    let phase = 'inception';
+                    if (p.status === 'in_progress') phase = 'implementation';
+                    if (p.status === 'completed' || p.status === 'archived') phase = 'conclusion';
+                    // Override based on manual logic if needed, but status is good enough
+                    if (phases[phase]) phases[phase].items.push(p);
+                });
+
+                // Render Groups
+                Object.keys(phases).forEach(key => {
+                    const group = phases[key];
+                    
+                    // Header
+                    const header = document.createElement('div');
+                    header.className = 'stage-header';
+                    header.innerText = group.label;
+                    container.appendChild(header);
+
+                    // Items
+                    if (group.items.length === 0) {
+                        const empty = document.createElement('div');
+                        empty.className = 'px-6 py-2 text-xs text-gray-400 italic';
+                        empty.innerText = '暂无项目';
+                        container.appendChild(empty);
+                    } else {
+                        group.items.forEach(p => {
+                            const pEl = document.createElement('div');
+                            pEl.className = `project-item group ${currentProjectId == p.id ? 'active' : ''}`;
+                            pEl.id = `project-nav-${p.id}`;
+                            
+                            // Project Name Row
+                            const nameRow = document.createElement('div');
+                            nameRow.className = 'px-6 py-3 flex items-center justify-between project-name';
+                            nameRow.innerHTML = `<span class="truncate font-medium text-sm text-gray-700 group-hover:text-gray-900">${p.title}</span>`;
+                            if (key !== 'conclusion') { // Don't show chevron for archived? actually show all
+                                nameRow.innerHTML += `<i class="fas fa-chevron-right text-xs text-gray-300 transform transition-transform group-[.active]:rotate-90"></i>`;
+                            }
+                            nameRow.onclick = () => selectProject(p.id, key);
+
+                            // Task List (Sub-menu)
+                            const taskList = document.createElement('div');
+                            taskList.className = 'task-list';
+                            
+                            // Render Tools for this phase
+                            stageTools[key].forEach(tool => {
+                                const tEl = document.createElement('div');
+                                tEl.className = `task-item ${currentToolId === tool.id ? 'active' : ''}`;
+                                tEl.innerHTML = `<i class="${tool.icon} ${tool.isGateway ? 'text-red-400' : 'text-indigo-400'}"></i> ${tool.name}`;
+                                tEl.onclick = (e) => {
+                                    e.stopPropagation();
+                                    loadTool(p, tool);
+                                };
+                                taskList.appendChild(tEl);
+                            });
+
+                            pEl.appendChild(nameRow);
+                            pEl.appendChild(taskList);
+                            container.appendChild(pEl);
+                        });
+                    }
+                });
+            }
+
+            window.selectProject = function(pid, phaseKey) {
+                if (currentProjectId === pid) {
+                    // Toggle? No, keep open.
+                    return;
+                }
+                currentProjectId = pid;
+                
+                // Update UI selection
+                document.querySelectorAll('.project-item').forEach(el => el.classList.remove('active'));
+                const activeEl = document.getElementById(`project-nav-${pid}`);
+                if (activeEl) activeEl.classList.add('active');
+
+                // Switch View
+                document.getElementById('welcome-view').classList.add('hidden');
+                document.getElementById('workspace-view').classList.remove('hidden');
+
+                // Find Project Data
+                const p = projects.find(x => x.id == pid);
+                if (!p) return;
+
+                // Determine Phase if not provided (fallback)
+                if (!phaseKey) {
+                    if (p.status === 'in_progress') phaseKey = 'implementation';
+                    else if (p.status === 'completed') phaseKey = 'conclusion';
+                    else phaseKey = 'inception';
+                }
+
+                // Default to first tool of that phase
+                const defaultTool = stageTools[phaseKey][0];
+                loadTool(p, defaultTool);
+            }
+
+            function loadTool(project, tool) {
+                currentToolId = tool.id;
+                
+                // Update Sidebar Highlights
+                document.querySelectorAll('.task-item').forEach(el => el.classList.remove('active'));
+                // Note: Re-rendering sidebar clears classes, so we might need to rely on the render loop or simpler DOM manipulation
+                // Since we don't re-render sidebar on tool click, just toggle class:
+                // Find the specific element clicked is hard without event, but we can querySelector
+                // Simpler: Just re-render sidebar to apply 'active' class from state
+                renderSidebar();
+
+                // Update Header
+                document.getElementById('current-project-name').innerText = project.title;
+                document.getElementById('current-project-phase').innerText = tool.isGateway ? '里程碑节点' : '进行中';
+                document.getElementById('step-title').innerText = tool.name;
+                document.getElementById('step-desc').innerText = `正在编辑: ${project.title} / ${tool.name}`;
+
+                // Update AI Context
+                addAiMessage(`已切换到 **${tool.name}** 任务。我是你的 AI 顾问，有什么可以帮你的？`);
+
+                // Render Content
+                const container = document.getElementById('main-content-area');
+                container.innerHTML = '';
+                
+                if (renderFunctions[tool.id]) {
+                    renderFunctions[tool.id](container, project);
+                } else if (tool.isGateway) {
+                    renderFunctions.gateway(container, project, tool.id, tool.name);
+                } else {
+                    container.innerHTML = '<div class="p-10 text-center text-gray-400">工具开发中...</div>';
+                }
+            }
+
+            // AI Chat Mock
+            window.sendAiMsg = function() {
+                const input = document.getElementById('ai-input');
+                const text = input.value;
+                if (!text) return;
+                addAiMessage(text, true);
+                input.value = '';
+                setTimeout(() => addAiMessage("这是一个很棒的想法！基于当前的探究目标，我建议你可以进一步考虑..."), 1000);
+            }
+
+            function addAiMessage(text, isUser = false) {
+                const box = document.getElementById('ai-chat-history');
+                const div = document.createElement('div');
+                div.className = `flex gap-3 ${isUser ? 'flex-row-reverse' : ''}`;
+                div.innerHTML = `
+                    <div class="w-8 h-8 rounded-full ${isUser ? 'bg-gray-200' : 'bg-indigo-600'} flex items-center justify-center text-xs text-${isUser?'gray-600':'white'} shrink-0">${isUser?'ME':'AI'}</div>
+                    <div class="${isUser ? 'bg-gray-800 text-white' : 'bg-white border border-gray-200 text-gray-700'} p-3 rounded-2xl rounded-${isUser?'tr':'tl'}-none text-sm shadow-sm max-w-[85%] leading-relaxed">
+                        ${marked.parse(text)}
+                    </div>
+                `;
+                box.appendChild(div);
+                box.scrollTop = box.scrollHeight;
+            }
+            
+            window.logout = function() {
+                window.auth.clearAuth();
+                window.location.href = 'login.html';
+            }
+            
+            // Create Handler
+             window.handleCreate = async function(e) {
+                e.preventDefault();
+                const btn = e.target.querySelector('button[type="submit"]');
+                const originalText = btn.innerText;
+                btn.disabled = true; btn.innerText = '创建中...';
+
+                try {
+                    const formData = new FormData(e.target);
+                    const data = Object.fromEntries(formData.entries());
+                    data.memberIds = [];
+                    const res = await apiFetch('/projects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+                    if (!res.ok) throw new Error('Failed');
+                    const resData = await res.json();
+                    
+                    // Reload and select
+                    await loadProjects();
+                    selectProject(resData.project.id);
+                    document.getElementById('createModal').classList.add('hidden');
+
+                } catch (err) {
+                    alert(err.message);
+                } finally {
+                    btn.disabled = false; btn.innerText = originalText;
+                }
+            }
+
+            // Start
+            init();
+
+        })();
+    </script>
+</body>
+</html>
