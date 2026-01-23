@@ -319,9 +319,21 @@
                         </div>
                     </div>
                     
-                    <!-- External Tool -->
-                    <div class="flex-1 relative bg-white min-w-0">
-                        <iframe src="http://drawio.reopeninnolab.com/zh" class="w-full h-full border-0"></iframe>
+                    <!-- External Tool Launcher -->
+                    <div class="flex-1 relative bg-white min-w-0 flex flex-col items-center justify-center p-10 text-center">
+                        <div class="w-24 h-24 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center text-4xl mb-6 shadow-sm">
+                            <i class="fas fa-project-diagram"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-gray-900 mb-2">架构绘图工作台</h2>
+                        <p class="text-gray-500 max-w-md mb-8 leading-relaxed">
+                            为了提供最佳的绘图体验，请点击下方按钮在独立窗口中打开 Draw.io。<br>
+                            <span class="text-sm bg-yellow-50 text-yellow-700 px-2 py-1 rounded mt-2 inline-block">
+                                <i class="fas fa-exclamation-triangle mr-1"></i> 完成绘制后，请务必 <strong>导出图片</strong> 并回到此处上传。
+                            </span>
+                        </p>
+                        <a href="http://drawio.reopeninnolab.com/zh" target="_blank" class="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg transform hover:-translate-y-0.5 transition flex items-center">
+                            <i class="fas fa-external-link-alt mr-2"></i> 前往 Draw.io 绘图
+                        </a>
                     </div>
                 </div>`;
             },
