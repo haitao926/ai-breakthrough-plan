@@ -122,7 +122,7 @@
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-1 overflow-y-auto bg-gray-50 p-8 relative flex flex-col">
+    <main class="flex-1 overflow-y-auto bg-gray-50 p-4 md:p-6 relative flex flex-col">
         
         <!-- Welcome / Empty State -->
         <div id="welcome-view" class="h-full flex flex-col items-center justify-center text-center">
@@ -272,7 +272,7 @@
                 c.innerHTML = `
                 <div class="flex h-full">
                     <!-- Tasks Sidebar -->
-                    <div class="w-72 bg-gray-50 border-r border-gray-200 flex flex-col p-4 shrink-0 overflow-y-auto">
+                    <div class="w-56 bg-gray-50 border-r border-gray-200 flex flex-col p-4 shrink-0 overflow-y-auto">
                         <div class="mb-6">
                             <h3 class="font-bold text-gray-800 mb-1">架构设计任务</h3>
                             <p class="text-xs text-gray-500">请完成以下 3 张关键图表</p>
@@ -280,26 +280,26 @@
                         
                         <div class="space-y-3 flex-1">
                             ${tasks.map((t, idx) => `
-                            <button onclick="setActiveArchTask(this)" class="arch-task-btn w-full text-left p-4 rounded-xl border ${idx===0 ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-white text-gray-600 border-transparent'} shadow-sm hover:shadow-md transition group relative overflow-hidden">
+                            <button onclick="setActiveArchTask(this)" class="arch-task-btn w-full text-left p-3 rounded-xl border ${idx===0 ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-white text-gray-600 border-transparent'} shadow-sm hover:shadow-md transition group relative overflow-hidden">
                                 <div class="relative z-10">
-                                    <div class="font-bold text-sm mb-1">${t.label}</div>
-                                    <div class="text-xs opacity-80">${t.desc}</div>
+                                    <div class="font-bold text-sm mb-0.5 truncate" title="${t.label}">${t.label}</div>
+                                    <div class="text-[10px] opacity-80 leading-tight">${t.desc}</div>
                                 </div>
                                 <div class="absolute right-0 top-0 p-2 opacity-0 group-hover:opacity-100 transition text-indigo-400">
-                                    <i class="fas fa-pen"></i>
+                                    <i class="fas fa-pen text-xs"></i>
                                 </div>
                             </button>
                             `).join('')}
                         </div>
 
-                        <div class="mt-6 bg-blue-50 p-4 rounded-xl border border-blue-100 text-xs text-blue-800">
-                            <i class="fas fa-info-circle mr-1 font-bold"></i> <strong>提示：</strong>
-                            <p class="mt-1 leading-relaxed">请使用右侧工具绘制。绘制完成后，请务必<strong>导出图片 (Export Image)</strong>。在后续的“立项评审”环节中，你需要上传这三张图作为佐证材料。</p>
+                        <div class="mt-6 bg-blue-50 p-3 rounded-xl border border-blue-100 text-[10px] text-blue-800 leading-relaxed">
+                            <i class="fas fa-info-circle mr-1 font-bold"></i>
+                            绘制完成后，请务必<strong>导出图片</strong>，以便在后续评审中使用。
                         </div>
                     </div>
                     
                     <!-- External Tool -->
-                    <div class="flex-1 relative bg-white">
+                    <div class="flex-1 relative bg-white min-w-0">
                         <iframe src="http://drawio.reopeninnolab.com/zh" class="w-full h-full border-0"></iframe>
                     </div>
                 </div>`;
