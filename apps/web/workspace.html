@@ -238,6 +238,25 @@
     <script src="js/auth.js"></script>
     <script>
         // Definition of Tools per Stage
+        const escapeHtml = (value) => String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+
+        const renderMarkdown = (value) => {
+            const safe = escapeHtml(value);
+            if (window.marked && typeof window.marked.parse === 'function') {
+                return window.marked.parse(safe);
+            }
+            return safe;
+        };
+
+        if (window.marked && typeof window.marked.setOptions === 'function') {
+            window.marked.setOptions({ breaks: true, headerIds: false, mangle: false });
+        }
+
         const stageTools = {
             'inception': [
                 { id: 'literature_review', name: '文献阅读', icon: 'fas fa-book' },
@@ -643,8 +662,8 @@
 
                 renderWbs();
             },
-            kanban: function(c) {
-                c.innerHTML = `<iframe src="tools/kanban.html" class="w-full h-full border-0"></iframe>`;
+            kanban: function(c, p) {
+                c.innerHTML = `<iframe src="tools/kanban.html?project=${p.id}" class="w-full h-full border-0"></iframe>`;
             },
             devlog: async function(c, p) {
                 c.innerHTML = `<div class="flex flex-col h-full p-6">
@@ -667,7 +686,7 @@
                                 <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3 text-xs font-bold text-gray-500">ME</div>
                                 <div><div class="text-sm font-bold text-gray-900">我</div><div class="text-xs text-gray-400">${moment(l.created_at).fromNow()}</div></div>
                             </div>
-                            <div class="prose prose-sm text-gray-700">${marked.parse(l.content)}</div>
+                            <div class="prose prose-sm text-gray-700">${renderMarkdown(l.content)}</div>
                         </div>
                     `).join('') : '<div class="text-center text-gray-400 py-10">暂无日志，开始记录第一条吧！</div>';
                 } catch(e) {}
@@ -698,6 +717,210 @@
                         </tr>`).join('') : '<tr><td colspan="3" class="p-10 text-center text-gray-400">暂无申请记录</td></tr>';
                 }catch(e){}
             },
+            delivery_proposal: function(c, p) {
+                const key = `ai_course_delivery_proposal_${p.id}`;
+                c.innerHTML = `
+                <div class="h-full overflow-y-auto p-6">
+                    <div class="max-w-4xl mx-auto space-y-6">
+                        <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                            <div class="flex items-center justify-between mb-6">
+                                <div>
+                                    <h3 class="text-xl font-bold text-gray-900">结题报告生成</h3>
+                                    <p class="text-xs text-gray-500 mt-1">填写关键信息，系统会自动保存草稿。</p>
+                                </div>
+                                <span id="proposal-save-status" class="text-xs text-gray-400">自动保存中...</span>
+                            </div>
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 mb-2">项目标题</label>
+                                    <input id="proposal-title" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="项目完整名称">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 mb-2">团队分工</label>
+                                    <input id="proposal-team" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="成员 + 职责">
+                                </div>
+                            </div>
+                            <div class="mt-4">
+                                <label class="block text-xs font-bold text-gray-500 mb-2">报告摘要</label>
+                                <textarea id="proposal-summary" class="w-full h-24 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none" placeholder="用 3-5 句话概括项目价值与成果。"></textarea>
+                            </div>
+                            <div class="mt-4 grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 mb-2">研究过程</label>
+                                    <textarea id="proposal-process" class="w-full h-28 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none" placeholder="调研、设计、实验、迭代的关键步骤。"></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 mb-2">核心成果</label>
+                                    <textarea id="proposal-results" class="w-full h-28 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none" placeholder="功能、数据指标、产品形态、论文等。"></textarea>
+                                </div>
+                            </div>
+                            <div class="mt-4">
+                                <label class="block text-xs font-bold text-gray-500 mb-2">数据证据 / 佐证材料</label>
+                                <textarea id="proposal-evidence" class="w-full h-24 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none" placeholder="列出关键数据、测试截图或报告附件。"></textarea>
+                            </div>
+                            <div class="mt-4">
+                                <label class="block text-xs font-bold text-gray-500 mb-2">反思与改进</label>
+                                <textarea id="proposal-reflection" class="w-full h-24 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none" placeholder="哪些地方做得好？哪些环节还需优化？"></textarea>
+                            </div>
+                        </div>
+                        <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 text-xs text-indigo-700">
+                            <i class="fas fa-lightbulb mr-1"></i> 提示：完成后可将内容整理到 PPT 或正式结题报告中。
+                        </div>
+                    </div>
+                </div>`;
+
+                const fieldMap = {
+                    title: 'proposal-title',
+                    team: 'proposal-team',
+                    summary: 'proposal-summary',
+                    process: 'proposal-process',
+                    results: 'proposal-results',
+                    evidence: 'proposal-evidence',
+                    reflection: 'proposal-reflection'
+                };
+
+                let saved = {};
+                try {
+                    saved = JSON.parse(localStorage.getItem(key) || '{}') || {};
+                } catch (e) {
+                    saved = {};
+                }
+
+                Object.entries(fieldMap).forEach(([field, id]) => {
+                    const el = document.getElementById(id);
+                    if (el && saved[field]) {
+                        el.value = saved[field];
+                    }
+                });
+
+                const statusEl = document.getElementById('proposal-save-status');
+                let statusTimer = null;
+                const save = () => {
+                    const data = {};
+                    Object.entries(fieldMap).forEach(([field, id]) => {
+                        const el = document.getElementById(id);
+                        data[field] = el ? el.value : '';
+                    });
+                    localStorage.setItem(key, JSON.stringify(data));
+                    if (!statusEl) return;
+                    statusEl.textContent = '已保存';
+                    statusEl.classList.add('text-green-500');
+                    clearTimeout(statusTimer);
+                    statusTimer = setTimeout(() => {
+                        statusEl.textContent = '自动保存中...';
+                        statusEl.classList.remove('text-green-500');
+                    }, 1000);
+                };
+
+                Object.values(fieldMap).forEach((id) => {
+                    const el = document.getElementById(id);
+                    if (el) el.addEventListener('input', save);
+                });
+            },
+            delivery_final: function(c, p) {
+                const key = `ai_course_delivery_final_${p.id}`;
+                c.innerHTML = `
+                <div class="h-full overflow-y-auto p-6">
+                    <div class="max-w-4xl mx-auto space-y-6">
+                        <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                            <div class="flex items-center justify-between mb-6">
+                                <div>
+                                    <h3 class="text-xl font-bold text-gray-900">模拟答辩准备</h3>
+                                    <p class="text-xs text-gray-500 mt-1">记录答辩脚本、问题清单与演示检查。</p>
+                                </div>
+                                <span id="defense-save-status" class="text-xs text-gray-400">自动保存中...</span>
+                            </div>
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 mb-2">答辩脚本</label>
+                                    <textarea id="defense-script" class="w-full h-28 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none" placeholder="3-5 分钟自我陈述的核心逻辑。"></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 mb-2">核心数据与亮点</label>
+                                    <textarea id="defense-highlights" class="w-full h-28 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none" placeholder="关键指标、创新点、成果展示。"></textarea>
+                                </div>
+                            </div>
+                            <div class="mt-4">
+                                <label class="block text-xs font-bold text-gray-500 mb-2">常见问题清单</label>
+                                <textarea id="defense-questions" class="w-full h-24 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none" placeholder="准备评委可能提出的问题与回答要点。"></textarea>
+                            </div>
+                            <div class="mt-4">
+                                <label class="block text-xs font-bold text-gray-500 mb-2">演示检查</label>
+                                <div class="grid md:grid-cols-2 gap-3 text-sm text-gray-700">
+                                    <label class="flex items-center gap-2"><input id="defense-check-demo" type="checkbox" class="rounded text-indigo-600"> 演示功能可运行</label>
+                                    <label class="flex items-center gap-2"><input id="defense-check-data" type="checkbox" class="rounded text-indigo-600"> 数据图表已准备</label>
+                                    <label class="flex items-center gap-2"><input id="defense-check-time" type="checkbox" class="rounded text-indigo-600"> 时间控制在 5 分钟内</label>
+                                    <label class="flex items-center gap-2"><input id="defense-check-backup" type="checkbox" class="rounded text-indigo-600"> 备用方案/备份材料</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-amber-50 border border-amber-100 rounded-2xl p-4 text-xs text-amber-700">
+                            <i class="fas fa-microphone mr-1"></i> 建议：完成后找同伴进行一次完整的模拟答辩。
+                        </div>
+                    </div>
+                </div>`;
+
+                const fieldMap = {
+                    script: 'defense-script',
+                    highlights: 'defense-highlights',
+                    questions: 'defense-questions'
+                };
+                const checklistIds = ['defense-check-demo', 'defense-check-data', 'defense-check-time', 'defense-check-backup'];
+
+                let saved = {};
+                try {
+                    saved = JSON.parse(localStorage.getItem(key) || '{}') || {};
+                } catch (e) {
+                    saved = {};
+                }
+
+                Object.entries(fieldMap).forEach(([field, id]) => {
+                    const el = document.getElementById(id);
+                    if (el && saved[field]) {
+                        el.value = saved[field];
+                    }
+                });
+
+                checklistIds.forEach((id) => {
+                    const el = document.getElementById(id);
+                    if (el && saved.checklist && typeof saved.checklist[id] === 'boolean') {
+                        el.checked = saved.checklist[id];
+                    }
+                });
+
+                const statusEl = document.getElementById('defense-save-status');
+                let statusTimer = null;
+                const save = () => {
+                    const data = {};
+                    Object.entries(fieldMap).forEach(([field, id]) => {
+                        const el = document.getElementById(id);
+                        data[field] = el ? el.value : '';
+                    });
+                    data.checklist = {};
+                    checklistIds.forEach((id) => {
+                        const el = document.getElementById(id);
+                        data.checklist[id] = el ? el.checked : false;
+                    });
+                    localStorage.setItem(key, JSON.stringify(data));
+                    if (!statusEl) return;
+                    statusEl.textContent = '已保存';
+                    statusEl.classList.add('text-green-500');
+                    clearTimeout(statusTimer);
+                    statusTimer = setTimeout(() => {
+                        statusEl.textContent = '自动保存中...';
+                        statusEl.classList.remove('text-green-500');
+                    }, 1000);
+                };
+
+                Object.values(fieldMap).forEach((id) => {
+                    const el = document.getElementById(id);
+                    if (el) el.addEventListener('input', save);
+                });
+                checklistIds.forEach((id) => {
+                    const el = document.getElementById(id);
+                    if (el) el.addEventListener('change', save);
+                });
+            },
             gateway: function(c, p, type, label) {
                 // Identify the current phase based on the gateway type
                 let phaseTasks = [];
@@ -716,7 +939,10 @@
                         'goal_definition': `ai_course_charter_${p.id}`,
                         'wbs_planning': `ai_course_wbs_${p.id}`, 
                         'kanban': `ai_course_kanban_${p.id}`,
-                        'devlog': `ai_course_devlog_${p.id}`
+                        'devlog': `ai_course_devlog_${p.id}`,
+                        'resources': `ai_course_resources_${p.id}`,
+                        'delivery_proposal': `ai_course_delivery_proposal_${p.id}`,
+                        'delivery_final': `ai_course_delivery_final_${p.id}`
                     };
 
                     if (taskId === 'architecture') {
@@ -734,10 +960,19 @@
                 };
 
                 const renderDeliverableItem = (task) => {
+                    const evidenceKey = `ai_gateway_upload_${p.id}_${task.id}`;
+                    const evidenceName = localStorage.getItem(evidenceKey);
+                    const hasEvidence = Boolean(evidenceName);
                     const hasData = checkStatus(task.id);
-                    const statusHtml = hasData 
-                        ? `<span class="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded border border-green-100"><i class="fas fa-check mr-1"></i>已检测到数据</span>` 
-                        : `<span class="text-xs font-bold text-gray-400 bg-gray-50 px-2 py-1 rounded border border-gray-100">待提交</span>`;
+                    const displayName = evidenceName && evidenceName.length > 20
+                        ? `${evidenceName.slice(0, 20)}...`
+                        : evidenceName;
+                    const safeName = displayName ? escapeHtml(displayName) : '';
+                    const statusHtml = hasEvidence
+                        ? `<span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded border border-indigo-100"><i class="fas fa-cloud-upload-alt mr-1"></i>已上传：${safeName}</span>`
+                        : (hasData
+                            ? `<span class="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded border border-green-100"><i class="fas fa-check mr-1"></i>已检测到数据</span>`
+                            : `<span class="text-xs font-bold text-gray-400 bg-gray-50 px-2 py-1 rounded border border-gray-100">待提交</span>`);
                     
                     return `
                     <div class="bg-white p-4 rounded-xl border border-gray-200 flex items-center justify-between shadow-sm hover:shadow-md transition group">
@@ -754,7 +989,7 @@
                             ${statusHtml}
                             <label class="cursor-pointer px-4 py-2 text-sm font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition flex items-center shadow-sm hover:shadow active:scale-95 select-none">
                                 <i class="fas fa-cloud-upload-alt mr-2 text-lg"></i> 上传佐证
-                                <input type="file" class="hidden" onchange="markAsUploaded(this, '${task.id}')">
+                                <input type="file" class="hidden" onchange="markAsUploaded(this, '${p.id}', '${task.id}')">
                             </label>
                         </div>
                     </div>`;
@@ -820,6 +1055,7 @@
         window.submitRes = async (pid) => {
             const n=document.getElementById('res-name').value; if(!n)return;
             await window.auth.apiFetch(`/projects/${pid}/resources`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_name:n,quantity:1})});
+            localStorage.setItem(`ai_course_resources_${pid}`, 'true');
             const dummyC = document.getElementById('main-content-area');
             renderFunctions.resources(dummyC, {id: pid});
         };
@@ -830,12 +1066,17 @@
         };
         
         // New Gateway Handlers
-        window.markAsUploaded = (input, taskId) => {
+        window.markAsUploaded = (input, pid, taskId) => {
             if (input.files && input.files[0]) {
+                const evidenceKey = `ai_gateway_upload_${pid}_${taskId}`;
+                localStorage.setItem(evidenceKey, input.files[0].name);
                 const container = input.closest('.group');
                 const statusEl = container.querySelector('span'); // The status span
-                statusEl.className = "text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded border border-green-100";
-                statusEl.innerHTML = `<i class="fas fa-check-circle mr-1"></i> 已上传: ${input.files[0].name.substring(0, 10)}...`;
+                const displayName = input.files[0].name.length > 20
+                    ? `${input.files[0].name.slice(0, 20)}...`
+                    : input.files[0].name;
+                statusEl.className = "text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded border border-indigo-100";
+                statusEl.innerHTML = `<i class="fas fa-check-circle mr-1"></i> 已上传：${escapeHtml(displayName)}`;
             }
         };
 
@@ -1064,14 +1305,14 @@
             }
 
             // AI Chat Mock
-            window.sendAiMsg = function() {
-                const input = document.getElementById('ai-input');
-                const text = input.value;
-                if (!text) return;
-                addAiMessage(text, true);
-                input.value = '';
-                setTimeout(() => addAiMessage("这是一个很棒的想法！基于当前的探究目标，我建议你可以进一步考虑..."), 1000);
-            }
+        window.sendAiMsg = function() {
+            const input = document.getElementById('ai-input');
+            const text = input.value.trim();
+            if (!text) return;
+            addAiMessage(text, true);
+            input.value = '';
+            setTimeout(() => addAiMessage("这是一个很棒的想法！基于当前的探究目标，我建议你可以进一步考虑..."), 1000);
+        }
 
             function addAiMessage(text, isUser = false) {
                 const box = document.getElementById('ai-chat-history');
@@ -1080,7 +1321,7 @@
                 div.innerHTML = `
                     <div class="w-8 h-8 rounded-full ${isUser ? 'bg-gray-200' : 'bg-indigo-600'} flex items-center justify-center text-xs text-${isUser?'gray-600':'white'} shrink-0">${isUser?'ME':'AI'}</div>
                     <div class="${isUser ? 'bg-gray-800 text-white' : 'bg-white border border-gray-200 text-gray-700'} p-3 rounded-2xl rounded-${isUser?'tr':'tl'}-none text-sm shadow-sm max-w-[85%] leading-relaxed">
-                        ${marked.parse(text)}
+                        ${renderMarkdown(text)}
                     </div>
                 `;
                 box.appendChild(div);
