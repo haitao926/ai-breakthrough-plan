@@ -1,0 +1,62 @@
+[
+    {
+        "id": "featured_1",
+        "category": "Tech Innovation",
+        "title": "未来发明家",
+        "subtitle": "Tech Innovation",
+        "color": "blue",
+        "icon": "fas fa-rocket",
+        "subjects": "STEM | 计算机科学 | 物理 | 社会学",
+        "keywords": ["社区生活", "智能技术", "城市设施", "空间优化"],
+        "examples": [
+            {
+                "question": "2150年的城市还会堵车吗？",
+                "project": "Minecraft为载体的未来城市理想交通系统设计"
+            },
+            {
+                "question": "边打游戏边矫正体态？",
+                "project": "通过推广 VR 游戏预防中国青少年的脊柱侧弯"
+            }
+        ]
+    },
+    {
+        "id": "featured_2",
+        "category": "Environmental Protection",
+        "title": "地球守护者",
+        "subtitle": "Environmental Protection",
+        "color": "green",
+        "icon": "fas fa-leaf",
+        "subjects": "生命科学 | 环境学 | 化学 | 天文地理",
+        "keywords": ["气候变化", "生物多样性", "环保行动", "可持续发展"],
+        "examples": [
+            {
+                "question": "枯萎的鲜花只能进垃圾桶？",
+                "project": "通过推广小规模堆肥方法实现观赏植物的可循环利用"
+            },
+            {
+                "question": "抽Labubu只是一时爽？",
+                "project": "延续惊喜的可种植植物种子盲盒设计"
+            }
+        ]
+    },
+    {
+        "id": "featured_3",
+        "category": "Cultural Heritage",
+        "title": "文化续梦人",
+        "subtitle": "Cultural Heritage",
+        "color": "pink",
+        "icon": "fas fa-palette",
+        "subjects": "文化与艺术 | 心理学 | 传播学 | 文学",
+        "keywords": ["传统工艺", "民俗习惯", "历史建筑", "文化传播"],
+        "examples": [
+            {
+                "question": "唐朝的“黑科技”现在还能打吗？",
+                "project": "重拾被遗忘的“非遗”：重庆秀山花灯的传承与创新"
+            },
+            {
+                "question": "玩捏捏乐也能保护文化？",
+                "project": "“古法”解压：鲁班锁益智解压玩具的设计"
+            }
+        ]
+    }
+]

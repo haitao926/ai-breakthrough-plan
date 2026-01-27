@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>未来的CEO：课程介绍</title>
+<style>
+  :root {
+      --primary-color: #3498db;
+      --secondary-color: #2c3e50;
+      --accent-pm: #e67e22;
+      --accent-pjm: #27ae60;
+      --bg-color: #f0f2f5;
+      --card-bg: #ffffff;
+      --text-color: #333;
+  }
+  body {
+      margin: 0;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background-color: var(--bg-color);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+  }
+  .slide-container {
+      width: 90%;
+      max-width: 1000px;
+      height: 85vh;
+      background: var(--card-bg);
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+  }
+  
+  .slide {
+      flex: 1;
+      padding: 60px;
+      box-sizing: border-box;
+      display: none; /* Hidden by default */
+      flex-direction: column;
+      overflow-y: auto;
+      animation: fadeIn 0.5s ease;
+  }
+  
+  .slide.active {
+      display: flex;
+  }
+
+  @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+  }
+
+  h1 { font-size: 2.5em; color: var(--secondary-color); margin-bottom: 20px; border-bottom: 4px solid var(--primary-color); padding-bottom: 15px; display: inline-block;}
+  h2 { font-size: 1.8em; color: var(--secondary-color); margin-top: 30px; margin-bottom: 15px; }
+  p { font-size: 1.2em; line-height: 1.6; color: #555; margin-bottom: 15px; }
+  ul { font-size: 1.2em; line-height: 1.8; color: #555; padding-left: 30px; }
+  li { margin-bottom: 10px; }
+  
+  .highlight { color: var(--primary-color); font-weight: bold; }
+  .pm-text { color: var(--accent-pm); font-weight: bold; }
+  .pjm-text { color: var(--accent-pjm); font-weight: bold; }
+
+  .box-container {
+      display: flex;
+      gap: 20px;
+      margin-top: 30px;
+      flex-wrap: wrap;
+  }
+  .box {
+      flex: 1;
+      min-width: 300px;
+      background: #f8f9fa;
+      padding: 25px;
+      border-radius: 12px;
+      border-left: 5px solid #ccc;
+  }
+  .box.pm { border-left-color: var(--accent-pm); background: #fdf2e9; }
+  .box.pjm { border-left-color: var(--accent-pjm); background: #e9f7ef; }
+  
+  .box h3 { margin-top: 0; font-size: 1.4em; }
+
+  .controls {
+      padding: 20px 40px;
+      background: #fff;
+      border-top: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+  }
+  
+  button {
+      padding: 12px 24px;
+      background: var(--secondary-color);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1em;
+      transition: background 0.2s;
+  }
+  button:hover { background: var(--primary-color); }
+  button:disabled { background: #ccc; cursor: not-allowed; }
+
+  .progress { font-size: 1.1em; color: #777; font-weight: bold; }
+
+  /* Cover Slide Specifics */
+  .slide.cover {
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  }
+  .slide.cover h1 { border: none; font-size: 3.5em; text-shadow: 2px 2px 4px rgba(0,0,0,0.1); }
+  .slide.cover p { font-size: 1.5em; max-width: 800px; }
+
+</style>
+</head>
+<body>
+
+<div class="slide-container">
+
+    <!-- Slide 1: Cover -->
+    <div class="slide cover active">
+        <h1>未来的 CEO</h1>
+        <p>用 <span class="pm-text">产品思维</span> + <span class="pjm-text">项目思维</span><br>通关高中三年</p>
+        <p style="font-size: 1em; color: #666; margin-top: 40px;">—— 高中生职业素养启蒙课程</p>
+    </div>
+
+    <!-- Slide 2: Why this course? -->
+    <div class="slide">
+        <h1>为什么要有这门课？</h1>
+        <p>高中生常面临的困惑：</p>
+        <ul>
+            <li>“我为什么要学这个？有什么用？”（缺乏价值感）</li>
+            <li>“事情太多做不完，考试复习一团乱。”（缺乏条理性）</li>
+            <li>“小组作业没人听我的，最后只能自己干。”（缺乏领导力）</li>
+        </ul>
+        <div class="box-container">
+            <div class="box">
+                <h3>🚫 传统的解决方式</h3>
+                <p>勤奋、熬夜、死记硬背、单打独斗。</p>
+            </div>
+            <div class="box pjm">
+                <h3>✅ 我们的解决方式</h3>
+                <p>像 <span class="pm-text">CEO</span> 一样思考：<br>
+                用 <strong>产品思维</strong> 发现价值<br>
+                用 <strong>项目思维</strong> 掌控进度</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 3: Core Concepts -->
+    <div class="slide">
+        <h1>核心双引擎</h1>
+        <p>我们将教会学生两个核心角色的思维模型：</p>
+        <div class="box-container">
+            <div class="box pm">
+                <h3 class="pm-text">产品经理 (PM)</h3>
+                <p><strong>核心任务：</strong>做正确的事 (Do the right thing)</p>
+                <p><strong>关键思维：</strong>用户思维、痛点挖掘、价值导向。</p>
+                <p><strong>口号：</strong>“万物皆产品”</p>
+            </div>
+            <div class="box pjm">
+                <h3 class="pjm-text">项目经理 (PJM)</h3>
+                <p><strong>核心任务：</strong>正确地做事 (Do the thing right)</p>
+                <p><strong>关键思维：</strong>结构化思维、目标拆解、风险管理。</p>
+                <p><strong>口号：</strong>“万事皆项目”</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 4: Curriculum Overview -->
+    <div class="slide">
+        <h1>课程全景图 (Syllabus)</h1>
+        <p>本课程共 4 课时，环环相扣：</p>
+        <ul>
+            <li><strong>🟢 第一课：启蒙篇 —— 重新定义世界</strong>
+                <br>打破刻板印象，建立“产品”与“项目”的基本认知。
+            </li>
+            <li><strong>🟠 第二课：产品经理篇 —— 像乔布斯一样思考</strong>
+                <br>学习移情，通过“同理心地图”发现身边同学和老师的痛点。
+            </li>
+            <li><strong>🔵 第三课：项目经理篇 —— 掌控混乱的艺术</strong>
+                <br>学习拆解，利用 WBS (工作分解结构) 处理复杂的考试与活动。
+            </li>
+            <li><strong>🟣 第四课：整合篇 —— 做自己人生的 CEO</strong>
+                <br>双剑合璧，制定高中三年的个人成长战略。
+            </li>
+        </ul>
+    </div>
+
+    <!-- Slide 5: Deep Dive - PM -->
+    <div class="slide">
+        <h1 class="pm-text">模块一：产品思维实战</h1>
+        <p>我们不讲空洞的理论，直接上手实战：</p>
+        <div class="box">
+            <h3>实战案例：拯救“收作业”灾难</h3>
+            <p><strong>背景：</strong>课代表每天收作业都很痛苦，找不到人、本子乱。</p>
+            <p><strong>学生任务：</strong>设计一套新的“交作业系统/流程”。</p>
+            <p><strong>引导思考：</strong></p>
+            <ul>
+                <li>谁是用户？（课代表、老师、同学）</li>
+                <li>痛点是什么？（怕麻烦、怕被记名字）</li>
+                <li><strong>MVP 方案：</strong>比如设计一个“九宫格分类收纳箱”。</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Slide 6: Deep Dive - PJM -->
+    <div class="slide">
+        <h1 class="pjm-text">模块二：项目思维实战</h1>
+        <p>教会学生如何把“不可能”变成“可能”：</p>
+        <div class="box">
+            <h3>实战案例：策划“18岁成人礼旅行”</h3>
+            <p><strong>背景：</strong>高考后，小组预算5000元，去陌生城市玩3天。</p>
+            <p><strong>学生任务：</strong>画出项目计划图 (WBS)。</p>
+            <p><strong>引导工具：</strong></p>
+            <ul>
+                <li><strong>SMART 原则：</strong>目标必须清晰可衡量。</li>
+                <li><strong>限制条件：</strong>钱（5000元）和 时间（3天）是死线。</li>
+                <li><strong>风险预案：</strong>如果没买到票怎么办？如果钱花超了怎么办？</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Slide 7: Capstone Project -->
+    <div class="slide">
+        <h1>期末大作业：AI 黑客松</h1>
+        <p><strong>挑战：</strong>2小时内，利用 AI 工具从 0 到 1 上线一个网页应用。</p>
+        <div class="box-container">
+            <div class="box">
+                <h3>角色分工</h3>
+                <ul>
+                    <li><strong>PM (产品经理)：</strong>决定做什么功能，更要决定<span style="color:red">不做</span>什么功能（克制）。</li>
+                    <li><strong>PJM (项目经理)：</strong>把需求拆解成 Prompt，分步喂给 AI，并验收结果。</li>
+                </ul>
+            </div>
+            <div class="box">
+                <h3>预期成果</h3>
+                <p>学生将不再是代码的奴隶，而是 AI 的指挥官。他们将亲手创造出：番茄钟、电子木鱼、随机决定器等实用小工具。</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 8: Teacher's Value -->
+    <div class="slide">
+        <h1>教师如何使用本套件</h1>
+        <p>我们为您准备了完整的教学支持：</p>
+        <ul>
+            <li>📄 <strong>课程大纲 (Curriculum)：</strong> 详细的逐字稿流程。</li>
+            <li>🃏 <strong>知识卡片 (Cheat Sheet)：</strong> 核心概念的“一句话解释”，方便学生背诵。</li>
+            <li>🛠 <strong>实战工单 (Worksheet)：</strong> 打印即用的课堂练习纸，包含“旅行策划表”和“痛点分析表”。</li>
+            <li>💻 <strong>PPT 演示文稿：</strong> 就是您现在看到的这份，支持课堂直接投屏。</li>
+        </ul>
+    </div>
+
+    <!-- Slide 9: Conclusion -->
+    <div class="slide cover">
+        <h1>结语</h1>
+        <p>高中不仅是知识的积累，更是思维的升级。</p>
+        <br>
+        <p><strong>“世界是一个巨大的游乐场，<br>用产品思维去发现美好，<br>用项目思维去实现梦想。”</strong></p>
+    </div>
+
+</div>
+
+<div class="controls">
+    <button id="prevBtn" onclick="changeSlide(-1)">← 上一页</button>
+    <div class="progress" id="progress">1 / 9</div>
+    <button id="nextBtn" onclick="changeSlide(1)">下一页 →</button>
+</div>
+
+<script>
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.slide');
+    const progressEl = document.getElementById('progress');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+
+    function updateSlide() {
+        slides.forEach((slide, index) => {
+            slide.classList.remove('active');
+            if (index === currentSlide) {
+                slide.classList.add('active');
+            }
+        });
+        
+        progressEl.textContent = `${currentSlide + 1} / ${slides.length}`;
+        
+        prevBtn.disabled = currentSlide === 0;
+        nextBtn.disabled = currentSlide === slides.length - 1;
+    }
+
+    function changeSlide(direction) {
+        const newIndex = currentSlide + direction;
+        if (newIndex >= 0 && newIndex < slides.length) {
+            currentSlide = newIndex;
+            updateSlide();
+        }
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === "ArrowRight" || e.key === " " || e.key === "Enter") changeSlide(1);
+        if (e.key === "ArrowLeft") changeSlide(-1);
+    });
+
+    updateSlide();
+</script>
+
+</body>
+</html>

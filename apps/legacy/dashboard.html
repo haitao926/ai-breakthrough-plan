@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>项目中心 | Project Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #f3f4f6; }
+        
+        .hub-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .hub-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- 顶部导航 -->
+    <nav class="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center shrink-0">
+        <div class="flex items-center gap-4">
+            <a href="index.html" class="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-xl flex items-center justify-center text-gray-500 transition">
+                <i class="fas fa-home"></i>
+            </a>
+            <div>
+                <h1 class="font-extrabold text-xl text-gray-900 tracking-tight" id="projectTitle">未命名项目</h1>
+                <p class="text-xs text-gray-500 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                    <span id="syncStatus">本地模式</span>
+                </p>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <div class="text-right hidden sm:block">
+                <div class="text-sm font-bold text-gray-800" id="userName">我</div>
+                <div class="text-xs text-gray-500">项目负责人</div>
+            </div>
+            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=local" id="userAvatar" class="w-10 h-10 rounded-full border-2 border-white shadow-sm bg-gray-100">
+            <button onclick="toggleLogin()" class="ml-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition shadow-sm">
+                <i class="fas fa-cloud-upload-alt mr-2"></i> 同步
+            </button>
+        </div>
+    </nav>
+
+    <!-- 主体内容 -->
+    <main class="flex-1 max-w-7xl mx-auto w-full p-8">
+        
+        <!-- 欢迎语 (Simplified) -->
+        <div class="mb-10">
+            <h2 class="text-3xl font-bold text-gray-800 mb-2">项目实战中心</h2>
+            <p class="text-gray-500">Project 6: Capstone Workspace</p>
+        </div>
+
+        <!-- 2. 常用工具 (Quick Tools) -->
+        <div class="mb-6">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center"><i class="fas fa-toolbox text-gray-600 mr-2"></i> 常用工具</h3>
+        </div>
+
+        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            
+            <!-- Tool 1: Charter -->
+            <a href="tools/charter.html" target="_blank" class="hub-card bg-white rounded-xl p-5 border border-gray-100 group hover:border-purple-300">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-10 h-10 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center text-xl">
+                        <i class="fas fa-file-signature"></i>
+                    </div>
+                    <h4 class="font-bold text-gray-800">项目立项</h4>
+                </div>
+                <p class="text-xs text-gray-500">Project Charter</p>
+            </a>
+
+            <!-- Tool 2: Kanban -->
+            <a href="tools/kanban.html" target="_blank" class="hub-card bg-white rounded-xl p-5 border border-gray-100 group hover:border-blue-300">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center text-xl">
+                        <i class="fas fa-tasks"></i>
+                    </div>
+                    <h4 class="font-bold text-gray-800">任务看板</h4>
+                </div>
+                <p class="text-xs text-gray-500">Agile Kanban</p>
+            </a>
+
+            <!-- Tool 3: Architecture -->
+            <a href="tools/architect.html" target="_blank" class="hub-card bg-white rounded-xl p-5 border border-gray-100 group hover:border-green-300">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-10 h-10 bg-green-100 text-green-600 rounded-lg flex items-center justify-center text-xl">
+                        <i class="fas fa-project-diagram"></i>
+                    </div>
+                    <h4 class="font-bold text-gray-800">技术架构</h4>
+                </div>
+                <p class="text-xs text-gray-500">Architecture</p>
+            </a>
+
+            <!-- Tool 4: Git -->
+            <a href="#" onclick="window.open(`http://${window.location.hostname}:3000`, '_blank'); return false;" class="hub-card bg-white rounded-xl p-5 border border-gray-100 group hover:border-orange-300">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-10 h-10 bg-orange-100 text-orange-600 rounded-lg flex items-center justify-center text-xl">
+                        <i class="fab fa-git-alt"></i>
+                    </div>
+                    <h4 class="font-bold text-gray-800">代码协同</h4>
+                </div>
+                <p class="text-xs text-gray-500">Gitea Server</p>
+            </a>
+
+        </div>
+
+        <!-- 底部：成果交付区 -->
+        <div class="bg-gradient-to-r from-gray-900 to-gray-800 rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden">
+            <div class="absolute right-0 top-0 h-full w-1/3 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvc3ZnPg==')] opacity-30"></div>
+            
+            <div class="relative z-10 flex flex-col md:flex-row justify-between items-center gap-8">
+                <div>
+                    <h3 class="text-2xl font-bold mb-2 flex items-center"><i class="fas fa-flag-checkered text-yellow-400 mr-3"></i> 成果交付站</h3>
+                    <p class="text-gray-400 max-w-lg">
+                        当你的项目完成了一个里程碑（如 MVP 或 最终版），请在这里打包提交。老师将对你的成果进行评审。
+                    </p>
+                </div>
+                
+                <div class="bg-white/10 backdrop-blur-md border border-white/10 rounded-xl p-6 w-full md:w-96">
+                    <form id="submissionForm" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-2">上传文件 (Zip/PDF)</label>
+                            <div class="flex items-center gap-2">
+                                <label class="flex-1 cursor-pointer bg-gray-800 hover:bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-sm text-gray-300 transition flex items-center justify-center">
+                                    <i class="fas fa-folder-open mr-2"></i> <span id="fileName">选择文件...</span>
+                                    <input type="file" id="fileInput" class="hidden">
+                                </label>
+                            </div>
+                        </div>
+                        <button type="submit" id="submitBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg transition shadow-lg flex items-center justify-center">
+                            <i class="fas fa-paper-plane mr-2"></i> 确认提交
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- 登录弹窗 (默认隐藏) -->
+    <div id="loginModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl w-96">
+            <h3 class="text-xl font-bold mb-4">连接到云端团队</h3>
+            <input type="text" id="teamInput" class="w-full border border-gray-300 rounded-lg px-4 py-2 mb-4 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="输入组号 (Team ID)">
+            <input type="text" id="nameInput" class="w-full border border-gray-300 rounded-lg px-4 py-2 mb-6 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="你的名字">
+            <div class="flex gap-3">
+                <button onclick="toggleLogin()" class="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg">取消</button>
+                <button onclick="doLogin()" class="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-bold">连接</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 初始化 ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const project = urlParams.get('project');
+            if(project) {
+                document.getElementById('projectTitle').textContent = project.toUpperCase();
+            }
+            
+            // 尝试读取本地立项书的标题
+            const charter = JSON.parse(localStorage.getItem('ai_course_charter') || '{}');
+            if(charter.projName) {
+                document.getElementById('projectTitle').textContent = charter.projName;
+            }
+        });
+
+        // --- 登录逻辑 ---
+        function toggleLogin() {
+            const modal = document.getElementById('loginModal');
+            modal.classList.toggle('hidden');
+        }
+
+        function doLogin() {
+            const name = document.getElementById('nameInput').value;
+            const team = document.getElementById('teamInput').value;
+            
+            if(name && team) {
+                document.getElementById('userName').textContent = name;
+                document.getElementById('userAvatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`;
+                document.getElementById('syncStatus').innerHTML = `<span class="text-green-600">● 云端已连接: ${team}</span>`;
+                toggleLogin();
+                // 这里可以触发真实的 syncData 逻辑
+            }
+        }
+
+        // --- 提交逻辑 ---
+        const fileInput = document.getElementById('fileInput');
+        fileInput.addEventListener('change', (e) => {
+            if(e.target.files.length) {
+                document.getElementById('fileName').textContent = e.target.files[0].name;
+            }
+        });
+
+        document.getElementById('submissionForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            if(!fileInput.files.length) return alert('请先选择文件');
+            
+            // 模拟提交
+            const btn = document.getElementById('submitBtn');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> 上传中...';
+            
+            setTimeout(() => {
+                alert('提交成功！老师已收到你的作业。');
+                btn.innerHTML = '<i class="fas fa-check mr-2"></i> 已提交';
+                btn.classList.add('bg-green-600', 'hover:bg-green-600');
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                    btn.classList.remove('bg-green-600', 'hover:bg-green-600');
+                    document.getElementById('fileName').textContent = '选择文件...';
+                    fileInput.value = '';
+                }, 3000);
+            }, 1500);
+        });
+    </script>
+
+</body>
+</html>

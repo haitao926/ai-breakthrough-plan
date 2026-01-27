@@ -1,0 +1,50 @@
+{
+  "id": "p4-l3",
+  "project": "project4",
+  "title": "第3课：自主实践 - 优化实验 (Optimization Lab)",
+  "duration": 45,
+  "description": "【自主实践】设计 A/B 对比实验，尝试提升模型性能。",
+  "phases": [
+    {
+      "id": "step1",
+      "title": "⚖️ 0-15分：实验设计",
+      "duration": 15,
+      "student": {
+        "title": "控制变量法",
+        "content": "<p>如果我想让模型跑得更快，或者更准，该怎么办？</p>",
+        "tasks": [
+            "<strong>方案 A</strong>：使用更轻量的模型（如 MobileNet）",
+            "<strong>方案 B</strong>：降低图片分辨率（如 224x224 -> 128x128）",
+            "选择一个变量进行测试"
+        ]
+      }
+    },
+    {
+      "id": "step2",
+      "title": "🧪 15-35分：跑数据",
+      "duration": 20,
+      "student": {
+        "title": "记录结果",
+        "content": "<p>不要只凭感觉，要看数据。</p>",
+        "tasks": [
+            "运行测试脚本，记录 10 次推理的平均耗时",
+            "记录 10 张图片的识别准确率",
+            "填表：ResNet vs MobileNet"
+        ]
+      }
+    },
+    {
+      "id": "step3",
+      "title": "📉 35-45分：数据分析",
+      "duration": 10,
+      "student": {
+        "title": "结论",
+        "content": "<p>根据你的数据，你会推荐在手机上用哪个模型？在服务器上用哪个？</p>",
+        "tasks": [
+            "绘制简单的对比柱状图（手画或 Excel）",
+            "准备下节课的报告素材"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>课程理念与素养体系 | HAI Tech Lab</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        
+        .glass {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .section-title {
+            position: relative;
+            display: inline-block;
+        }
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            width: 40px;
+            height: 4px;
+            background: #4f46e5;
+            border-radius: 2px;
+        }
+
+        .capability-card {
+            transition: all 0.3s ease;
+        }
+        .capability-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <!-- 导航栏 -->
+    <nav class="fixed w-full z-50 glass transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <a href="index.html" class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold shadow-md">AI</div>
+                    <span class="font-bold text-xl tracking-tight text-gray-900">破壁计划</span>
+                </a>
+                <div class="hidden md:flex space-x-8">
+                    <a href="index.html" class="text-gray-600 hover:text-indigo-600 font-medium transition">首页</a>
+                    <a href="competencies.html" class="text-indigo-600 font-medium transition">核心素养</a>
+                    <a href="showcase.html" class="text-gray-600 hover:text-indigo-600 font-medium transition">教学展示墙</a>
+                    <a href="downloads.html" class="text-gray-600 hover:text-indigo-600 font-medium transition">资源与工具</a>
+                </div>
+                <div class="flex gap-3 items-center">
+                    <a href="submission.html" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition text-sm font-bold shadow-md flex items-center">
+                        <i class="fas fa-cloud-upload-alt mr-2"></i> 作业提交
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Header -->
+    <header class="bg-white pt-32 pb-16 border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-6">
+                不是教"知识"，而是培养<span class="text-indigo-600">"能力"</span>
+            </h1>
+            <p class="text-xl text-gray-500 max-w-3xl mx-auto leading-relaxed">
+                本课程不仅教授 AI 技术，更注重培养学生面向未来的核心素养。
+                <br>我们致力于让学生不仅"现在会用"，更是为了"未来能学"。
+            </p>
+            
+            <div class="mt-10 flex flex-wrap justify-center gap-4">
+                <div class="px-6 py-3 bg-indigo-50 text-indigo-700 rounded-full font-semibold text-sm">
+                    <i class="fas fa-brain mr-2"></i>双核心能力
+                </div>
+                <div class="px-6 py-3 bg-blue-50 text-blue-700 rounded-full font-semibold text-sm">
+                    <i class="fas fa-layer-group mr-2"></i>8大素养体系
+                </div>
+                <div class="px-6 py-3 bg-purple-50 text-purple-700 rounded-full font-semibold text-sm">
+                    <i class="fas fa-chart-line mr-2"></i>能力进阶矩阵
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+
+        <!-- 六大职业核心思维模型 -->
+        <section class="mb-20">
+            <h2 class="text-3xl font-bold text-gray-900 mb-10 section-title">一、六大项目核心思维模型</h2>
+            
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Project 1 -->
+                <div class="bg-white rounded-xl p-6 border-l-4 border-indigo-500 shadow-sm hover:shadow-md transition">
+                    <div class="flex items-center mb-4">
+                        <div class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mr-3">
+                            <i class="fas fa-gamepad"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-sm text-gray-500 font-medium">项目1：体感互动游戏</h4>
+                            <h3 class="text-lg font-bold text-gray-900">计算思维</h3>
+                        </div>
+                    </div>
+                    <p class="text-gray-600 text-sm">
+                        学会像计算机一样思考，将复杂交互拆解为逻辑步骤，掌握与AI协作解决问题的"新编程范式"。
+                    </p>
+                </div>
+
+                <!-- Project 2 -->
+                <div class="bg-white rounded-xl p-6 border-l-4 border-purple-500 shadow-sm hover:shadow-md transition">
+                    <div class="flex items-center mb-4">
+                        <div class="w-10 h-10 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mr-3">
+                            <i class="fas fa-clipboard-check"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-sm text-gray-500 font-medium">项目2：产品与项目经理</h4>
+                            <h3 class="text-lg font-bold text-gray-900">产品与结构化思维</h3>
+                        </div>
+                    </div>
+                    <p class="text-gray-600 text-sm">
+                        <strong>产品思维</strong>发现用户痛点与价值，<strong>结构化思维(WBS)</strong>拆解复杂任务与流程。
+                    </p>
+                </div>
+
+                <!-- Project 3 -->
+                <div class="bg-white rounded-xl p-6 border-l-4 border-blue-500 shadow-sm hover:shadow-md transition">
+                    <div class="flex items-center mb-4">
+                        <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mr-3">
+                            <i class="fas fa-server"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-sm text-gray-500 font-medium">项目3：全栈工程师</h4>
+                            <h3 class="text-lg font-bold text-gray-900">工程架构思维</h3>
+                        </div>
+                    </div>
+                    <p class="text-gray-600 text-sm">
+                        理解 Client-Server 架构，掌握模块化设计、数据流转与代码质量控制，构建可扩展的系统。
+                    </p>
+                </div>
+
+                <!-- Project 4 -->
+                <div class="bg-white rounded-xl p-6 border-l-4 border-green-500 shadow-sm hover:shadow-md transition">
+                    <div class="flex items-center mb-4">
+                        <div class="w-10 h-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center mr-3">
+                            <i class="fas fa-microscope"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-sm text-gray-500 font-medium">项目4：算法工程师</h4>
+                            <h3 class="text-lg font-bold text-gray-900">科学思维</h3>
+                        </div>
+                    </div>
+                    <p class="text-gray-600 text-sm">
+                        基于数据与证据的推理，设计对比实验(A/B Test)，在精度与效率之间进行科学的权衡(Trade-off)。
+                    </p>
+                </div>
+
+                <!-- Project 5 -->
+                <div class="bg-white rounded-xl p-6 border-l-4 border-orange-500 shadow-sm hover:shadow-md transition">
+                    <div class="flex items-center mb-4">
+                        <div class="w-10 h-10 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mr-3">
+                            <i class="fas fa-microchip"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-sm text-gray-500 font-medium">项目5：嵌入式工程师</h4>
+                            <h3 class="text-lg font-bold text-gray-900">软硬系统思维</h3>
+                        </div>
+                    </div>
+                    <p class="text-gray-600 text-sm">
+                        打破软件与硬件的界限，从系统整体视角解决问题，理解资源约束下的边缘计算与逻辑控制。
+                    </p>
+                </div>
+
+                <!-- Project 6 -->
+                <div class="bg-white rounded-xl p-6 border-l-4 border-red-500 shadow-sm hover:shadow-md transition">
+                    <div class="flex items-center mb-4">
+                        <div class="w-10 h-10 bg-red-100 text-red-600 rounded-full flex items-center justify-center mr-3">
+                            <i class="fas fa-rocket"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-sm text-gray-500 font-medium">项目6：综合实践周</h4>
+                            <h3 class="text-lg font-bold text-gray-900">创业价值思维</h3>
+                        </div>
+                    </div>
+                    <p class="text-gray-600 text-sm">
+                        以创造真实价值为核心，整合所有技能，经历从 MVP 到商业路演的完整闭环，培养企业家精神。
+                    </p>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 核心能力 -->
+        <section class="mb-20">
+            <h2 class="text-3xl font-bold text-gray-900 mb-8 section-title">二、双核心能力（贯穿始终）</h2>
+            <div class="grid md:grid-cols-2 gap-8">
+                <!-- AI Coding -->
+                <div class="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm capability-card">
+                    <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center mb-6 text-xl">
+                        <i class="fas fa-code"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 mb-4">AI Coding 能力</h3>
+                    <p class="text-gray-600 mb-6">在AI工具辅助下，快速实现想法、解决问题、提升开发效率的能力。</p>
+                    <ul class="space-y-3">
+                        <li class="flex items-start text-sm text-gray-600">
+                            <i class="fas fa-check text-green-500 mt-1 mr-3"></i>
+                            <span><strong>Prompt工程</strong>：精准描述需求，获得高质量输出</span>
+                        </li>
+                        <li class="flex items-start text-sm text-gray-600">
+                            <i class="fas fa-check text-green-500 mt-1 mr-3"></i>
+                            <span><strong>代码审查与重构</strong>：判断AI生成代码的质量并优化</span>
+                        </li>
+                        <li class="flex items-start text-sm text-gray-600">
+                            <i class="fas fa-check text-green-500 mt-1 mr-3"></i>
+                            <span><strong>Bug调试</strong>：利用AI分析报错信息，快速定位问题</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- 任务规划 -->
+                <div class="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm capability-card">
+                    <div class="w-12 h-12 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center mb-6 text-xl">
+                        <i class="fas fa-tasks"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 mb-4">任务规划能力</h3>
+                    <p class="text-gray-600 mb-6">科学拆解任务、合理安排时间、有效管理项目、应对突发问题的能力。</p>
+                    <ul class="space-y-3">
+                        <li class="flex items-start text-sm text-gray-600">
+                            <i class="fas fa-check text-green-500 mt-1 mr-3"></i>
+                            <span><strong>任务分解</strong>：WBS分解，将大目标拆解为可执行动作</span>
+                        </li>
+                        <li class="flex items-start text-sm text-gray-600">
+                            <i class="fas fa-check text-green-500 mt-1 mr-3"></i>
+                            <span><strong>时间管理</strong>：使用番茄工作法和甘特图管理进度</span>
+                        </li>
+                        <li class="flex items-start text-sm text-gray-600">
+                            <i class="fas fa-check text-green-500 mt-1 mr-3"></i>
+                            <span><strong>敏捷协作</strong>：站会、看板、迭代开发</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- 素养体系网格 -->
+        <section class="mb-20">
+            <h2 class="text-3xl font-bold text-gray-900 mb-10 section-title">三、8大素养体系</h2>
+            
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- 思维能力 -->
+                <div class="bg-white rounded-xl p-6 border border-gray-100 hover:shadow-md transition">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                        <i class="fas fa-brain text-blue-500 mr-2"></i> 思维能力层
+                    </h3>
+                    <ul class="space-y-4 text-sm">
+                        <li>
+                            <strong class="block text-gray-700">计算思维</strong>
+                            <span class="text-gray-500">分解、抽象、模式识别、算法设计</span>
+                        </li>
+                        <li>
+                            <strong class="block text-gray-700">批判性思维</strong>
+                            <span class="text-gray-500">质疑权威、论证评估、反思复盘</span>
+                        </li>
+                        <li>
+                            <strong class="block text-gray-700">系统思维</strong>
+                            <span class="text-gray-500">整体观、动态演化、权衡取舍</span>
+                        </li>
+                        <li>
+                            <strong class="block text-gray-700">设计思维</strong>
+                            <span class="text-gray-500">同理心、快速原型、迭代优化</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- 学习能力 -->
+                <div class="bg-white rounded-xl p-6 border border-gray-100 hover:shadow-md transition">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                        <i class="fas fa-book-reader text-green-500 mr-2"></i> 学习能力层
+                    </h3>
+                    <ul class="space-y-4 text-sm">
+                        <li>
+                            <strong class="block text-gray-700">自主学习</strong>
+                            <span class="text-gray-500">搜索技巧、文档阅读、资源获取</span>
+                        </li>
+                        <li>
+                            <strong class="block text-gray-700">问题解决</strong>
+                            <span class="text-gray-500">问题定位、假设验证、调试工具</span>
+                        </li>
+                        <li>
+                            <strong class="block text-gray-700">快速迁移</strong>
+                            <span class="text-gray-500">举一反三，从已知技术迁移到新技术</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- 协作与表达 -->
+                <div class="bg-white rounded-xl p-6 border border-gray-100 hover:shadow-md transition">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                        <i class="fas fa-users text-orange-500 mr-2"></i> 协作与表达层
+                    </h3>
+                    <ul class="space-y-4 text-sm">
+                        <li>
+                            <strong class="block text-gray-700">技术沟通</strong>
+                            <span class="text-gray-500">技术文档写作、演讲表达、可视化</span>
+                        </li>
+                        <li>
+                            <strong class="block text-gray-700">团队协作</strong>
+                            <span class="text-gray-500">Git协作、异步沟通、跨职能配合</span>
+                        </li>
+                        <li>
+                            <strong class="block text-gray-700">冲突解决</strong>
+                            <span class="text-gray-500">建设性反馈、接受批评、协商决策</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- 工程素养 -->
+                <div class="bg-white rounded-xl p-6 border border-gray-100 hover:shadow-md transition">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                        <i class="fas fa-cogs text-gray-500 mr-2"></i> 工程素养层
+                    </h3>
+                    <ul class="space-y-4 text-sm">
+                        <li>
+                            <strong class="block text-gray-700">代码质量</strong>
+                            <span class="text-gray-500">可读性、可维护性、模块化设计</span>
+                        </li>
+                        <li>
+                            <strong class="block text-gray-700">测试思维</strong>
+                            <span class="text-gray-500">边界条件、异常处理、破坏性测试</span>
+                        </li>
+                        <li>
+                            <strong class="block text-gray-700">工程化</strong>
+                            <span class="text-gray-500">自动化部署(CI/CD)、标准化规范</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- 产品与商业 -->
+                <div class="bg-white rounded-xl p-6 border border-gray-100 hover:shadow-md transition">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                        <i class="fas fa-chart-pie text-red-500 mr-2"></i> 产品与商业层
+                    </h3>
+                    <ul class="space-y-4 text-sm">
+                        <li>
+                            <strong class="block text-gray-700">产品思维</strong>
+                            <span class="text-gray-500">真伪需求辨别、价值判断、MVP思维</span>
+                        </li>
+                        <li>
+                            <strong class="block text-gray-700">数据驱动</strong>
+                            <span class="text-gray-500">指标定义、数据分析、A/B测试</span>
+                        </li>
+                        <li>
+                            <strong class="block text-gray-700">商业意识</strong>
+                            <span class="text-gray-500">成本核算、商业模式、竞争分析</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- 职业与科研 -->
+                <div class="bg-white rounded-xl p-6 border border-gray-100 hover:shadow-md transition">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                        <i class="fas fa-user-graduate text-indigo-500 mr-2"></i> 科研与职业素养
+                    </h3>
+                    <ul class="space-y-4 text-sm">
+                        <li>
+                            <strong class="block text-gray-700">科研素养</strong>
+                            <span class="text-gray-500">实验设计、论文阅读与写作</span>
+                        </li>
+                        <li>
+                            <strong class="block text-gray-700">职业素养</strong>
+                            <span class="text-gray-500">时间管理、成长型思维、开源精神</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- 培养矩阵 -->
+        <section class="bg-gray-900 text-white rounded-3xl p-8 md:p-12 overflow-hidden relative">
+            <div class="absolute top-0 right-0 w-[400px] h-[400px] bg-indigo-600 rounded-full mix-blend-overlay filter blur-[100px] opacity-20"></div>
+            
+            <div class="relative z-10">
+                <h2 class="text-3xl font-bold mb-6">四、能力培养矩阵总览</h2>
+                <p class="text-gray-400 mb-8 max-w-2xl">
+                    每一门课程都不仅是技术的学习，更是对特定能力的刻意练习。
+                </p>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-gray-300">
+                        <thead class="text-xs text-gray-400 uppercase bg-gray-800">
+                            <tr>
+                                <th class="px-6 py-4 rounded-tl-lg">核心能力</th>
+                                <th class="px-6 py-4">Vibe Coding</th>
+                                <th class="px-6 py-4">产品+项目</th>
+                                <th class="px-6 py-4">全栈开发</th>
+                                <th class="px-6 py-4">算法研究</th>
+                                <th class="px-6 py-4">智能硬件</th>
+                                <th class="px-6 py-4 rounded-tr-lg">综合实践</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-800">
+                            <tr class="hover:bg-gray-800/50">
+                                <td class="px-6 py-4 font-bold text-white">AI Coding</td>
+                                <td class="px-6 py-4 text-indigo-400">⭐⭐⭐</td>
+                                <td class="px-6 py-4 text-indigo-400">⭐⭐</td>
+                                <td class="px-6 py-4 text-indigo-400">⭐⭐⭐</td>
+                                <td class="px-6 py-4 text-indigo-400">⭐⭐</td>
+                                <td class="px-6 py-4 text-indigo-400">⭐⭐</td>
+                                <td class="px-6 py-4 text-indigo-400">⭐⭐⭐</td>
+                            </tr>
+                            <tr class="hover:bg-gray-800/50">
+                                <td class="px-6 py-4 font-bold text-white">任务规划</td>
+                                <td class="px-6 py-4 text-indigo-400">⭐⭐</td>
+                                <td class="px-6 py-4 text-indigo-400">⭐⭐⭐</td>
+                                <td class="px-6 py-4 text-indigo-400">⭐⭐</td>
+                                <td class="px-6 py-4 text-indigo-400">⭐⭐</td>
+                                <td class="px-6 py-4 text-indigo-400">⭐⭐</td>
+                                <td class="px-6 py-4 text-indigo-400">⭐⭐⭐</td>
+                            </tr>
+                            <tr class="hover:bg-gray-800/50">
+                                <td class="px-6 py-4 font-bold text-white">产品思维</td>
+                                <td class="px-6 py-4 text-indigo-400">⭐⭐</td>
+                                <td class="px-6 py-4 text-indigo-400">⭐⭐⭐</td>
+                                <td class="px-6 py-4 text-indigo-400">⭐⭐</td>
+                                <td class="px-6 py-4 text-gray-600">⭐</td>
+                                <td class="px-6 py-4 text-gray-600">⭐</td>
+                                <td class="px-6 py-4 text-indigo-400">⭐⭐⭐</td>
+                            </tr>
+                             <tr class="hover:bg-gray-800/50">
+                                <td class="px-6 py-4 font-bold text-white">系统思维</td>
+                                <td class="px-6 py-4 text-indigo-400">⭐⭐</td>
+                                <td class="px-6 py-4 text-indigo-400">⭐⭐⭐</td>
+                                <td class="px-6 py-4 text-indigo-400">⭐⭐⭐</td>
+                                <td class="px-6 py-4 text-indigo-400">⭐⭐</td>
+                                <td class="px-6 py-4 text-indigo-400">⭐⭐⭐</td>
+                                <td class="px-6 py-4 text-indigo-400">⭐⭐⭐</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="mt-4 text-xs text-gray-500 text-right">* 星级代表该课程对该能力的侧重程度</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center">
+            <div class="mb-4 md:mb-0">
+                <span class="font-bold text-xl text-gray-900">HAI Tech Lab</span>
+                <p class="text-sm text-gray-500 mt-1">© 2025 High School Innovation Course</p>
+            </div>
+            <div class="flex space-x-6 text-gray-400">
+                <a href="course-files/common/能力素养培养体系.md" target="_blank" class="hover:text-indigo-600 transition flex items-center">
+                    <i class="fas fa-download mr-2"></i> 下载完整Markdown文档
+                </a>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>

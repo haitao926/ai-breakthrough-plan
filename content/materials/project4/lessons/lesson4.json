@@ -1,0 +1,55 @@
+{
+  "id": "p4-l4",
+  "project": "project4",
+  "title": "第4课：自主实践 - 学术报告 (Research Report)",
+  "duration": 45,
+  "description": "【自主实践】整理实验结论，撰写一篇规范的技术微论文。",
+  "phases": [
+    {
+      "id": "step1",
+      "title": "📝 0-15分：报告结构",
+      "duration": 15,
+      "student": {
+        "title": "IMRaD 结构",
+        "content": "<p>学术写作有固定的套路：</p><ul class='list-disc pl-4'><li><strong>I</strong>ntroduction (背景)</li><li><strong>M</strong>ethods (方法)</li><li><strong>R</strong>esults (结果)</li><li><strong>D</strong>iscussion (讨论)</li></ul>",
+        "tasks": [
+            "新建 `report.md`",
+            "写下大纲标题"
+        ]
+      }
+    },
+    {
+      "id": "step2",
+      "title": "✍️ 15-35分：AI 辅助写作",
+      "duration": 20,
+      "student": {
+        "title": "填充内容",
+        "content": "<p>把你的数据喂给 AI，让它帮你写得“学术一点”。</p>",
+        "prompts": [
+            {
+                "label": "学术润色",
+                "text": "这是我的实验数据（ResNet 耗时 120ms，MobileNet 耗时 30ms）。请帮我写一段“结果与分析”，风格要客观、严谨，使用学术词汇（如“显著提升”、“权衡”）。"
+            }
+        ],
+        "tasks": [
+            "生成文本并校对",
+            "插入你制作的图表"
+        ]
+      }
+    },
+    {
+      "id": "step3",
+      "title": "🎓 35-45分：同行评审",
+      "duration": 10,
+      "student": {
+        "title": "发表",
+        "content": "<p>你的第一篇技术报告完成了。</p>",
+        "tasks": [
+            "导出为 PDF",
+            "上传到平台，互评",
+            "阅读别人的报告，找出一个亮点"
+        ]
+      }
+    }
+  ]
+}

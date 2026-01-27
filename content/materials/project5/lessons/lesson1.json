@@ -1,0 +1,74 @@
+{
+  "id": "p5-l1",
+  "project": "project5",
+  "title": "第1课：硬件架构设计 (System Design)",
+  "duration": 45,
+  "description": "理解边缘计算，设计智能相机的硬件连接方案。",
+  "phases": [
+    {
+      "id": "step1",
+      "title": "🔌 0-10分：云端 vs 边缘",
+      "duration": 10,
+      "student": {
+        "title": "为什么要用硬件？",
+        "content": "<p>Siri 是在云端运行的，必须联网。但自动驾驶汽车在断网时也必须能刹车。这就是 <strong>边缘计算 (Edge Computing)</strong> —— 把大脑装进设备里。</p>",
+        "tasks": [
+            "思考：如果做一个‘智能防盗门’，为什么不能完全依赖云端识别？",
+            "观察手中的树莓派开发板，找到 USB 接口和 GPIO 针脚。"
+        ]
+      }
+    },
+    {
+      "id": "step2",
+      "title": "📐 10-25分：系统设计",
+      "duration": 15,
+      "student": {
+        "title": "绘制架构图",
+        "content": "<p>我们要制作一个“智能感应灯”：当摄像头看到人时，亮起 LED 灯。</p><p>请设计它的连接方式。</p>",
+        "prompts": [
+          {
+            "label": "方案咨询",
+            "text": "我要用树莓派 (Raspberry Pi) 做一个智能装置。输入是 USB 摄像头，输出是一个 LED 灯。\n1. 请告诉我硬件连接图（摄像头插哪里？LED灯接哪个引脚？是否需要电阻？）\n2. 请用流程图描述程序的逻辑。"
+          }
+        ],
+        "tasks": [
+            "根据 AI 的建议，画出连线草图",
+            "理解 GPIO (General Purpose Input/Output) 的概念"
+        ]
+      }
+    },
+    {
+      "id": "step3",
+      "title": "💡 25-40分：Hello World",
+      "duration": 15,
+      "student": {
+        "title": "点亮第一盏灯",
+        "content": "<p>我们先不加 AI，先试着写代码控制物理世界。</p>",
+        "prompts": [
+            {
+                "label": "生成控制代码",
+                "text": "请帮我写一段 Python 代码，运行在树莓派上。\n功能：控制连接在 GPIO 17 号引脚的 LED 灯，每隔 1 秒闪烁一次。\n使用 RPi.GPIO 库。"
+            }
+        ],
+        "tasks": [
+            "连接好 LED 灯（注意正负极和电阻）",
+            "将代码复制到树莓派的 <code>test_led.py</code>",
+            "运行代码，观察灯是否闪烁！"
+        ]
+      }
+    },
+    {
+      "id": "step4",
+      "title": "🏁 40-45分：总结",
+      "duration": 5,
+      "student": {
+        "title": "软硬结合",
+        "content": "<p>恭喜你！你刚刚打通了数字世界和物理世界的墙壁。</p><p>下节课，我们将把 Project 4 里的 AI 模型部署进来，让这个灯变得“有思想”。</p>",
+        "tasks": [
+            "整理好硬件，不要弄丢杜邦线",
+            "思考：除了亮灯，GPIO 还能控制什么？（电机？蜂鸣器？）"
+        ]
+      }
+    }
+  ]
+}

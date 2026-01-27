@@ -1,0 +1,55 @@
+{
+  "id": "p4-l2",
+  "project": "project4",
+  "title": "第2课：模型复现 (Model Inference)",
+  "duration": 45,
+  "description": "调用预训练模型 (ResNet/YOLO)，实现图像识别。",
+  "phases": [
+    {
+      "id": "step1",
+      "title": "📦 0-10分：站在巨人肩膀上",
+      "duration": 10,
+      "student": {
+        "title": "预训练模型",
+        "content": "<p>我们不需要从头训练一个大脑，我们可以直接下载一个“大学毕业”的模型。</p>",
+        "tasks": [
+            "了解 <strong>ResNet50</strong> (图像分类) 和 <strong>YOLO</strong> (目标检测)",
+            "确保安装了 `torch` 和 `torchvision`"
+        ]
+      }
+    },
+    {
+      "id": "step2",
+      "title": "🐍 10-30分：代码实战",
+      "duration": 20,
+      "student": {
+        "title": "编写推理脚本",
+        "content": "<p>使用 PyTorch 加载模型并预测图片。</p>",
+        "prompts": [
+          {
+            "label": "生成 Python 代码",
+            "text": "请使用 PyTorch 的 torchvision 库，加载预训练的 ResNet50 模型。编写一个 Python 脚本，读取本地图片 'test.jpg'，进行预处理（Resize, Normalize），然后输入模型，输出可能性最高的 3 个类别名称。"
+          }
+        ],
+        "tasks": [
+            "找一张狗狗的照片命名为 `test.jpg`",
+            "运行代码，看 AI 认为是哪种狗"
+        ]
+      }
+    },
+    {
+      "id": "step3",
+      "title": "📊 30-45分：批量测试",
+      "duration": 15,
+      "student": {
+        "title": "性能评估",
+        "content": "<p>一张图准不代表都准。找 10 张图试试。</p>",
+        "tasks": [
+            "准备 10 张不同物体的图",
+            "统计 AI 答对了几张（Accuracy）",
+            "记录每张图的处理时间（Latency）"
+        ]
+      }
+    }
+  ]
+}

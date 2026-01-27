@@ -1,0 +1,51 @@
+{
+  "id": "p2-l3",
+  "project": "project2",
+  "title": "第3课：自主实践 - 需求文档 (PRD Writing)",
+  "duration": 45,
+  "description": "【自主实践】从零开始撰写一份专业的产品需求文档。",
+  "phases": [
+    {
+      "id": "step1",
+      "title": "📝 0-15分：文档结构搭建",
+      "duration": 15,
+      "student": {
+        "title": "PRD 骨架",
+        "content": "<p>今天没有老师领路，你是产品的负责人。</p><p>请参考行业标准，搭建你的 PRD (Product Requirement Document) 结构。</p>",
+        "tasks": [
+            "新建文档 `PRD.md`",
+            "使用 AI 辅助生成 PRD 模板（包含：项目背景、用户画像、功能列表、非功能需求）",
+            "<strong>挑战</strong>：不使用默认模板，根据你的项目特点定制目录。"
+        ]
+      }
+    },
+    {
+      "id": "step2",
+      "title": "🎨 15-35分：原型绘制",
+      "duration": 20,
+      "student": {
+        "title": "可视化你的想法",
+        "content": "<p>文字是苍白的。请用纸笔或工具画出核心界面。</p>",
+        "tasks": [
+            "手绘 3 个关键页面的线框图 (Wireframe)",
+            "拍照上传到电脑",
+            "在 PRD 文档中插入这些图片，并附上文字说明（点击哪里跳转哪里）"
+        ]
+      }
+    },
+    {
+      "id": "step3",
+      "title": "🤝 35-45分：评审互改",
+      "duration": 10,
+      "student": {
+        "title": "需求评审 (Review)",
+        "content": "<p>找你的同桌（扮演开发人员），让他看你的文档。</p>",
+        "tasks": [
+            "同桌能看懂你的逻辑吗？",
+            "记录同桌提出的 3 个疑问（“这里怎么交互？”“数据从哪来？”）",
+            "根据反馈修改文档"
+        ]
+      }
+    }
+  ]
+}

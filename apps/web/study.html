@@ -274,10 +274,16 @@
         async function handleHomeworkUpload(input) {
             if (input.files && input.files[0]) {
                 const user = window.auth.getAuthUser();
+                let studentName = user ? user.name : '';
+
+                // Anonymous handling
                 if (!user) {
-                    alert('请先登录后再提交作业');
-                    window.location.href = 'login.html';
-                    return;
+                    const name = prompt('请输入你的姓名以提交作业：');
+                    if (!name) {
+                        input.value = ''; // Reset
+                        return;
+                    }
+                    studentName = name;
                 }
 
                 const file = input.files[0];
@@ -292,9 +298,18 @@
                 try {
                     const formData = new FormData();
                     formData.append('type', 'showcase'); // Show in showcase
-                    formData.append('title', `${lessonData.title} - 作业`);
+                    formData.append('title', `[${lessonData.title}] 作业`);
                     formData.append('content', `Lesson: ${lessonId}`);
-                    formData.append('details', JSON.stringify({ lessonId: lessonId, lessonTitle: lessonData.title }));
+                    // Store studentName in details for anonymous users
+                    formData.append('details', JSON.stringify({ 
+                        lessonId: lessonId, 
+                        lessonTitle: lessonData.title,
+                        studentName: studentName,
+                        showcaseSummary: `课程作业 - ${lessonData.title}`
+                    }));
+                    if (!user) {
+                        formData.append('studentName', studentName); // Redundant but safe for backend logic
+                    }
                     formData.append('file', file);
 
                     const res = await window.auth.apiFetch(`/projects/${pid}/submissions`, {
@@ -317,7 +332,7 @@
                     
                     // Feedback
                     const toast = document.getElementById('toast');
-                    toast.innerHTML = `<i class="fas fa-check-circle text-green-400"></i><span>作业已提交并展示: ${file.name}</span>`;
+                    toast.innerHTML = `<i class="fas fa-check-circle text-green-400"></i><span>作业已提交: ${file.name}</span>`;
                     showToast();
 
                 } catch (err) {
@@ -494,8 +509,34 @@
                 });
                 tasksHtml += `</div></div>`;
             }
+            
+            // MISSION BRIEFING INJECTION (Lesson 1, Step 0)
+            let briefingHtml = '';
+            if (lessonId === 'lesson1' && index === 0) {
+                briefingHtml = `
+                    <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl p-6 text-white mb-8 shadow-lg relative overflow-hidden">
+                        <div class="relative z-10 flex flex-col md:flex-row items-center gap-6">
+                            <div class="flex-1">
+                                <h3 class="text-xl font-bold mb-2"><i class="fas fa-flag-checkered mr-2"></i> 任务简报：选择你的赛道</h3>
+                                <p class="text-indigo-100 text-sm mb-4 leading-relaxed">
+                                    在开始技术学习之前，你需要明确你的终极目标。是做一名<b>研究员</b>、<b>发明家</b>还是<b>公益行动者</b>？不同的选择将决定你后续项目的方向。
+                                </p>
+                                <a href="competencies.html" target="_blank" class="inline-flex items-center px-4 py-2 bg-white text-indigo-600 rounded-lg font-bold text-sm hover:bg-gray-100 transition shadow-md">
+                                    <i class="fas fa-map-signs mr-2"></i> 阅读《项目类型指南》
+                                </a>
+                            </div>
+                            <div class="hidden md:block opacity-80">
+                                <i class="fas fa-rocket text-6xl"></i>
+                            </div>
+                        </div>
+                        <!-- Decor -->
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl transform translate-x-10 -translate-y-10"></div>
+                    </div>
+                `;
+            }
 
             container.innerHTML = `
+                ${briefingHtml}
                 <div class="mb-2 text-indigo-600 font-bold text-sm uppercase tracking-wider">Step ${index + 1}</div>
                 <h2 class="text-3xl font-bold text-gray-900 mb-6">${data.title || phase.title}</h2>
                 <div class="markdown-body text-gray-600">

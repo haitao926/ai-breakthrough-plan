@@ -23,12 +23,16 @@
             <h1 class="font-bold text-gray-800 text-lg flex items-center">
                 <i class="fas fa-file-signature text-purple-600 mr-2"></i> 项目立项书
             </h1>
+            <a href="../competencies.html" target="_blank" class="ml-2 text-xs bg-indigo-50 text-indigo-600 px-2 py-1 rounded-full border border-indigo-100 hover:bg-indigo-100 transition">
+                <i class="fas fa-question-circle mr-1"></i> 类型指南
+            </a>
         </div>
         
         <!-- Mode Toggle -->
         <div class="flex bg-gray-100 p-1 rounded-lg">
             <button onclick="setMode('product')" id="btn-product" class="mode-btn px-3 py-1 text-xs rounded-md text-gray-500 border border-transparent transition">工程产品</button>
             <button onclick="setMode('research')" id="btn-research" class="mode-btn px-3 py-1 text-xs rounded-md text-gray-500 border border-transparent transition">课题探究</button>
+            <button onclick="setMode('impact')" id="btn-impact" class="mode-btn px-3 py-1 text-xs rounded-md text-gray-500 border border-transparent transition">社会公益</button>
         </div>
 
         <div class="flex items-center gap-3">
@@ -94,7 +98,7 @@
         const projectId = urlParams.get('project');
         const DATA_KEY = projectId ? `ai_course_charter_${projectId}` : 'ai_course_charter';
         
-        let currentMode = 'product'; // 'product' or 'research'
+        let currentMode = 'product'; // 'product', 'research', or 'impact'
 
         // Configurations
         const CONFIG = {
@@ -109,6 +113,12 @@
                 q2: { label: '<i class="fas fa-question-circle mr-2 text-lg"></i> 2. 探究问题 (Question)', ph: '你想解决什么科学问题或验证什么假设？\n例如：红光照射是否比蓝光更能促进多肉植物生长？' },
                 q3: { label: '<i class="fas fa-vial mr-2 text-lg"></i> 3. 研究方法 (Method)', ph: '你打算怎么做实验？\n例如：设置对照组，控制变量（光照强度、水分），每日记录...' },
                 q4: { label: '<i class="fas fa-clipboard-check mr-2 text-lg"></i> 4. 预期成果 (Outcome)', ph: '你希望得到什么结论或产出？\n例如：一份关于光照对植物生长影响的实验报告和数据图表。' }
+            },
+            impact: {
+                q1: { label: '<i class="fas fa-hands-helping mr-2 text-lg"></i> 1. 受益群体 (Beneficiary)', ph: '谁会因为你的行动而受益？\n例如：社区里的空巢老人，子女长期在外工作...' },
+                q2: { label: '<i class="fas fa-heart-broken mr-2 text-lg"></i> 2. 社会议题 (Issue)', ph: '你关注的社会问题是什么？\n例如：老年人缺乏陪伴，且难以适应数字化生活（买菜、就医困难）...' },
+                q3: { label: '<i class="fas fa-hand-holding-heart mr-2 text-lg"></i> 3. 行动方案 (Action)', ph: '你打算做什么具体的行动？\n例如：组织每周一次的“数字反哺”志愿服务，一对一教老人使用智能手机...' },
+                q4: { label: '<i class="fas fa-star mr-2 text-lg"></i> 4. 社会影响 (Impact)', ph: '你希望带来什么样的改变？\n例如：帮助30位老人掌握微信使用，建立社区互助网络，提升幸福感。' }
             }
         };
 

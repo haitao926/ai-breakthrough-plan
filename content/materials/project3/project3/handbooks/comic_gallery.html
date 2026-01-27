@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HAI Tech Lab - 行业黑话邮票集</title>
+    <style>
+        :root {
+            --postal-green: #00643a; /* China Post Greenish */
+            --paper-color: #f7f3e8;
+            --stamp-bg: #fff;
+            --stamp-border-color: #e0e0e0;
+            --text-color: #333;
+            --font-serif: "Georgia", "Times New Roman", serif;
+            --font-sans: "Helvetica Neue", "Arial", sans-serif;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--postal-green);
+            margin: 0;
+            padding: 0;
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Prevent scrolling, use JS carousel */
+        }
+
+        /* --- Header --- */
+        header {
+            background-color: rgba(255,255,255,0.1);
+            color: #fff;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            flex-shrink: 0;
+        }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: 1.5rem;
+            margin: 0;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 15px;
+        }
+
+        .filter-select {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            background: #fff;
+            color: var(--postal-green);
+            font-weight: bold;
+            cursor: pointer;
+            outline: none;
+        }
+
+        /* --- Carousel Container --- */
+        .carousel-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            padding: 20px;
+            perspective: 1000px;
+        }
+
+        /* --- Stamp Card --- */
+        .stamp-card {
+            background: var(--stamp-bg);
+            width: 100%;
+            max-width: 800px;
+            height: auto;
+            max-height: 85vh;
+            aspect-ratio: 1.4 / 1; /* Postcard/Stamp ratio */
+            position: relative;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            
+            /* Stamp Perforations effect */
+            border: 1px solid transparent;
+            background-clip: padding-box;
+        }
+        
+        /* The perforated edge look using radial gradient mask is tricky,
+           using a simpler border style for compatibility and cleanness,
+           or using a pseudo element for the "serrated" look.
+           Let's use a "serrated" border image or css trick.
+        */
+        .stamp-card::before {
+            content: "";
+            position: absolute;
+            top: -5px; bottom: -5px; left: -5px; right: -5px;
+            background: radial-gradient(transparent 50%, var(--postal-green) 50%) repeat;
+            background-size: 20px 20px;
+            z-index: -1;
+            /* This is a simple visual trick, simplistic but effective */
+        }
+        
+        /* Simulating a cleaner stamp look with a white border inside a dark container */
+        .stamp-inner {
+            flex: 1;
+            margin: 15px; /* The white border of the stamp */
+            border: 1px solid #ddd;
+            display: flex;
+            flex-direction: row; /* Horizontal layout for desktop */
+            background: #fafafa;
+            position: relative;
+        }
+
+        /* Left Side: Visual/Comic */
+        .stamp-visual {
+            flex: 1.2;
+            display: flex;
+            flex-direction: column;
+            border-right: 2px dashed #ccc; /* Perforation line in middle */
+            position: relative;
+        }
+        
+        .comic-panel {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+        }
+        
+        .comic-panel.problem {
+            background-color: #fff5f5;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .comic-panel.solution {
+            background-color: #f0fff4;
+        }
+        
+        .emoji-actor {
+            font-size: 4rem;
+            margin-right: 20px;
+            filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.1));
+        }
+
+        .speech-bubble {
+            background: #fff;
+            border: 2px solid #333;
+            border-radius: 15px;
+            padding: 10px 15px;
+            position: relative;
+            font-family: "Comic Sans MS", "Chalkboard SE", sans-serif;
+            font-size: 0.9rem;
+            max-width: 180px;
+            box-shadow: 2px 2px 0 rgba(0,0,0,0.1);
+        }
+        
+        /* Right Side: Info/Text */
+        .stamp-info {
+            flex: 1;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background-image: linear-gradient(90deg, transparent 95%, #eee 95%);
+            background-size: 100% 20px; /* Writing lines hint */
+        }
+
+        .stamp-header {
+            border-bottom: 2px solid var(--postal-green);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+        }
+        
+        .stamp-title {
+            font-family: var(--font-serif);
+            font-size: 1.8rem;
+            color: #333;
+            margin: 0;
+            line-height: 1.2;
+        }
+        
+        .stamp-role {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: #888;
+            letter-spacing: 2px;
+            margin-top: 5px;
+            display: block;
+        }
+        
+        .stamp-def {
+            font-style: italic;
+            color: #555;
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+            font-family: var(--font-serif);
+        }
+
+        .stamp-principle {
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: #444;
+            margin-bottom: 20px;
+        }
+        
+        .stamp-action {
+            color: var(--postal-green);
+            font-weight: bold;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Postmark (Stamp cancellation mark) */
+        .postmark {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 80px;
+            height: 80px;
+            border: 2px solid rgba(200, 0, 0, 0.4);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(200, 0, 0, 0.4);
+            font-size: 0.7rem;
+            font-weight: bold;
+            text-align: center;
+            transform: rotate(-15deg);
+            pointer-events: none;
+            z-index: 10;
+            background: transparent;
+        }
+        .postmark-lines {
+            position: absolute;
+            top: 50%;
+            left: -40px;
+            width: 160px;
+            height: 20px;
+            border-top: 2px solid rgba(200, 0, 0, 0.4);
+            border-bottom: 2px solid rgba(200, 0, 0, 0.4);
+            transform: rotate(0deg);
+        }
+
+        /* --- Navigation --- */
+        .nav-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: #fff;
+            font-size: 2rem;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 100;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255,255,255,0.4);
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .nav-prev { left: 40px; }
+        .nav-next { right: 40px; }
+        
+        .counter {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255,255,255,0.7);
+            font-size: 1rem;
+            letter-spacing: 2px;
+        }
+
+        /* Animation */
+        .fade-enter {
+            animation: fadeIn 0.5s ease forwards;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* Mobile Adapt */
+        @media (max-width: 768px) {
+            .stamp-inner {
+                flex-direction: column;
+                overflow-y: auto;
+            }
+            .stamp-visual {
+                flex: none;
+                height: 200px;
+                border-right: none;
+                border-bottom: 2px dashed #ccc;
+            }
+            .stamp-info {
+                flex: none;
+                padding: 20px;
+            }
+            .nav-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 1.5rem;
+                padding: 0;
+                background: rgba(0,0,0,0.3);
+            }
+            .nav-prev { left: 10px; }
+            .nav-next { right: 10px; }
+            .emoji-actor { font-size: 2.5rem; }
+            .speech-bubble { font-size: 0.8rem; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>📮 HAI Tech Lab <span style="font-size: 0.8em; opacity: 0.8; font-weight: normal; margin-left: 10px;">| 行业黑话集邮册</span></h1>
+        <div class="header-controls">
+            <select id="roleFilter" class="filter-select">
+                <option value="all">全部角色 (ALL)</option>
+                <!-- Options filled by JS -->
+            </select>
+        </div>
+    </header>
+
+    <div class="carousel-container">
+        <button class="nav-btn nav-prev" onclick="changeSlide(-1)">&#10094;</button>
+        
+        <div id="stampContainer" class="stamp-card fade-enter">
+            <!-- Content Injected by JS -->
+        </div>
+
+        <button class="nav-btn nav-next" onclick="changeSlide(1)">&#10095;</button>
+    </div>
+
+    <div class="counter" id="counter">1 / 10</div>
+
+    <script>
+        const jargonData = [
+             // --- PM ---
+            { role: "PM", roleName: "项目经理", icon: "🦅", term: "里程碑", definition: "游戏存档点", 
+              panel1: { emoji: "😩", text: "终点太远了，我要累死了..." }, 
+              panel2: { emoji: "🚩", text: "这周只需走到这！休息一下！" }, 
+              principle: "时间是线性的，注意力是发散的。切分大目标，符合大脑奖励机制。", action: "👉 在日历上画圈，设立阶段性胜利点。" },
+            
+            { role: "PM", roleName: "项目经理", icon: "🦅", term: "MVP", definition: "能跑的破车", 
+              panel1: { emoji: "🚲", text: "我想造完美的法拉利..." }, 
+              panel2: { emoji: "🛴", text: "先来个滑板，只要能动就行！" }, 
+              principle: "资源稀缺。与其造完美的轮子，不如先造能滚的圆木。", action: "👉 砍需求！去掉不影响核心功能的累赘。" },
+
+            { role: "PM", roleName: "项目经理", icon: "🦅", term: "需求池", definition: "愿望清单", 
+              panel1: { emoji: "🤯", text: "这个想做，那个也想做！" }, 
+              panel2: { emoji: "📝", text: "先记小本本上，以后再说。" }, 
+              principle: "有限处理能力 vs 无限想法。建立缓冲区保护专注力。", action: "👉 别脑子一热就写代码，先按优先级排队。" },
+            
+            { role: "PM", roleName: "项目经理", icon: "🦅", term: "迭代", definition: "版本升级", 
+              panel1: { emoji: "🎯", text: "一箭没射中靶心..." }, 
+              panel2: { emoji: "🔄", text: "往左偏了？下支箭往右修！" }, 
+              principle: "反馈循环。谁也无法一次击中移动靶。", action: "👉 V0.1 能用 -> V0.2 好看 -> V0.3 好用。" },
+            
+            { role: "PM", roleName: "项目经理", icon: "🦅", term: "站会", definition: "每日对齐", 
+              panel1: { emoji: "🤷", text: "我以为你做了..." }, 
+              panel2: { emoji: "🤝", text: "咱们每天早晨花1分钟通个气。" }, 
+              principle: "消除信息不对称的高频、低成本协议。", action: "👉 昨天做啥？今天做啥？有啥困难？" },
+
+            // --- Frontend ---
+            { role: "Frontend", roleName: "前端", icon: "🖼️", term: "分离", definition: "三驾马车", 
+              panel1: { emoji: "🍝", text: "代码混在一起像坨面..." }, 
+              panel2: { emoji: "🏗️", text: "骨架、皮肤、肌肉，各管各的。" }, 
+              principle: "关注点分离 (Separation of Concerns)。", action: "👉 HTML写结构，CSS写样式，JS写逻辑。" },
+
+            { role: "Frontend", roleName: "前端", icon: "🖼️", term: "DOM", definition: "网页族谱", 
+              panel1: { emoji: "🌳", text: "网页是一棵倒过来的树？" }, 
+              panel2: { emoji: "✂️", text: "我要修剪这片叶子(标签)。" }, 
+              principle: "树状结构。层级关系决定了控制方式。", action: "👉 用 JS 找到叶子(Element)并修改它。" },
+
+            { role: "Frontend", roleName: "前端", icon: "🖼️", term: "HTTP", definition: "飞鸽传书", 
+              panel1: { emoji: "🏜️", text: "隔着十万八千里怎么说话？" }, 
+              panel2: { emoji: "🕊️", text: "按标准格式写信(Request)。" }, 
+              principle: "跨空间通信协议。标准化的信件格式。", action: "👉 GET(读信) / POST(写信)。" },
+
+            { role: "Frontend", roleName: "前端", icon: "🖼️", term: "渲染", definition: "画出来", 
+              panel1: { emoji: "💾", text: "后端给了我一堆 0 和 1..." }, 
+              panel2: { emoji: "🎨", text: "变身！变成好看的图片！" }, 
+              principle: "数据可视化。将二进制翻译成光信号。", action: "👉 拿到数据，用循环生成 HTML。" },
+
+            { role: "Frontend", roleName: "前端", icon: "🖼️", term: "调试", definition: "F12 大法", 
+              panel1: { emoji: "🙈", text: "程序心里在想啥？" }, 
+              panel2: { emoji: "🩺", text: "把心里话打印出来(Log)！" }, 
+              principle: "可观测性。给程序装个X光机。", action: "👉 Console.log('这里出错了')。" },
+
+            // --- PdM ---
+            { role: "PdM", roleName: "产品经理", icon: "🧠", term: "痛点", definition: "哪里不爽", 
+              panel1: { emoji: "😫", text: "抄错题抄断手了..." }, 
+              panel2: { emoji: "💊", text: "这有个神器，一键打印！" }, 
+              principle: "阻力最小化。任何让人累的地方都是机会。", action: "👉 观察生活，找到摩擦力最大的环节。" },
+
+            { role: "PdM", roleName: "产品经理", icon: "🧠", term: "用户故事", definition: "人话需求", 
+              panel1: { emoji: "🤖", text: "系统需支持二进制流传输..." }, 
+              panel2: { emoji: "🧑‍🎓", text: "我想拍照上传，为了省时间。" }, 
+              principle: "共情。站在使用者视角体验世界。", action: "👉 作为[谁]，想要[啥]，以便[目的]。" },
+
+            { role: "PdM", roleName: "产品经理", icon: "🧠", term: "原型图", definition: "线框草图", 
+              panel1: { emoji: "🏗️", text: "房子盖好了你才说要改窗户？" }, 
+              panel2: { emoji: "✏️", text: "先看图纸！图纸改起来不花钱。" }, 
+              principle: "模拟仿真成本 < 实体构建成本。", action: "👉 别管好不好看，先画方块确认逻辑。" },
+
+            // --- UI ---
+            { role: "UI", roleName: "设计师", icon: "👁️", term: "视觉层级", definition: "谁是老大", 
+              panel1: { emoji: "😵", text: "满屏都是字，先看哪？" }, 
+              panel2: { emoji: "👀", text: "那个最大的按钮！点它！" }, 
+              principle: "注意力聚焦。利用反差引导视线。", action: "👉 重要的做大做亮，次要的做小做灰。" },
+
+            { role: "UI", roleName: "设计师", icon: "👁️", term: "留白", definition: "呼吸感", 
+              panel1: { emoji: "🥫", text: "挤死我了，喘不过气！" }, 
+              panel2: { emoji: "🍃", text: "离远点，距离产生美。" }, 
+              principle: "格式塔分组。用'空'划分'有'。", action: "👉 别塞满，留出 20px 透透气。" },
+
+            // --- Backend ---
+            { role: "Backend", roleName: "后端", icon: "⚙️", term: "接口", definition: "服务窗口", 
+              panel1: { emoji: "🏦", text: "我要钻进金库拿钱吗？" }, 
+              panel2: { emoji: "💁", text: "不用，窗口递存折就行。" }, 
+              principle: "封装与契约。屏蔽内部复杂逻辑。", action: "👉 定义 URL，告诉前端往哪发数据。" },
+
+            { role: "Backend", roleName: "后端", icon: "⚙️", term: "持久化", definition: "存盘", 
+              panel1: { emoji: "⚡", text: "啊！停电了数据全没了！" }, 
+              panel2: { emoji: "💽", text: "放心，已经刻在硬盘上了。" }, 
+              principle: "易失性 vs 永久性。", action: "👉 把内存里的数据写入数据库/文件。" },
+
+            { role: "Backend", roleName: "后端", icon: "⚙️", term: "JSON", definition: "普通话", 
+              panel1: { emoji: "🗣️", text: "Python语听不懂JS语..." }, 
+              panel2: { emoji: "📜", text: "大家统一讲 JSON 语！" }, 
+              principle: "序列化。通用的文本交换格式。", action: "👉 后端打包成 JSON，前端解包。" },
+
+            // --- QA ---
+            { role: "QA", roleName: "测试", icon: "🛡️", term: "Bug", definition: "捉虫子", 
+              panel1: { emoji: "🤔", text: "逻辑很完美，肯定没问题。" }, 
+              panel2: { emoji: "🐛", text: "这是啥？程序崩溃了！" }, 
+              principle: "预期与现实的偏差。熵增导致错误。", action: "👉 发现 -> 复现 -> 记录 -> 验证。" },
+
+            { role: "QA", roleName: "测试", icon: "🛡️", term: "边界测试", definition: "试探底线", 
+              panel1: { emoji: "🧊", text: "路中间走得很稳..." }, 
+              panel2: { emoji: "⚠️", text: "路边悬崖最容易掉下去！" }, 
+              principle: "临界点最不稳定 (0, 空, 最大值)。", action: "👉 限制10个字？我偏输入11个试试。" },
+
+            // --- Sales ---
+            { role: "Sales", roleName: "销售", icon: "💰", term: "痛点营销", definition: "伤口撒盐", 
+              panel1: { emoji: "😐", text: "这药能帮你长生不老..." }, 
+              panel2: { emoji: "😱", text: "你有病！不吃这药会死！" }, 
+              principle: "损失厌恶。避免损失动力 > 获得收益。", action: "👉 先描述惨状(恐吓)，再递上解药。" },
+
+            { role: "Sales", roleName: "销售", icon: "💰", term: "电梯演讲", definition: "30秒定生死", 
+              panel1: { emoji: "⏳", text: "大佬只有30秒，别废话！" }, 
+              panel2: { emoji: "💎", text: "我是谁！能干啥！有多好！" }, 
+              principle: "注意力稀缺与信息压缩。", action: "👉 练习精炼话术，直击要害。" },
+
+            // --- Ops ---
+            { role: "Ops", roleName: "运营", icon: "📈", term: "冷启动", definition: "第一把火", 
+              panel1: { emoji: "🥶", text: "店里一个人都没有..." }, 
+              panel2: { emoji: "🔥", text: "雇几个人排队，制造人气！" }, 
+              principle: "临界质量。人为注入初始能量。", action: "👉 找种子用户，制造繁荣假象。" },
+
+            { role: "Ops", roleName: "运营", icon: "📈", term: "私域流量", definition: "自家鱼塘", 
+              panel1: { emoji: "🌊", text: "大海捞鱼太难了..." }, 
+              panel2: { emoji: "🎣", text: "把鱼抓回自家池塘养着。" }, 
+              principle: "所有权与触达成本。", action: "👉 建群，随时免费发广告。" }
+        ];
+
+        let currentIndex = 0;
+        let filteredData = [...jargonData];
+
+        // 1. Setup Filter
+        const roleSelect = document.getElementById('roleFilter');
+        const roles = [...new Set(jargonData.map(item => item.role))];
+        const roleNames = {}; 
+        jargonData.forEach(d => roleNames[d.role] = d.roleName);
+
+        roles.forEach(role => {
+            const opt = document.createElement('option');
+            opt.value = role;
+            opt.textContent = `${roleNames[role]} (${role})`;
+            roleSelect.appendChild(opt);
+        });
+
+        roleSelect.addEventListener('change', (e) => {
+            const role = e.target.value;
+            if (role === 'all') {
+                filteredData = [...jargonData];
+            } else {
+                filteredData = jargonData.filter(item => item.role === role);
+            }
+            currentIndex = 0;
+            renderSlide();
+        });
+
+        // 2. Render Slide
+        function renderSlide() {
+            const container = document.getElementById('stampContainer');
+            const counter = document.getElementById('counter');
+            
+            if (filteredData.length === 0) {
+                container.innerHTML = '<div style="padding:50px; text-align:center;">暂无数据</div>';
+                counter.textContent = '';
+                return;
+            }
+
+            const item = filteredData[currentIndex];
+            
+            // Generate Random Postmark Date
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}.${now.getMonth()+1}.${now.getDate()}`;
+
+            // Re-trigger animation
+            container.classList.remove('fade-enter');
+            void container.offsetWidth; // trigger reflow
+            container.classList.add('fade-enter');
+
+            container.innerHTML = `
+                <div class="stamp-inner">
+                    <div class="postmark">
+                        <div class="postmark-lines"></div>
+                        AI POST<br>${dateStr}<br>${item.role}
+                    </div>
+
+                    <div class="stamp-visual">
+                        <div class="comic-panel problem">
+                            <div class="emoji-actor">${item.panel1.emoji}</div>
+                            <div class="speech-bubble">${item.panel1.text}</div>
+                        </div>
+                        <div class="comic-panel solution">
+                            <div class="emoji-actor">${item.panel2.emoji}</div>
+                            <div class="speech-bubble">${item.panel2.text}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stamp-info">
+                        <div class="stamp-header">
+                            <h2 class="stamp-title">${item.term}</h2>
+                            <span class="stamp-role">${item.icon} ${item.roleName} | ${item.definition}</span>
+                        </div>
+                        
+                        <p class="stamp-def">
+                            "${item.principle}"
+                        </p>
+                        
+                        <p class="stamp-principle">
+                            <strong>应用指南：</strong>
+                            ${item.action}
+                        </p>
+                    </div>
+                </div>
+            `;
+
+            counter.textContent = `${currentIndex + 1} / ${filteredData.length}`;
+        }
+
+        // 3. Navigation Controls
+        function changeSlide(direction) {
+            currentIndex += direction;
+            if (currentIndex < 0) {
+                currentIndex = filteredData.length - 1;
+            } else if (currentIndex >= filteredData.length) {
+                currentIndex = 0;
+            }
+            renderSlide();
+        }
+
+        // Keyboard Support
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') changeSlide(-1);
+            if (e.key === 'ArrowRight') changeSlide(1);
+        });
+
+        // Initial Render
+        renderSlide();
+
+    </script>
+</body>
+</html>

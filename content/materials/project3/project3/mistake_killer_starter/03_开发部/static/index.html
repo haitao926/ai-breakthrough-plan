@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mistake Killer - 错题杀手</title>
+    <!-- 引入 Vue.js (前端框架) -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- 引入 设计部的 CSS 文件 -->
+    <link rel="stylesheet" href="../../02_设计部/视觉规范.css">
+</head>
+<body>
+
+    <div id="app">
+        <!-- 导航栏 -->
+        <div class="navbar">
+            📝 错题杀手 V1.0
+        </div>
+
+        <!-- 输入区域 -->
+        <div class="card">
+            <h3>📸 上传新错题</h3>
+            <!-- TODO 1: 给输入框绑定数据模型 (v-model) -->
+            <input type="text" v-model="________" placeholder="请输入科目 (如: 数学)">
+            <br><br>
+            <input type="text" v-model="________" placeholder="请输入题目描述" style="width: 80%;">
+            <br><br>
+            <button @click="addMistake">提交保存</button>
+        </div>
+
+        <!-- 列表展示区域 -->
+        <!-- TODO 2: 使用 v-for 循环显示错题列表 -->
+        <div class="card" v-for="(item, index) in mistakeList">
+            <h4>科目：{{ item.subject }}</h4>
+            <p>题目：{{ item.description }}</p>
+            <small style="color: grey;">ID: {{ index + 1 }}</small>
+        </div>
+
+    </div>
+
+    <script>
+        const { createApp } = Vue
+
+        createApp({
+            data() {
+                return {
+                    // 这里存放页面的数据
+                    newSubject: '',      // 新输入的科目
+                    newDescription: '',  // 新输入的描述
+                    mistakeList: [
+                        { subject: '示例数学', description: '这就叫 MVP (最小可行性产品)！' }
+                    ]
+                }
+            },
+            methods: {
+                addMistake() {
+                    // TODO 3: 完成提交逻辑
+                    // 1. 判断输入是否为空
+                    if (this.newSubject === '') {
+                        alert("科目不能为空！");
+                        return;
+                    }
+
+                    // 2. 构造一个新对象
+                    const newMistake = {
+                        subject: this.newSubject,
+                        description: this.newDescription
+                    };
+
+                    // 3. 把它加入到列表中 (push)
+                    // (在这里写代码把 newMistake 加入 mistakeList)
+                    this.mistakeList.push(newMistake); 
+
+                    // 4. 发送给后端 (高阶挑战，暂时留空)
+                    // fetch('/api/mistakes', ...)
+                    
+                    alert("添加成功！");
+                }
+            }
+        }).mount('#app')
+    </script>
+</body>
+</html>

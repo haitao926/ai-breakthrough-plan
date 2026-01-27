@@ -1,0 +1,92 @@
+{
+  "id": "p1-l1",
+  "project": "project1",
+  "title": "第1课：视觉引擎启动 (Vision Bootcamp)",
+  "duration": 45,
+  "description": "理解计算机视觉坐标系，跑通第一个手势识别 Demo。",
+  "phases": [
+    {
+      "id": "step1",
+      "title": "🚀 0-5分：环境准备",
+      "duration": 5,
+      "student": {
+        "title": "初始化工作区",
+        "content": "<div class='bg-blue-50 p-4 rounded-lg border border-blue-100 mb-4'><h4 class='font-bold text-blue-800'>🌟 今日目标</h4><p class='text-sm text-blue-600'>不写一行底层代码，用 AI 创造一个能看懂手势的程序。</p></div><p>首先，我们需要准备好干净的编码环境。</p>",
+        "tasks": [
+            "打开 VS Code",
+            "在桌面新建文件夹命名为 <code>hand-tracking</code>",
+            "在 VS Code 中点击 'Open Folder' 打开该文件夹",
+            "新建一个空白文件 <code>index.html</code>"
+        ]
+      }
+    },
+    {
+      "id": "step2",
+      "title": "🧠 5-15分：视觉原理",
+      "duration": 10,
+      "student": {
+        "title": "电脑是如何'看见'手的？",
+        "content": "<p>电脑看到的其实不是'手'，而是一堆数字。AI 模型（MediaPipe）会分析这些像素，并返回 <strong>21个关键点 (Landmarks)</strong> 的坐标。</p><div class='flex gap-4 my-4'><img src='https://developers.google.com/static/mediapipe/images/solutions/hand-landmarks.png' class='w-1/2 rounded-lg border border-gray-200'><div class='w-1/2 text-sm bg-gray-100 p-4 rounded-lg'><h4 class='font-bold'>关键点速查：</h4><ul class='list-disc pl-4 mt-2'><li><strong>0号点</strong>：手腕 (Wrist)</li><li><strong>8号点</strong>：食指指尖 (Index Tip)</li><li><strong>4号点</strong>：大拇指尖 (Thumb Tip)</li></ul><p class='mt-4 text-gray-500'>坐标范围是 0.0 到 1.0 (左上角是0,0)。</p></div></div>",
+        "tasks": [
+            "观察左图，找到 <strong>8号点</strong> 的位置",
+            "思考：如果我们想用食指控制游戏里的光标，应该追踪哪个点的坐标？"
+        ]
+      }
+    },
+    {
+      "id": "step3",
+      "title": "💻 15-25分：AI 生成引擎",
+      "duration": 10,
+      "student": {
+        "title": "召唤 AI 写代码",
+        "content": "<p>现在是见证奇迹的时刻。我们将使用 Claude 直接生成完整的视觉引擎代码。</p><p class='text-sm text-gray-500'>我们将使用 CDN 方式引入库，这样不需要安装复杂的 Python 环境。</p>",
+        "prompts": [
+          {
+            "label": "发送给 Claude",
+            "text": "请帮我写一个基于 MediaPipe Hands 的 HTML 单文件示例。要求：\n1. 使用 CDN 引入必要的 JS 库。\n2. 自动调用电脑摄像头。\n3. 在 canvas 画布上实时画出我的手部骨架连线。\n4. 代码要简洁，中文注释。"
+          }
+        ],
+        "tasks": [
+            "点击上方卡片复制 Prompt，发送给 Claude",
+            "将 AI 生成的代码完整复制到 <code>index.html</code> 中",
+            "右键 <code>index.html</code> -> 'Open with Live Server'",
+            "允许浏览器访问摄像头，观察效果！"
+        ]
+      }
+    },
+    {
+      "id": "step4",
+      "title": "🔧 25-40分：获取数据",
+      "duration": 15,
+      "student": {
+        "title": "读取坐标数据",
+        "content": "<p>看到红色的骨架线了吗？现在我们要让程序把“数据”吐出来。</p><p>我们需要修改代码，在每一帧的循环里，打印出食指（8号点）的 X 和 Y 坐标。</p>",
+        "prompts": [
+            {
+                "label": "修改代码 Prompt",
+                "text": "代码运行成功了！现在请帮我修改代码：\n在 onResults 函数的循环里，获取食指指尖（索引为8）的 x 和 y 坐标，并使用 console.log 打印出来。保留原来的画图逻辑。"
+            }
+        ],
+        "tasks": [
+            "将新代码覆盖到 <code>index.html</code>",
+            "回到浏览器，按 <strong>F12</strong> 打开开发者工具 (Console)",
+            "移动手指，观察控制台里的数字变化",
+            "实验：当你把手举高时，Y坐标是变大还是变小？(Web中通常向下为Y轴正方向)"
+        ]
+      }
+    },
+    {
+      "id": "step5",
+      "title": "🏁 40-45分：课后挑战",
+      "duration": 5,
+      "student": {
+        "title": "挑战任务",
+        "content": "<p>恭喜！你已经拥有了一个能看见世界的程序。下节课我们将用它来控制游戏。</p>",
+        "tasks": [
+            "<strong>挑战 1 (视觉)</strong>：让 AI 修改代码，把连接线的颜色改成彩色，或者加粗。",
+            "<strong>挑战 2 (逻辑)</strong>：试着让 AI 写一段逻辑 —— 当我竖起大拇指时，在屏幕上显示“点赞”文字。"
+        ]
+      }
+    }
+  ]
+}

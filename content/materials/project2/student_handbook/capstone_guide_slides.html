@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Hackathon Guide</title>
+<style>
+    :root { --primary: #2c3e50; --accent: #3498db; --highlight: #e74c3c; --bg: #fdfdfd; --text: #333; }
+    body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
+    .slide { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 40px 80px; box-sizing: border-box; opacity: 0; transform: translateX(100px); transition: all 0.5s ease; pointer-events: none; }
+    .slide.active { opacity: 1; transform: translateX(0); pointer-events: all; }
+    .slide.prev { transform: translateX(-100px); opacity: 0; }
+    h1 { font-size: 3em; color: var(--primary); text-align: center; margin-bottom: 20px; }
+    h2 { font-size: 2.2em; color: var(--primary); border-bottom: 4px solid var(--accent); padding-bottom: 10px; margin-bottom: 30px; }
+    .subtitle { color: #7f8c8d; font-weight: 300; font-size: 0.8em; }
+    .content-box { font-size: 1.4em; line-height: 1.6; max-width: 1000px; width: 100%; }
+    blockquote { background: #f1f9ff; border-left: 8px solid var(--accent); margin: 20px 0; padding: 20px; font-style: italic; color: #555; }
+    strong { color: var(--highlight); font-weight: 700; }
+    li { margin-bottom: 10px; }
+    .progress-bar { position: fixed; bottom: 0; left: 0; height: 6px; background: var(--accent); width: 0%; transition: width 0.3s; }
+    .controls { position: fixed; bottom: 20px; right: 20px; display: flex; gap: 10px; }
+    button { background: white; border: 2px solid var(--accent); color: var(--accent); padding: 10px 20px; cursor: pointer; border-radius: 30px; font-weight: bold; }
+    button:hover { background: var(--accent); color: white; }
+    .slide.cover { background: var(--primary); color: white; }
+    .slide.cover h1 { color: white; }
+    .slide.cover h2 { border-color: white; color: #ecf0f1; }
+    .slide.cover strong { color: #f1c40f; }
+    .slide.cover blockquote { background: rgba(255,255,255,0.1); border-left-color: #f1c40f; color: #ddd; }
+</style>
+</head>
+<body>
+<div id="slides-container"></div>
+<div class="progress-bar" id="progress"></div>
+<div class="controls"><button onclick="prevSlide()">❮ Prev</button><button onclick="nextSlide()">Next ❯</button></div>
+<script>
+const slidesData = [{"type": "cover", "title": "期末大作业：AI 产品黑客松 (Capstone Project)", "content": "**任务**：在 2 小时内，利用 AI (ChatGPT/Cursor/Replit) 从 0 到 1 上线一个网页应用。<br>**核心**：你不是写代码的程序员，你是指挥 AI 干活的 **产品经理 (PM)** 和 **项目经理 (PJM)**。"}, {"type": "section_header", "title": "第一阶段：我是产品经理 (PM) —— 定义与克制 (前 40分钟)", "content": "<strong>你的职责</strong>：想清楚要做什么，<strong>更重要的是决定“不做什么”</strong>。"}, {"type": "content", "title": "第一阶段：我是产品经理 (PM) —— 定义与克制 (前 40分钟) <span class='subtitle'> // 1. 填写“一页纸 PRD” (产品需求文档)</span>", "content": "不要空想，请在纸上写下以下 4 点，这是你指挥 AI 的依据。<br><li><strong>产品名称</strong>：_____________ (起个响亮的名字)</li><li><strong>一句话口号</strong>：为 [谁] 解决 [什么痛点]。</li><li><strong>核心功能 (MVP)</strong>：(只选 3 个！多一个都不要！)</li><br>    1.  ___________________________ (例如：倒计时功能)<br>    2.  ___________________________ (例如：任务列表)<br>    3.  ___________________________ (例如：完成时的动画)<li><strong>我决定不做的功能</strong>：(明确写下来，防止 AI 跑偏)</li><br>    *   *例如：不做注册登录、不做数据云端同步、不做复杂的设置页。*"}, {"type": "content", "title": "第一阶段：我是产品经理 (PM) —— 定义与克制 (前 40分钟) <span class='subtitle'> // 2. 绘制草图 (Wireframe)</span>", "content": "AI 看不懂你脑子里的画面，但能看懂你的描述。请画出界面布局：<li><strong>布局结构</strong>：左边是什么？右边是什么？按钮放在哪里？</li><li><strong>颜色风格</strong>：是严肃的深色系？还是活泼的马卡龙色系？</li>"}, {"type": "content", "title": "第一阶段：我是产品经理 (PM) —— 定义与克制 (前 40分钟) <span class='subtitle'> // 3. PM 的关键决策 (Decision Making)</span>", "content": "> <strong>当 AI 问你：“要不要加个背景音乐？”</strong><blockquote>*   <strong>普通学生</strong>：好啊好啊！</blockquote><blockquote>*   <strong>合格 PM</strong>：<strong>不要。</strong> (因为这不解决核心痛点，且可能导致浏览器兼容性 Bug，影响上线时间)。</blockquote><br><br>---"}, {"type": "section_header", "title": "第二阶段：我是项目经理 (PJM) —— 拆解与验收 (中间 60分钟)", "content": "<strong>你的职责</strong>：把大目标切碎，像挤牙膏一样一点点喂给 AI，并确保它产出的东西能用。"}, {"type": "content", "title": "第二阶段：我是项目经理 (PJM) —— 拆解与验收 (中间 60分钟) <span class='subtitle'> // 1. 制定冲刺计划 (Sprint Planning)</span>", "content": "不要试图一句 Prompt 生成整个 APP。请按以下顺序“发号施令”：<br><li><strong>Sprint 1 (骨架篇)</strong>：生成一个静态的 HTML 页面，包含布局和简单的 CSS 样式。（先看脸）</li><li><strong>Sprint 2 (逻辑篇)</strong>：让按钮能点击，让倒计时能动起来。（再长脑子）</li><li><strong>Sprint 3 (数据篇)</strong>：让浏览器记住用户的数据 (LocalStorage)，刷新不丢失。（最后记性）</li>"}, {"type": "content", "title": "第二阶段：我是项目经理 (PJM) —— 拆解与验收 (中间 60分钟) <span class='subtitle'> // 2. 向 AI 派发任务 (Prompt Engineering)</span>", "content": "<strong>PJM 的标准话术模板</strong>：<blockquote>\"你是一个高级前端工程师。现在的任务是 <strong>[Sprint 1：搭建骨架]</strong>。</blockquote><blockquote>请写一个单文件 HTML。</blockquote><blockquote><strong>背景颜色</strong>：淡蓝色。</blockquote><blockquote><strong>页面中心</strong>：有一个白色的卡片容器。</blockquote><blockquote><strong>元素</strong>：包含一个大标题'番茄钟'，和一个绿色的'开始'按钮。</blockquote><blockquote><strong>注意</strong>：暂时不需要写 JavaScript 逻辑，只写界面。\"</blockquote>"}, {"type": "content", "title": "第二阶段：我是项目经理 (PJM) —— 拆解与验收 (中间 60分钟) <span class='subtitle'> // 3. 处理 Bug 与风险 (Risk Management)</span>", "content": "当代码运行报错，或者样子很丑时，PJM 需要站出来：<li><strong>不要说</strong>：“你写的代码不对。” (AI 听不懂)</li><li><strong>要说</strong>：“点击‘开始’按钮后，没有任何反应。请检查 JavaScript 的 addEventListener 部分，并给出修复后的完整代码。”</li><li><strong>砍需求策略</strong>：如果一个功能 AI 改了 3 次还是错的，PJM 必须立刻决定：<strong>放弃这个功能，换个简单的替代方案</strong>，保住上线时间。</li><br><br>---"}, {"type": "section_header", "title": "第三阶段：验收与交付 (最后 20分钟)", "content": "<strong>你的职责</strong>：确保产品无致命 Bug，准备路演。"}, {"type": "content", "title": "第三阶段：验收与交付 (最后 20分钟) <span class='subtitle'> // 1. 验收测试 (UAT)</span>", "content": "请同桌作为“用户”来试用。<li><strong>测试点 1</strong>：狂点按钮，会崩吗？</li><li><strong>测试点 2</strong>：输入框里输入乱码，会崩吗？</li><li><strong>测试点 3</strong>：刷新页面，刚才记的东西还在吗？</li>"}, {"type": "content", "title": "第三阶段：验收与交付 (最后 20分钟) <span class='subtitle'> // 2. 编写发布说明 (Release Note)</span>", "content": "提交你的作业报告，必须包含：<li><strong>产品截图</strong>：最美的一张。</li><li><strong>遗憾清单</strong>：本来想做但因为时间不够（或技术太难）而砍掉的功能。（这体现了你的项目管理能力）。</li><li><strong>AI 对话链接</strong>：让我们看看你是怎么“调教”AI 的。</li><br><br>---"}, {"type": "content", "title": "附录：三个推荐选题 (难度分级) <span class='subtitle'> // 选题 A：极简番茄钟 (难度：⭐⭐)</span>", "content": "*   <strong>PM 视角</strong>：帮助同学专注 25 分钟。<li><strong>PJM 难点</strong>：倒计时的准确性，结束时的提示音（Audio 标签的处理）。</li>"}, {"type": "content", "title": "附录：三个推荐选题 (难度分级) <span class='subtitle'> // 选题 B：随机决定器 (难度：⭐⭐⭐)</span>", "content": "*   <strong>PM 视角</strong>：解决“中午吃什么”的选择困难症。<li><strong>PJM 难点</strong>：数组 (Array) 的操作，随机算法，以及动感的滚动动画效果。</li>"}, {"type": "content", "title": "附录：三个推荐选题 (难度分级) <span class='subtitle'> // 选题 C：电子木鱼 (难度：⭐⭐⭐⭐)</span>", "content": "*   <strong>PM 视角</strong>：赛博积德，缓解焦虑。<li><strong>PJM 难点</strong>：点击屏幕时的波纹动画，数字 \"+1\" 的浮动效果，敲击计数的本地存储。</li>"}];
+const container = document.getElementById('slides-container');
+const progress = document.getElementById('progress');
+
+slidesData.forEach((slide, index) => {
+    const el = document.createElement('div');
+    el.className = `slide ${slide.type} ${index === 0 ? 'active' : ''}`;
+    let htmlContent = '';
+    if (slide.type === 'cover') {
+        htmlContent = `<h1>${slide.title}</h1><div class='content-box'>${slide.content}</div>`;
+    } else {
+        htmlContent = `<h2>${slide.title}</h2><div class='content-box'>${slide.content}</div>`;
+    }
+    el.innerHTML = htmlContent;
+    container.appendChild(el);
+});
+
+let currentIdx = 0;
+const slides = document.querySelectorAll('.slide');
+
+function updateSlide(newIdx) {
+    if (newIdx < 0 || newIdx >= slides.length) return;
+    slides[currentIdx].classList.remove('active');
+    if (newIdx > currentIdx) slides[currentIdx].classList.add('prev');
+    else slides[currentIdx].classList.remove('prev');
+    currentIdx = newIdx;
+    slides[currentIdx].classList.remove('prev');
+    slides[currentIdx].classList.add('active');
+    const pct = ((currentIdx + 1) / slides.length) * 100;
+    progress.style.width = pct + '%';
+}
+
+function nextSlide() { updateSlide(currentIdx + 1); }
+function prevSlide() { updateSlide(currentIdx - 1); }
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') nextSlide();
+    if (e.key === 'ArrowLeft') prevSlide();
+});
+</script></body></html>

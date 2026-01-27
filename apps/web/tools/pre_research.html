@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>前期调研 | Field Research</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #f8fafc; }
+        .input-group:focus-within label { color: #4f46e5; }
+        .input-group:focus-within i { color: #4f46e5; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- 顶部导航 -->
+    <nav class="bg-white border-b border-gray-200 px-6 py-3 flex justify-between items-center sticky top-0 z-50">
+        <div class="flex items-center gap-3">
+            <a href="../tools.html" class="text-gray-400 hover:text-gray-600 transition"><i class="fas fa-arrow-left"></i></a>
+            <h1 class="font-bold text-gray-800 text-lg flex items-center">
+                <i class="fas fa-search text-indigo-600 mr-2"></i> 前期调研
+            </h1>
+        </div>
+        <div class="flex items-center gap-3">
+            <span id="saveStatus" class="text-xs text-gray-400">自动保存中...</span>
+        </div>
+    </nav>
+
+    <!-- 主体 -->
+    <main class="flex-1 max-w-5xl mx-auto w-full p-8">
+        <div class="mb-8 text-center">
+            <h2 class="text-3xl font-bold text-gray-900 mb-2">先验证，再动手</h2>
+            <p class="text-gray-500 text-sm">记录调研对象、方法与关键发现，为立项提供真实依据。</p>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 input-group">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-3 flex items-center">
+                    <i class="fas fa-question-circle mr-2 text-lg"></i> 核心问题
+                </label>
+                <textarea id="question" class="w-full h-24 text-base resize-none outline-none text-gray-700 bg-transparent placeholder-gray-300" placeholder="你想验证的假设或问题是什么？"></textarea>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 input-group">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-3 flex items-center">
+                    <i class="fas fa-users mr-2 text-lg"></i> 目标对象
+                </label>
+                <textarea id="targets" class="w-full h-24 text-base resize-none outline-none text-gray-700 bg-transparent placeholder-gray-300" placeholder="调研谁？（年级、身份、场景等）"></textarea>
+            </div>
+        </div>
+
+        <div class="mt-6 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-4 flex items-center">
+                <i class="fas fa-clipboard-list mr-2 text-lg"></i> 调研方法
+            </label>
+            <div class="grid md:grid-cols-2 gap-4 text-sm text-gray-700">
+                <label class="flex items-center gap-2"><input type="checkbox" id="method-interview" class="rounded text-indigo-600"> 访谈</label>
+                <label class="flex items-center gap-2"><input type="checkbox" id="method-survey" class="rounded text-indigo-600"> 问卷</label>
+                <label class="flex items-center gap-2"><input type="checkbox" id="method-observation" class="rounded text-indigo-600"> 观察</label>
+                <label class="flex items-center gap-2"><input type="checkbox" id="method-data" class="rounded text-indigo-600"> 数据分析</label>
+            </div>
+        </div>
+
+        <div class="mt-6 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 input-group">
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-3 flex items-center">
+                <i class="fas fa-route mr-2 text-lg"></i> 调研计划
+            </label>
+            <textarea id="plan" class="w-full h-24 text-base resize-none outline-none text-gray-700 bg-transparent placeholder-gray-300" placeholder="计划何时、如何开展调研？需要谁参与？"></textarea>
+        </div>
+
+        <div class="mt-6 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 input-group">
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-3 flex items-center">
+                <i class="fas fa-pen-nib mr-2 text-lg"></i> 调研问题清单
+            </label>
+            <textarea id="questions" class="w-full h-28 text-base resize-none outline-none text-gray-700 bg-transparent placeholder-gray-300" placeholder="列出访谈/问卷问题，至少 5 条。"></textarea>
+        </div>
+
+        <div class="mt-6 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 input-group">
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-3 flex items-center">
+                <i class="fas fa-chart-line mr-2 text-lg"></i> 关键发现
+            </label>
+            <textarea id="findings" class="w-full h-28 text-base resize-none outline-none text-gray-700 bg-transparent placeholder-gray-300" placeholder="整理最重要的现象、证据和痛点。"></textarea>
+        </div>
+
+        <div class="mt-6 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 input-group">
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-3 flex items-center">
+                <i class="fas fa-flag-checkered mr-2 text-lg"></i> 结论与下一步
+            </label>
+            <textarea id="nextSteps" class="w-full h-24 text-base resize-none outline-none text-gray-700 bg-transparent placeholder-gray-300" placeholder="调研结论是什么？下一步准备如何调整项目方向？"></textarea>
+        </div>
+    </main>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const projectId = urlParams.get('project');
+        const DATA_KEY = projectId ? `ai_course_pre_research_${projectId}` : 'ai_course_pre_research';
+
+        const methodIds = ['interview', 'survey', 'observation', 'data'];
+        let state = {
+            question: '',
+            targets: '',
+            methods: [],
+            plan: '',
+            questions: '',
+            findings: '',
+            nextSteps: ''
+        };
+
+        const statusEl = document.getElementById('saveStatus');
+        let statusTimer = null;
+
+        function loadData() {
+            const saved = JSON.parse(localStorage.getItem(DATA_KEY) || '{}');
+            state.question = saved.question || '';
+            state.targets = saved.targets || '';
+            state.methods = Array.isArray(saved.methods) ? saved.methods : [];
+            state.plan = saved.plan || '';
+            state.questions = saved.questions || '';
+            state.findings = saved.findings || '';
+            state.nextSteps = saved.nextSteps || '';
+
+            document.getElementById('question').value = state.question;
+            document.getElementById('targets').value = state.targets;
+            document.getElementById('plan').value = state.plan;
+            document.getElementById('questions').value = state.questions;
+            document.getElementById('findings').value = state.findings;
+            document.getElementById('nextSteps').value = state.nextSteps;
+
+            methodIds.forEach((id) => {
+                const checkbox = document.getElementById(`method-${id}`);
+                checkbox.checked = state.methods.includes(id);
+            });
+        }
+
+        function saveData() {
+            localStorage.setItem(DATA_KEY, JSON.stringify(state));
+            if (!statusEl) return;
+            statusEl.textContent = '已保存';
+            statusEl.classList.add('text-green-500');
+            clearTimeout(statusTimer);
+            statusTimer = setTimeout(() => {
+                statusEl.textContent = '自动保存中...';
+                statusEl.classList.remove('text-green-500');
+            }, 1000);
+        }
+
+        function syncMethods() {
+            state.methods = methodIds.filter((id) => document.getElementById(`method-${id}`).checked);
+            saveData();
+        }
+
+        document.getElementById('question').addEventListener('input', (e) => {
+            state.question = e.target.value;
+            saveData();
+        });
+        document.getElementById('targets').addEventListener('input', (e) => {
+            state.targets = e.target.value;
+            saveData();
+        });
+        document.getElementById('plan').addEventListener('input', (e) => {
+            state.plan = e.target.value;
+            saveData();
+        });
+        document.getElementById('questions').addEventListener('input', (e) => {
+            state.questions = e.target.value;
+            saveData();
+        });
+        document.getElementById('findings').addEventListener('input', (e) => {
+            state.findings = e.target.value;
+            saveData();
+        });
+        document.getElementById('nextSteps').addEventListener('input', (e) => {
+            state.nextSteps = e.target.value;
+            saveData();
+        });
+
+        methodIds.forEach((id) => {
+            document.getElementById(`method-${id}`).addEventListener('change', syncMethods);
+        });
+
+        loadData();
+    </script>
+</body>
+</html>

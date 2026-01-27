@@ -1,0 +1,50 @@
+{
+  "id": "p5-l2",
+  "project": "project5",
+  "title": "第2课：系统部署 (Deployment)",
+  "duration": 45,
+  "description": "配置 Linux 环境，将代码搬运到树莓派。",
+  "phases": [
+    {
+      "id": "step1",
+      "title": "🐧 0-10分：Linux 初识",
+      "duration": 10,
+      "student": {
+        "title": "终端的艺术",
+        "content": "<p>在树莓派上，我们通常使用命令行 (Terminal)。</p>",
+        "tasks": [
+            "使用 SSH 登录树莓派 `ssh pi@192.168.x.x`",
+            "尝试命令：`ls` (列出文件), `cd` (进入目录), `pwd` (在哪？)"
+        ]
+      }
+    },
+    {
+      "id": "step2",
+      "title": "🚚 10-30分：代码搬家",
+      "duration": 20,
+      "student": {
+        "title": "文件传输",
+        "content": "<p>我们在电脑上写好的代码，怎么发给树莓派？</p>",
+        "tasks": [
+            "方法 A：使用 FileZilla (SFTP)",
+            "方法 B：使用 VS Code Remote SSH (推荐)",
+            "将 `led_control.py` 传到 `/home/pi/my_project`"
+        ]
+      }
+    },
+    {
+      "id": "step3",
+      "title": "🏃 30-45分：实机运行",
+      "duration": 15,
+      "student": {
+        "title": "Run it!",
+        "content": "<p>是时候在真实的硬件上跑代码了。</p>",
+        "tasks": [
+            "在终端输入 `python3 led_control.py`",
+            "观察 LED 灯",
+            "<strong>排错</strong>：如果报错 `ModuleNotFoundError`，说明需要 `pip install` 库"
+        ]
+      }
+    }
+  ]
+}

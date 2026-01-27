@@ -1,0 +1,64 @@
+/* 🎨 视觉规范 (Design System) */
+
+/* 
+   TODO: 请在下方定义你的品牌颜色。
+   你可以去 https://flatuicolors.com/ 挑选你喜欢的颜色代码。
+*/
+
+:root {
+    /* 主色调 (品牌色)：用于导航栏、主要按钮 */
+    --primary-color: #________;  /* 建议试试 #42b983 (绿) 或 #3498db (蓝) */
+
+    /* 辅助色：用于强调或次要信息 */
+    --secondary-color: #________; /* 建议试试 #2c3e50 (深蓝灰) */
+
+    /* 背景色 */
+    --bg-color: #f5f7fa;
+
+    /* 字体颜色 */
+    --text-color: #333333;
+}
+
+/* 下面是已经写好的样式，它们会自动引用上面你定义的颜色 */
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+}
+
+.navbar {
+    background-color: var(--primary-color); /* 这里使用了你的主色 */
+    color: white;
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 1.2em;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    margin-top: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    border-left: 5px solid var(--secondary-color); /* 左边框使用了辅助色 */
+}
+
+button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 1em;
+}
+
+button:hover {
+    opacity: 0.8; /* 鼠标放上去变透明一点 */
+}

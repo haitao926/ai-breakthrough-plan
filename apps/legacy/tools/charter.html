@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>项目立项书 | Project Charter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #f8fafc; }
+        .input-group:focus-within label { color: #4f46e5; }
+        .input-group:focus-within i { color: #4f46e5; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- 顶部导航 -->
+    <nav class="bg-white border-b border-gray-200 px-6 py-3 flex justify-between items-center sticky top-0 z-50">
+        <div class="flex items-center gap-3">
+            <a href="../tools.html" class="text-gray-400 hover:text-gray-600 transition"><i class="fas fa-arrow-left"></i></a>
+            <h1 class="font-bold text-gray-800 text-lg flex items-center">
+                <i class="fas fa-file-signature text-purple-600 mr-2"></i> 项目立项书
+            </h1>
+        </div>
+        <div class="flex items-center gap-3">
+            <span id="saveStatus" class="text-xs text-gray-400">自动保存中...</span>
+            <button onclick="exportPDF()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-sm transition">
+                <i class="fas fa-file-pdf mr-1"></i> 导出 PDF
+            </button>
+        </div>
+    </nav>
+
+    <!-- 主画布 -->
+    <main class="flex-1 max-w-5xl mx-auto w-full p-8">
+        
+        <!-- 头部信息 -->
+        <div class="mb-8 text-center">
+            <input type="text" id="projName" class="text-4xl font-extrabold text-center bg-transparent border-b-2 border-transparent hover:border-gray-200 focus:border-purple-500 outline-none w-full py-2 transition placeholder-gray-300" placeholder="在此输入项目名称...">
+            <p class="text-gray-400 mt-2 text-sm">定义你的愿景，明确你的方向</p>
+        </div>
+
+        <!-- 核心四问矩阵 -->
+        <div class="grid md:grid-cols-2 gap-6">
+            
+            <!-- 1. 用户 -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 input-group hover:shadow-md transition duration-300">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-3 flex items-center transition-colors">
+                    <i class="fas fa-user-circle mr-2 text-lg"></i> 1. 目标用户 (Who)
+                </label>
+                <textarea id="projPersona" class="w-full h-32 text-base resize-none outline-none text-gray-700 bg-transparent placeholder-gray-300 leading-relaxed" placeholder="描述你的典型用户画像。&#10;例如：高一（3）班经常忘记带饭卡的走读生..."></textarea>
+            </div>
+
+            <!-- 2. 痛点 -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 input-group hover:shadow-md transition duration-300">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-3 flex items-center transition-colors">
+                    <i class="fas fa-exclamation-triangle mr-2 text-lg"></i> 2. 核心痛点 (Why)
+                </label>
+                <textarea id="projPain" class="w-full h-32 text-base resize-none outline-none text-gray-700 bg-transparent placeholder-gray-300 leading-relaxed" placeholder="他们遇到了什么麻烦？&#10;例如：午休时间只有40分钟，排队充卡要花15分钟..."></textarea>
+            </div>
+
+            <!-- 3. 方案 -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 input-group hover:shadow-md transition duration-300">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-3 flex items-center transition-colors">
+                    <i class="fas fa-lightbulb mr-2 text-lg"></i> 3. 解决方案 (How)
+                </label>
+                <textarea id="projSolution" class="w-full h-32 text-base resize-none outline-none text-gray-700 bg-transparent placeholder-gray-300 leading-relaxed" placeholder="我们要开发什么？&#10;例如：基于人脸识别的无感支付终端，部署在食堂窗口..."></textarea>
+            </div>
+
+            <!-- 4. 价值 -->
+            <div class="bg-gradient-to-br from-purple-600 to-indigo-700 p-6 rounded-2xl shadow-lg text-white">
+                <label class="block text-xs font-bold text-purple-200 uppercase mb-3 flex items-center">
+                    <i class="fas fa-bullhorn mr-2 text-lg"></i> 4. 电梯演讲 (Value)
+                </label>
+                <textarea id="projValue" class="w-full h-32 text-lg font-medium resize-none outline-none text-white bg-transparent placeholder-purple-300/50 leading-relaxed" placeholder="一句话打动评委：&#10;我们的产品是______，为了解决______问题，它能够______。"></textarea>
+            </div>
+
+        </div>
+
+    </main>
+
+    <script>
+        // 简单的数据持久化逻辑
+        const fields = ['projName', 'projPersona', 'projPain', 'projSolution', 'projValue'];
+        const DATA_KEY = 'ai_course_charter';
+
+        // Load
+        const saved = JSON.parse(localStorage.getItem(DATA_KEY) || '{}');
+        fields.forEach(f => {
+            if(saved[f]) document.getElementById(f).value = saved[f];
+        });
+
+        // Auto Save
+        document.body.addEventListener('input', () => {
+            const data = {};
+            fields.forEach(f => data[f] = document.getElementById(f).value);
+            localStorage.setItem(DATA_KEY, JSON.stringify(data));
+            
+            const status = document.getElementById('saveStatus');
+            status.textContent = '已保存';
+            status.classList.add('text-green-500');
+            setTimeout(() => {
+                status.textContent = '自动保存中...';
+                status.classList.remove('text-green-500');
+            }, 1000);
+        });
+
+        function exportPDF() {
+            window.print(); // 最简单的导出方式
+        }
+    </script>
+</body>
+</html>

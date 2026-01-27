@@ -1,0 +1,14 @@
+.DS_Store
+node_modules/
+*.log
+
+storage/db/*.sqlite
+storage/uploads/
+storage/logs/
+
+services/gitea/data/
+services/gitea/log/
+services/gitea/custom/conf/app.ini
+services/gitea/gitea
+services/gitea/gitea-*
+archive/

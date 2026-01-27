@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>教师指挥塔 | Mission Control</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            font-family: 'Inter', sans-serif;
+            color: #e0e7ff;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.5); }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <!-- Header -->
+    <header class="bg-slate-900/80 border-b border-slate-700 h-16 flex items-center justify-between px-6 backdrop-blur-md z-10">
+        <div class="flex items-center gap-4">
+            <a href="teacher.html" class="text-slate-400 hover:text-white transition"><i class="fas fa-arrow-left"></i> 返回后台</a>
+            <h1 class="font-bold text-white text-lg flex items-center gap-2">
+                <i class="fas fa-tower-observation text-indigo-400"></i>
+                Mission Control Center
+            </h1>
+        </div>
+        <div class="flex items-center gap-4 text-sm">
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                <span class="text-slate-300">Live Data</span>
+            </div>
+            <span id="total-badge" class="bg-indigo-600 px-3 py-1 rounded-full text-xs font-bold">Projects: 0</span>
+        </div>
+    </header>
+
+    <!-- Main -->
+    <main class="flex-1 flex overflow-hidden p-6 gap-6">
+        
+        <!-- Left: Team List -->
+        <div class="w-1/3 flex flex-col gap-4">
+            <div class="glass-panel bg-slate-800/50 border-slate-700 rounded-xl flex-1 flex flex-col overflow-hidden">
+                <div class="p-4 border-b border-slate-700/50 flex justify-between items-center">
+                    <h3 class="font-bold text-white">活跃项目监控</h3>
+                    <button onclick="fetchAllTeams()" class="text-slate-400 hover:text-white"><i class="fas fa-sync-alt"></i></button>
+                </div>
+                <div id="teamList" class="flex-1 overflow-y-auto p-4 space-y-3">
+                    <div class="text-center text-slate-500 mt-10">
+                        <i class="fas fa-satellite-dish fa-spin text-2xl mb-2"></i><br>正在扫描信号...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Detail View -->
+        <div class="flex-1 flex flex-col glass-panel bg-slate-800/90 border-slate-700 rounded-xl overflow-hidden relative text-slate-200">
+            <!-- Detail Header -->
+            <div class="h-20 border-b border-slate-700 flex items-center justify-between px-8 bg-slate-900/50">
+                <div class="flex items-center gap-4">
+                    <div id="detailAvatar" class="w-12 h-12 rounded-lg bg-indigo-500/20 border border-indigo-500/50 flex items-center justify-center text-indigo-300 text-xl font-bold">
+                        #
+                    </div>
+                    <div>
+                        <h2 id="detailName" class="font-bold text-xl text-white">请选择项目</h2>
+                        <p id="detailMeta" class="text-sm text-slate-400">点击左侧列表查看实时进度</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-xs text-slate-500 uppercase tracking-wider">最后活跃</div>
+                    <div id="detailActive" class="text-sm font-mono text-emerald-400">--:--</div>
+                </div>
+            </div>
+
+            <!-- Detail Content -->
+            <div class="flex-1 overflow-y-auto p-8 relative">
+                <div id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center text-slate-600">
+                    <i class="fas fa-chart-network text-6xl mb-4 opacity-20"></i>
+                    <p>等待数据接入...</p>
+                </div>
+
+                <div id="detailContent" class="hidden space-y-8">
+                    <!-- Progress Bar -->
+                    <div>
+                        <div class="flex justify-between text-sm mb-2">
+                            <span class="text-slate-400">WBS 完成度</span>
+                            <span class="text-white font-bold" id="progress-text">0%</span>
+                        </div>
+                        <div class="w-full bg-slate-700 rounded-full h-4 overflow-hidden">
+                            <div id="progress-bar" class="bg-gradient-to-r from-indigo-500 to-purple-500 h-full rounded-full transition-all duration-1000" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Milestones -->
+                    <div class="grid grid-cols-3 gap-4" id="milestone-grid">
+                        <!-- Injected -->
+                    </div>
+
+                    <!-- Recent Logs -->
+                    <div>
+                        <h3 class="font-bold text-white mb-4 flex items-center"><i class="fas fa-terminal mr-2 text-green-400"></i> 开发日志流</h3>
+                        <div id="log-stream" class="space-y-2 font-mono text-sm">
+                            <!-- Logs -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+<script src="js/auth.js"></script>
+<script>
+    const { apiFetch } = window.auth;
+
+    async function fetchAllTeams() {
+        const listContainer = document.getElementById('teamList');
+        try {
+            const res = await apiFetch('/mission/projects');
+            const data = await res.json();
+            const projects = data.projects || [];
+            
+            document.getElementById('total-badge').innerText = `Projects: ${projects.length}`;
+            listContainer.innerHTML = '';
+
+            projects.forEach(p => {
+                const activeTime = moment(p.lastActive).fromNow();
+                const progressColor = p.taskStats.progress >= 80 ? 'emerald' : (p.taskStats.progress >= 40 ? 'blue' : 'amber');
+                
+                const div = document.createElement('div');
+                div.className = "bg-slate-700/50 hover:bg-slate-700 border border-slate-600 rounded-lg p-4 cursor-pointer transition group relative overflow-hidden";
+                div.onclick = () => loadDetail(p.id);
+                
+                div.innerHTML = `
+                    <div class="absolute left-0 top-0 bottom-0 w-1 bg-${progressColor}-500"></div>
+                    <div class="flex justify-between items-start mb-2 pl-3">
+                        <h4 class="font-bold text-white group-hover:text-indigo-300 transition truncate pr-2">${p.name}</h4>
+                        <span class="text-xs text-slate-400 whitespace-nowrap">${activeTime}</span>
+                    </div>
+                    <div class="pl-3">
+                        <div class="flex justify-between text-xs text-slate-400 mb-1">
+                            <span>任务进度</span>
+                            <span>${p.taskStats.done}/${p.taskStats.total}</span>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-1.5">
+                            <div class="bg-${progressColor}-500 h-1.5 rounded-full" style="width: ${p.taskStats.progress}%"></div>
+                        </div>
+                    </div>
+                `;
+                listContainer.appendChild(div);
+            });
+        } catch(e) { console.error(e); }
+    }
+
+    async function loadDetail(id) {
+        document.getElementById('emptyState').classList.add('hidden');
+        document.getElementById('detailContent').classList.remove('hidden');
+        
+        // 1. Fetch Project Info
+        const resP = await apiFetch(`/projects/${id}`);
+        const dataP = await resP.json();
+        const p = dataP.project;
+        
+        document.getElementById('detailName').innerText = p.title;
+        document.getElementById('detailMeta').innerText = p.team_members || '无成员信息';
+        document.getElementById('detailAvatar').innerText = p.id;
+        document.getElementById('detailActive').innerText = moment(p.updated_at).format('HH:mm:ss');
+
+        // 2. Fetch Milestones
+        const resM = await apiFetch(`/projects/${id}/milestones`);
+        const dataM = await resM.json();
+        const tasks = dataM.milestones;
+        
+        // Update Progress
+        const total = tasks.length;
+        const done = tasks.filter(t => t.status === 'done').length; // Check DB status value
+        const percent = total > 0 ? Math.round((done/total)*100) : 0;
+        document.getElementById('progress-text').innerText = `${percent}%`;
+        document.getElementById('progress-bar').style.width = `${percent}%`;
+
+        // Render Milestones Columns
+        const grid = document.getElementById('milestone-grid');
+        grid.innerHTML = '';
+        ['m1', 'm2', 'm3'].forEach((phase, idx) => {
+            const phaseTasks = tasks.filter(t => t.description === phase);
+            const col = document.createElement('div');
+            col.className = "bg-slate-700/30 rounded-lg p-4 border border-slate-600/50";
+            col.innerHTML = `
+                <h4 class="text-xs font-bold text-slate-400 uppercase mb-3 border-b border-slate-600 pb-2">Phase ${idx+1}</h4>
+                <div class="space-y-2">
+                    ${phaseTasks.length ? phaseTasks.map(t => `
+                        <div class="bg-slate-800 p-2 rounded text-xs border border-slate-700 flex items-center justify-between">
+                            <span class="truncate">${t.title}</span>
+                            ${t.status==='done' ? '<i class="fas fa-check text-green-400"></i>' : '<span class="w-2 h-2 bg-slate-600 rounded-full"></span>'}
+                        </div>
+                    `).join('') : '<div class="text-xs text-slate-600 italic">空</div>'}
+                </div>
+            `;
+            grid.appendChild(col);
+        });
+
+        // 3. Fetch Logs
+        const resL = await apiFetch(`/projects/${id}/logs`);
+        const dataL = await resL.json();
+        const logs = document.getElementById('log-stream');
+        logs.innerHTML = '';
+        (dataL.logs || []).slice(0, 8).forEach(log => {
+            logs.innerHTML += `
+                <div class="flex gap-3 items-start opacity-80 hover:opacity-100 transition">
+                    <span class="text-slate-500 whitespace-nowrap text-xs pt-0.5">${moment(log.created_at).format('HH:mm')}</span>
+                    <div>
+                        <span class="text-indigo-400 font-bold text-xs mr-2">[${log.author_name}]</span>
+                        <span class="text-slate-300 text-xs">${log.content.substring(0,60)}...</span>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    // Auto Refresh
+    fetchAllTeams();
+    setInterval(fetchAllTeams, 15000);
+</script>
+</body>
+</html>

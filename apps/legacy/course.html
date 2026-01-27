@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>课程工作台 | HAI Tech Lab</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/marked.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; }
+        
+        /* 滚动条美化 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Markdown 样式重置 */
+        .prose h1 { font-size: 2rem; font-weight: 800; color: #1e293b; margin-bottom: 1.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 1rem; }
+        .prose h2 { font-size: 1.5rem; font-weight: 700; color: #334155; margin-top: 2.5rem; margin-bottom: 1rem; display: flex; align-items: center; }
+        .prose h3 { font-size: 1.25rem; font-weight: 600; color: #475569; margin-top: 1.5rem; margin-bottom: 0.75rem; }
+        .prose p { margin-bottom: 1rem; line-height: 1.75; color: #4b5563; }
+        .prose ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
+        .prose li { margin-bottom: 0.5rem; }
+        .prose code { background: #f1f5f9; padding: 0.2rem 0.4rem; rounded; font-family: monospace; font-size: 0.9em; color: #ef4444; }
+        .prose pre { background: #1e293b; color: #f8fafc; padding: 1rem; rounded-lg; overflow-x: auto; margin-bottom: 1.5rem; }
+        .prose blockquote { border-left: 4px solid #6366f1; background: #eff6ff; padding: 1rem; border-radius: 0 0.5rem 0.5rem 0; color: #1e40af; margin-bottom: 1rem; }
+        .prose img { max-width: 100%; rounded-lg; shadow-md; margin: 1.5rem 0; }
+
+        /* 交互组件 */
+        .task-checkbox {
+            appearance: none;
+            width: 1.2em;
+            height: 1.2em;
+            border: 2px solid #cbd5e1;
+            border-radius: 4px;
+            margin-right: 0.5em;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            top: 3px;
+        }
+        .task-checkbox:checked {
+            background-color: #10b981;
+            border-color: #10b981;
+        }
+        .task-checkbox:checked::after {
+            content: '✓';
+            position: absolute;
+            color: white;
+            font-size: 0.8em;
+            left: 2px;
+            top: -1px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 flex flex-col">
+
+    <!-- 顶栏 -->
+    <header class="h-14 bg-white border-b border-gray-200 flex justify-between items-center px-4 shrink-0 z-20">
+        <div class="flex items-center gap-4">
+            <a href="index.html" class="text-gray-400 hover:text-gray-600 transition"><i class="fas fa-home"></i></a>
+            <div class="h-6 w-px bg-gray-200"></div>
+            <h1 class="font-bold text-gray-800 text-sm" id="courseTitle">加载中...</h1>
+        </div>
+        <div class="flex items-center gap-3">
+            <span class="text-xs text-gray-500" id="saveStatus">本地已保存</span>
+            <a href="courseware/project1/lesson1.html" target="_blank" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-1.5 rounded text-xs font-bold transition mr-2" id="lessonModeBtn">
+                <i class="fas fa-desktop mr-1"></i> 上课模式
+            </a>
+            <a href="dashboard.html?mode=standalone" target="_blank" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded text-xs font-bold transition" id="dashboardBtn">
+                <i class="fas fa-rocket mr-1"></i> 打开驾驶舱
+            </a>
+        </div>
+    </header>
+
+    <!-- 主体：三栏布局 -->
+    <div class="flex flex-1 overflow-hidden">
+        
+        <!-- 左侧：大纲 (Syllabus) -->
+        <aside class="w-64 bg-gray-50 border-r border-gray-200 flex flex-col shrink-0 transition-all duration-300" id="sidebar">
+            <div class="p-4 border-b border-gray-200">
+                <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider">课程大纲</h2>
+            </div>
+            <nav class="flex-1 overflow-y-auto p-2 space-y-1" id="toc-list">
+                <!-- 动态生成目录 -->
+            </nav>
+            <div class="p-4 bg-gray-100 border-t border-gray-200">
+                <div class="text-xs text-gray-500 mb-2">学习进度</div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div class="bg-green-500 h-2 rounded-full transition-all duration-500" style="width: 0%" id="progressBar"></div>
+                </div>
+                <div class="text-right text-xs font-bold text-gray-700 mt-1" id="progressText">0%</div>
+            </div>
+        </aside>
+
+        <!-- 中间：内容 (Content) -->
+        <main class="flex-1 overflow-y-auto bg-white relative scroll-smooth" id="main-scroll">
+            <div class="max-w-3xl mx-auto px-8 py-12 prose" id="content-area">
+                <div class="flex flex-col items-center justify-center h-64 text-gray-400">
+                    <i class="fas fa-spinner fa-spin text-3xl mb-4"></i>
+                    <p>正在加载课程内容...</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- 右侧：随身工具 (Side Tools) -->
+        <aside class="w-80 bg-white border-l border-gray-200 flex flex-col shrink-0 shadow-xl z-10 transform transition-transform duration-300 translate-x-0" id="tool-panel">
+            <!-- 工具切换 Tab -->
+            <div class="flex border-b border-gray-200">
+                <button onclick="switchSideTool('kanban')" class="flex-1 py-3 text-xs font-medium text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50 transition" id="tab-kanban">
+                    <i class="fas fa-tasks block mb-1 text-lg"></i>任务
+                </button>
+                <button onclick="switchSideTool('files')" class="flex-1 py-3 text-xs font-medium text-gray-500 hover:text-gray-700 transition" id="tab-files">
+                    <i class="fas fa-folder-open block mb-1 text-lg"></i>资源
+                </button>
+                <button onclick="switchSideTool('ai')" class="flex-1 py-3 text-xs font-medium text-gray-500 hover:text-gray-700 transition" id="tab-ai">
+                    <i class="fas fa-robot block mb-1 text-lg"></i>AI
+                </button>
+                <button onclick="toggleToolPanel()" class="px-3 text-gray-400 hover:text-gray-600 border-l border-gray-100">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- 工具内容区 -->
+            <div class="flex-1 overflow-hidden relative">
+                
+                <!-- 1. 迷你看板 -->
+                <div id="side-kanban" class="absolute inset-0 flex flex-col p-4 overflow-y-auto">
+                    <div class="mb-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="text-xs font-bold text-gray-500 uppercase">待办事项</h3>
+                            <button onclick="addQuickTask()" class="text-indigo-600 hover:bg-indigo-50 p-1 rounded"><i class="fas fa-plus"></i></button>
+                        </div>
+                        <div class="space-y-2" id="mini-todo-list">
+                            <!-- JS 填充 -->
+                        </div>
+                    </div>
+                    
+                    <div class="pt-4 border-t border-gray-100">
+                        <h3 class="text-xs font-bold text-gray-500 uppercase mb-2">已完成</h3>
+                        <div class="space-y-2 opacity-60" id="mini-done-list"></div>
+                    </div>
+                </div>
+
+                <!-- 2. 资源列表 (Files) -->
+                <div id="side-files" class="absolute inset-0 flex flex-col p-4 overflow-y-auto hidden">
+                    <h3 class="text-xs font-bold text-gray-500 uppercase mb-3">课件与源码</h3>
+                    <div id="file-list-container" class="space-y-2">
+                        <div class="text-center text-gray-400 py-8 text-xs">
+                            <i class="fas fa-spinner fa-spin mb-2"></i><br>加载资源中...
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 pt-4 border-t border-gray-100">
+                        <h3 class="text-xs font-bold text-gray-500 uppercase mb-3">公共资源</h3>
+                        <a href="course-files/common/Git协同开发指南.md" target="_blank" class="flex items-center p-2 rounded hover:bg-gray-50 text-sm text-gray-600">
+                            <i class="fas fa-book text-green-500 w-6"></i> Git 指南
+                        </a>
+                        <a href="course-files/common/工具清单和资源.md" target="_blank" class="flex items-center p-2 rounded hover:bg-gray-50 text-sm text-gray-600">
+                            <i class="fas fa-tools text-blue-500 w-6"></i> 工具清单
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 3. AI 助手 (静态占位) -->
+                <div id="side-ai" class="absolute inset-0 p-4 hidden bg-gray-50">
+                    <div class="bg-white p-3 rounded-lg shadow-sm border border-gray-200 mb-3 text-sm text-gray-600">
+                        👋 你好！我是你的课程 AI 助教。遇到不懂的概念，可以随时问我。
+                    </div>
+                    <div class="absolute bottom-4 left-4 right-4">
+                        <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="输入问题...">
+                    </div>
+                </div>
+
+            </div>
+        </aside>
+
+        <!-- 展开按钮 (当侧边栏收起时显示) -->
+        <button onclick="toggleToolPanel()" id="expand-btn" class="fixed right-0 top-1/2 transform -translate-y-1/2 bg-white border border-gray-200 shadow-lg p-2 rounded-l-lg text-gray-500 hover:text-indigo-600 hidden z-50">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+
+    </div>
+
+    <script>
+        // --- 状态管理 ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const courseId = urlParams.get('id') || 'project1';
+        const STORAGE_KEY = `course_progress_${courseId}`;
+        
+        let progressData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"completedTasks": []}');
+
+        // --- 初始化 ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 1. 加载 Markdown 内容
+            await loadCourseContent();
+            
+            // 2. 渲染目录
+            generateTOC();
+            
+            // 3. 渲染迷你看板
+            renderMiniKanban();
+            
+            // 4. 恢复进度状态
+            restoreProgress();
+
+            // 5. 加载侧边栏资源
+            loadSideResources();
+        });
+
+        // --- 资源加载 ---
+        async function loadSideResources() {
+            const container = document.getElementById('file-list-container');
+            // 注意：这里我们假设资源的存放路径是 course-files/{project}/
+            // 实际上 server.js 的 /api/files/:project 接口会列出该目录下的所有文件
+            
+            try {
+                const res = await fetch(`/api/files/${courseId}`);
+                const data = await res.json();
+                
+                if (data.files && data.files.length > 0) {
+                    // 过滤掉隐藏文件 (允许显示 Markdown 辅助资料)
+                    const files = data.files.filter(f => !f.name.startsWith('.'));
+                    
+                    if(files.length === 0) {
+                        container.innerHTML = '<div class="text-center text-gray-400 py-4 text-xs">暂无额外资源</div>';
+                        return;
+                    }
+
+                    container.innerHTML = files.map(file => {
+                        const icon = getFileIcon(file.type);
+                        return `
+                            <a href="/api/download/${courseId}/${file.name}" class="flex items-center p-2 bg-white border border-gray-100 rounded-lg shadow-sm hover:border-indigo-200 transition group">
+                                <div class="w-8 h-8 flex-shrink-0 flex items-center justify-center bg-gray-50 rounded text-lg group-hover:bg-indigo-50 group-hover:text-indigo-600 transition">
+                                    ${icon}
+                                </div>
+                                <div class="ml-3 min-w-0">
+                                    <div class="text-sm font-medium text-gray-800 truncate" title="${file.name}">${file.name}</div>
+                                    <div class="text-[10px] text-gray-400">${formatSize(file.size)}</div>
+                                </div>
+                                <div class="ml-auto text-gray-300 group-hover:text-indigo-500">
+                                    <i class="fas fa-download"></i>
+                                </div>
+                            </a>
+                        `;
+                    }).join('');
+                } else {
+                    container.innerHTML = '<div class="text-center text-gray-400 py-4 text-xs">暂无资源</div>';
+                }
+            } catch (err) {
+                console.error('Failed to load resources', err);
+                container.innerHTML = '<div class="text-center text-red-400 py-4 text-xs">加载失败</div>';
+            }
+        }
+
+        function getFileIcon(type) {
+            if(type === 'folder') return '<i class="fas fa-folder text-yellow-400"></i>';
+            if(['png','jpg','jpeg','gif'].includes(type)) return '<i class="fas fa-image text-purple-400"></i>';
+            if(['mp4','mov'].includes(type)) return '<i class="fas fa-video text-red-400"></i>';
+            if(['zip','rar','7z'].includes(type)) return '<i class="fas fa-file-archive text-orange-400"></i>';
+            if(['pdf'].includes(type)) return '<i class="fas fa-file-pdf text-red-500"></i>';
+            if(['ppt','pptx'].includes(type)) return '<i class="fas fa-file-powerpoint text-orange-500"></i>';
+            return '<i class="fas fa-file text-gray-400"></i>';
+        }
+
+        function formatSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        // --- 核心逻辑：加载与解析 ---
+        async function loadCourseContent() {
+            const map = {
+                'project1': 'course-files/project1/项目1-VibeCoding.md',
+                'project2': 'course-files/project2/项目2-产品经理与项目经理.md',
+                'project3': 'course-files/project3/项目3-全栈工程师.md',
+                'project4': 'course-files/project4/项目4-算法工程师.md',
+                'project5': 'course-files/project5/项目5-嵌入式工程师.md',
+                'project6': 'course-files/project6/项目6-综合实践周.md'
+            };
+            
+            const path = map[courseId];
+            if (!path) {
+                document.getElementById('content-area').innerHTML = '<div class="text-red-500 text-center mt-10">课程未找到</div>';
+                return;
+            }
+
+            try {
+                const res = await fetch(path);
+                if (!res.ok) throw new Error('Network response was not ok');
+                const text = await res.text();
+                
+                // 设置标题
+                const titleMatch = text.match(/^#\s+(.+)$/m);
+                if (titleMatch) document.getElementById('courseTitle').textContent = titleMatch[1];
+
+                // 动态设置上课模式链接 (目前仅 Project 1 有演示)
+                const lessonBtn = document.getElementById('lessonModeBtn');
+                if (courseId === 'project1') {
+                    lessonBtn.href = 'courseware/project1/lesson1.html';
+                    lessonBtn.style.display = 'inline-flex';
+                } else {
+                    lessonBtn.style.display = 'none'; // 其他课程暂时隐藏
+                }
+
+                // 动态设置驾驶舱链接
+                const dashboardBtn = document.getElementById('dashboardBtn');
+                if (dashboardBtn) {
+                    // 如果 courseId 存在（例如 'project1'），则链接到对应的 dashboard
+                    // mode=standalone 可以保留，或者根据需要去掉，这里假设 dashboard 支持 ?project=xx 参数
+                    dashboardBtn.href = `dashboard.html?project=${courseId}`;
+                }
+
+                // 渲染 Markdown
+                const html = marked.parse(text);
+                document.getElementById('content-area').innerHTML = html;
+
+                // --- 交互增强：注入打卡按钮 ---
+                enhanceContent();
+
+            } catch (err) {
+                console.error(err);
+                document.getElementById('content-area').innerHTML = '<div class="text-red-500 text-center mt-10">加载失败，请检查文件路径</div>';
+            }
+        }
+
+        // --- 交互增强 ---
+        function enhanceContent() {
+            // 遍历所有 H3 标题（通常是小节任务），添加打卡勾选框
+            document.querySelectorAll('#content-area h3').forEach((el, index) => {
+                const taskId = `task-${index}`;
+                
+                // 创建 checkbox
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'task-checkbox';
+                checkbox.id = taskId;
+                checkbox.onclick = () => toggleTask(taskId, el.textContent);
+                
+                // 插入到标题前
+                el.insertBefore(checkbox, el.firstChild);
+            });
+        }
+
+        function toggleTask(id, title) {
+            const isChecked = document.getElementById(id).checked;
+            
+            if (isChecked) {
+                if (!progressData.completedTasks.includes(id)) {
+                    progressData.completedTasks.push(id);
+                    // 同时添加到看板的 Done
+                    addToMiniKanban(title, 'done');
+                }
+            } else {
+                progressData.completedTasks = progressData.completedTasks.filter(t => t !== id);
+            }
+            
+            saveProgress();
+            updateProgressBar();
+        }
+
+        function restoreProgress() {
+            progressData.completedTasks.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.checked = true;
+            });
+            updateProgressBar();
+        }
+
+        function updateProgressBar() {
+            const total = document.querySelectorAll('.task-checkbox').length;
+            const done = progressData.completedTasks.length;
+            const percent = total === 0 ? 0 : Math.round((done / total) * 100);
+            
+            document.getElementById('progressBar').style.width = `${percent}%`;
+            document.getElementById('progressText').textContent = `${percent}%`;
+        }
+
+        function saveProgress() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(progressData));
+            document.getElementById('saveStatus').textContent = '已保存';
+            setTimeout(() => document.getElementById('saveStatus').textContent = '本地已保存', 1000);
+        }
+
+        // --- 目录生成 ---
+        function generateTOC() {
+            const toc = document.getElementById('toc-list');
+            const headers = document.querySelectorAll('#content-area h2, #content-area h3');
+            
+            headers.forEach((header, index) => {
+                header.id = `heading-${index}`; // Add Anchor
+                
+                const link = document.createElement('a');
+                link.href = `#heading-${index}`;
+                link.className = `block px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded truncate transition ${header.tagName === 'H3' ? 'pl-6 text-xs' : 'font-bold'}`;
+                link.textContent = header.textContent;
+                
+                link.onclick = (e) => {
+                    e.preventDefault();
+                    header.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                };
+                
+                toc.appendChild(link);
+            });
+        }
+
+        // --- 侧边栏工具 ---
+        function switchSideTool(tool) {
+            // Hide all
+            ['kanban', 'files', 'ai'].forEach(t => {
+                document.getElementById(`side-${t}`).classList.add('hidden');
+                document.getElementById(`tab-${t}`).classList.remove('text-indigo-600', 'border-b-2', 'border-indigo-600', 'bg-indigo-50');
+                document.getElementById(`tab-${t}`).classList.add('text-gray-500');
+            });
+
+            // Show target
+            document.getElementById(`side-${tool}`).classList.remove('hidden');
+            const btn = document.getElementById(`tab-${tool}`);
+            btn.classList.remove('text-gray-500');
+            btn.classList.add('text-indigo-600', 'border-b-2', 'border-indigo-600', 'bg-indigo-50');
+        }
+
+        function toggleToolPanel() {
+            const panel = document.getElementById('tool-panel');
+            const btn = document.getElementById('expand-btn');
+            
+            if (panel.classList.contains('translate-x-full') || panel.style.display === 'none') {
+                // Show
+                panel.style.display = 'flex';
+                setTimeout(() => panel.classList.remove('translate-x-full'), 10); // animation hack
+                btn.classList.add('hidden');
+            } else {
+                // Hide
+                panel.classList.add('translate-x-full');
+                setTimeout(() => panel.style.display = 'none', 300);
+                btn.classList.remove('hidden');
+            }
+        }
+
+        // --- 迷你看板逻辑 ---
+        function renderMiniKanban() {
+            // 这里为了演示，简单读取一个 LocalStorage，实际应与主 Kanban 同步
+            // 简化版：仅展示当前课程内的打卡任务
+        }
+
+        function addToMiniKanban(title, status) {
+            const list = status === 'done' ? document.getElementById('mini-done-list') : document.getElementById('mini-todo-list');
+            const item = document.createElement('div');
+            item.className = "bg-white p-2 rounded border border-gray-200 text-xs shadow-sm flex items-center gap-2";
+            item.innerHTML = `<i class="fas fa-check-circle text-green-500"></i> <span class="truncate">${title}</span>`;
+            list.prepend(item);
+        }
+
+        function addQuickTask() {
+            const title = prompt("添加随手记任务:");
+            if (title) {
+                const list = document.getElementById('mini-todo-list');
+                const item = document.createElement('div');
+                item.className = "bg-yellow-50 p-2 rounded border border-yellow-200 text-xs shadow-sm";
+                item.textContent = title;
+                list.prepend(item);
+            }
+        }
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,70 @@
+{
+  "id": "p1-l3",
+  "project": "project1",
+  "title": "第3课：核心交互融合 (Integration)",
+  "duration": 45,
+  "description": "将 MediaPipe (视觉) 与 Phaser.js (游戏) 结合，实现体感控制。",
+  "phases": [
+    {
+      "id": "step1",
+      "title": "🧩 0-10分：逻辑拆解",
+      "duration": 10,
+      "student": {
+        "title": "缝合怪",
+        "content": "<p>现在我们有两个独立的代码：<br>1. <code>index.html</code> (能看到手)<br>2. <code>game.html</code> (能玩游戏)</p><p>今天的任务是把它们合并，实现：<strong>如果你跳（鼻子抬高），游戏角色就跳。</strong></p>",
+        "tasks": [
+            "打开 <code>game.html</code> 作为主文件",
+            "思考：我们需要把 <code>index.html</code> 里的哪些部分复制过来？（提示：引入库、video标签、onResults函数）"
+        ]
+      }
+    },
+    {
+      "id": "step2",
+      "title": "🧵 10-30分：代码缝合",
+      "duration": 20,
+      "student": {
+        "title": "AI 辅助合并",
+        "content": "<p>手动合并太容易出错了，我们让 AI 来做“缝合手术”。</p>",
+        "prompts": [
+          {
+            "label": "合并代码 Prompt",
+            "text": "我有两段代码。一段是 Phaser.js 跑酷游戏（按空格跳跃），一段是 MediaPipe 姿态识别（能获取 nose 的 y 坐标）。\n请帮我把它们合并成一个 HTML 文件。\n核心逻辑：\n1. 保持游戏画面为主，摄像头画面缩小放在右上角。\n2. 当检测到 nose.y 小于 0.5 (人向上跳) 时，触发游戏角色的 jump() 函数，代替空格键。"
+          }
+        ],
+        "tasks": [
+            "新建 `final.html`",
+            "将 AI 合并后的代码粘贴进去",
+            "运行测试：在摄像头前做深蹲起立动作，看角色是否跳跃"
+        ]
+      }
+    },
+    {
+      "id": "step3",
+      "title": "🎛️ 30-40分：阈值调试",
+      "duration": 10,
+      "student": {
+        "title": "灵敏度校准",
+        "content": "<p>“为什么我头都断了它还不跳？”或者“我没动它怎么乱跳？”</p><p>这通常是 <strong>阈值 (Threshold)</strong> 的问题。每个人离摄像头距离不同，<code>0.5</code> 不一定准。</p>",
+        "tasks": [
+            "在 `onResults` 函数里添加 `console.log(nose.y)`",
+            "观察：自然站立时 nose.y 是多少？(比如 0.6)",
+            "观察：跳起来时 nose.y 是多少？(比如 0.4)",
+            "修改代码中的判断条件： `if (nose.y < 你的中间值)`"
+        ]
+      }
+    },
+    {
+      "id": "step4",
+      "title": "🏁 40-45分：全员体验",
+      "duration": 5,
+      "student": {
+        "title": "体感游戏初体验",
+        "content": "<p>站起来！离摄像头远一点（2-3米）。</p><p>这是你自己写的体感游戏，享受它。</p>",
+        "tasks": [
+            "邀请同桌玩一次你的游戏",
+            "记录 Bug：玩的过程中发现了什么问题？（比如：路人经过干扰了？）"
+        ]
+      }
+    }
+  ]
+}

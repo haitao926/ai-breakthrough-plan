@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>项目3 - 全栈工程师实战</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reset.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/white.min.css">
+
+    <!-- Theme used for syntax highlighted code -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github.min.css">
+
+    <style>
+        .reveal h1, .reveal h2, .reveal h3 {
+            text-transform: none;
+            font-family: "Helvetica Neue", Helvetica, Arial, "Microsoft YaHei", sans-serif;
+        }
+        .reveal section {
+            font-family: "Helvetica Neue", Helvetica, Arial, "Microsoft YaHei", sans-serif;
+        }
+        .role-badge {
+            background-color: #e74c3c;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.6em;
+            vertical-align: middle;
+        }
+        .code-preview {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        .timeline {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+            font-size: 0.8em;
+        }
+        .timeline-item {
+            text-align: center;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            flex: 1;
+            margin: 0 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+
+            <!-- Slide 1: 封面 -->
+            <section>
+                <h1>从 0 到 1：全栈工程师的诞生</h1>
+                <h3>项目实战——打造你的“智能错题本”</h3>
+                <p>
+                    <small>授课对象：高一信息技术 | 项目代号：Mistake Killer</small>
+                </p>
+                <img src="https://img.icons8.com/color/96/000000/code.png" alt="Code Icon" style="border:none; box-shadow:none;">
+            </section>
+
+            <!-- Slide 2: 痛点 -->
+            <section>
+                <h2>😫 痛点：你也经历过绝望吗？</h2>
+                <ul>
+                    <li class="fragment">考前翻箱倒柜找那张<strong>期中试卷</strong>？</li>
+                    <li class="fragment">同一个知识点，<strong>错了又错</strong>？</li>
+                    <li class="fragment">手抄错题太累，<strong>剪贴</strong>太丑？</li>
+                </ul>
+                <div class="fragment" style="margin-top: 30px; background-color: #e8f8f5; padding: 20px; border-radius: 10px;">
+                    <h3>💡 解决方案：Web App</h3>
+                    <ol>
+                        <li>📸 <strong>拍照上传</strong>：手机一拍，立存云端</li>
+                        <li>🏷️ <strong>自动分类</strong>：科目、知识点一目了然</li>
+                        <li>🔍 <strong>随时复习</strong>：碎片时间高效利用</li>
+                    </ol>
+                </div>
+            </section>
+
+            <!-- Slide 3: 项目启动 -->
+            <section>
+                <h2>👨‍💼 项目启动会 (Kick-off)</h2>
+                <p><span class="role-badge">项目经理 PM</span></p>
+                <blockquote>
+                    "虽然我们只有一个人，但我们要像一支正规军一样战斗！"
+                </blockquote>
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <strong>Day 1</strong><br>需求 & 草图
+                    </div>
+                    <div class="timeline-item">
+                        <strong>Day 2</strong><br>前端构建
+                    </div>
+                    <div class="timeline-item">
+                        <strong>Day 3</strong><br>后端 & 数据库
+                    </div>
+                    <div class="timeline-item">
+                        <strong>Day 4</strong><br>联调 & 发布
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 3.5: PM Task -->
+            <section>
+                <h3>🎯 任务卡：指挥作战</h3>
+                <div style="text-align: left; font-size: 0.9em; background: #e8eaeb; padding: 20px; border-radius: 10px;">
+                    <p><strong>角色</strong>：<span class="role-badge">PM / 项目经理</span></p>
+                    <p><strong>目标</strong>：建立 <code>01_项目指挥部/项目作战地图.md</code></p>
+                    <ul>
+                        <li>🚩 <strong>设定里程碑</strong>：我们今天必须完成什么？(MVP)</li>
+                        <li>🤝 <strong>分发任务</strong>：确保每个人都知道自己该干什么。</li>
+                    </ul>
+                    <div style="margin-top: 15px; border-left: 4px solid #2c3e50; padding-left: 10px;">
+                        <small>“混乱是阶梯？不，混乱是项目经理的死敌。”</small>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 4: 产品设计 -->
+            <section>
+                <h2>📝 产品设计</h2>
+                <p><span class="role-badge" style="background-color: #3498db;">产品经理</span></p>
+                <p>我们不需要复杂的 PS，手绘原型图 (Wireframe) 即可：</p>
+                <pre><code class="plaintext" style="font-size: 18px; line-height: 1.2;">
++-----------------------+
+|  Mistake Killer    +  |  <-- 添加按钮
++-----------------------+
+| [ 数学 ]  三角函数    |
+| 2023-10-12            |
+| --------------------- |
+| [ 物理 ]  牛顿定律    |
+| 2023-10-15            |
++-----------------------+
+                </code></pre>
+                <ul>
+                    <li><strong>列表页</strong>：展示所有错题卡片</li>
+                    <li><strong>添加页</strong>：输入科目、描述、上传图片</li>
+                </ul>
+            </section>
+
+            <!-- Slide 4.5: PM/Product Task -->
+            <section>
+                <h3>🎯 任务卡：定义产品灵魂</h3>
+                <div style="text-align: left; font-size: 0.9em; background: #e8f8f5; padding: 20px; border-radius: 10px;">
+                    <p><strong>角色</strong>：<span class="role-badge">PM / 产品经理</span></p>
+                    <p><strong>目标</strong>：填写 <code>01_项目指挥部/需求立项单.md</code></p>
+                    <ul>
+                        <li>📝 <strong>TODO 1</strong>：除了“找不到试卷”，还有什么痛点？</li>
+                        <li>✅ <strong>TODO 3</strong>：确认 MVP 功能（在最简单的功能上打钩）。</li>
+                    </ul>
+                    <div style="margin-top: 15px; border-left: 4px solid #1abc9c; padding-left: 10px;">
+                        <small>“没有文档的开发就是耍流氓。”</small>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 5: 技术选型 -->
+            <section>
+                <h2>🤓 技术选型</h2>
+                <p><span class="role-badge" style="background-color: #9b59b6;">技术负责人</span></p>
+                <table style="font-size: 0.7em;">
+                    <thead>
+                        <tr>
+                            <th>领域</th>
+                            <th>选型</th>
+                            <th>理由</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>前端</strong> (面子)</td>
+                            <td>HTML + Vue.js (CDN)</td>
+                            <td>简单，无需环境配置，直接写在HTML里</td>
+                        </tr>
+                        <tr>
+                            <td><strong>后端</strong> (里子)</td>
+                            <td>Python + FastAPI</td>
+                            <td>代码极简，自带接口文档，适合初学者</td>
+                        </tr>
+                        <tr>
+                            <td><strong>数据</strong> (家)</td>
+                            <td>JSON 文件</td>
+                            <td>像记事本一样存数据，看得见摸得着</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Slide 6: UI 设计 -->
+            <section>
+                <h2>🎨 UI 设计</h2>
+                <p><span class="role-badge" style="background-color: #f1c40f; color: black;">UI 设计师</span></p>
+                <div style="display: flex; justify-content: center; align-items: center; gap: 20px; margin-top: 20px;">
+                    <div style="width: 150px; height: 150px; background-color: #42b983; color: white; display: flex; align-items: center; justify-content: center; border-radius: 8px;">
+                        Vue Green<br>#42b983
+                    </div>
+                    <div style="width: 150px; height: 150px; background-color: #306998; color: white; display: flex; align-items: center; justify-content: center; border-radius: 8px;">
+                        Python Blue<br>#306998
+                    </div>
+                </div>
+                <p style="margin-top: 20px;"><strong>规范：</strong> 卡片式布局 | 圆角 8px | 清新风格</p>
+            </section>
+
+            <!-- Slide 6.5: UI Task -->
+            <section>
+                <h3>🎯 任务卡：拒绝丑陋</h3>
+                <div style="text-align: left; font-size: 0.9em; background: #fff8e1; padding: 20px; border-radius: 10px;">
+                    <p><strong>角色</strong>：<span class="role-badge" style="background-color: #f1c40f; color: black;">UI 设计师</span></p>
+                    <p><strong>目标</strong>：修改 <code>mistake_killer_code_lab/static/theme.css</code></p>
+                    <ul>
+                        <li>🧱 <strong>圆角革命</strong>：现在的卡片是直角(0px)，请改为 <code>border-radius: 12px;</code>。</li>
+                        <li>🌥️ <strong>光影魔术</strong>：取消注释 <code>box-shadow</code> 属性，让卡片浮起来。</li>
+                        <li>🖱️ <strong>交互反馈</strong>：在 <code>button:hover</code> 里写一行代码，让鼠标悬停时按钮变色。</li>
+                    </ul>
+                    <div style="margin-top: 15px; border-left: 4px solid #f1c40f; padding-left: 10px;">
+                        <small>“好的设计是看不见的，但丑陋的设计显而易见。”</small>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 7: API 接口 -->
+            <section>
+                <h2>🤝 制定契约：API</h2>
+                <p>前端和后端怎么“对话”？ --> <strong>HTTP 协议</strong></p>
+                <div style="text-align: left; font-size: 0.8em; background: #eee; padding: 20px; border-radius: 10px;">
+                    <p><strong>就像去餐厅点菜：</strong></p>
+                    <ul>
+                        <li>菜单 = API 文档</li>
+                        <li>服务员 = HTTP 请求</li>
+                        <li>后厨 = 后端程序</li>
+                    </ul>
+                </div>
+                <div style="margin-top: 20px; font-size: 0.8em;">
+                    <p><code>GET /api/mistakes</code> : 把所有错题端上来</p>
+                    <p><code>POST /api/mistakes</code> : 厨房，做道新菜（保存错题）</p>
+                </div>
+            </section>
+
+            <!-- Slide 8: 前端开发 -->
+            <section>
+                <h2>💻 前端开发</h2>
+                <p><span class="role-badge" style="background-color: #2ecc71;">前端开发</span></p>
+                <pre><code class="html" data-trim data-line-numbers="1-6|8-12">
+<!-- 这是一个“卡片”的模板 -->
+<div class="card" v-for="item in mistakes">
+  <h3>{{ item.subject }}</h3>
+  <p>{{ item.description }}</p>
+  <img :src="item.image_url" width="100%">
+</div>
+
+<script>
+  // 向后端要数据
+  fetch('/api/mistakes')
+    .then(response => response.json())
+    .then(data => { ... })
+</script>
+                </code></pre>
+            </section>
+
+            <!-- Slide 8.5: Frontend Task -->
+            <section>
+                <h3>🎯 任务卡：修复失灵的按钮</h3>
+                <div style="text-align: left; font-size: 0.9em; background: #eafaf1; padding: 20px; border-radius: 10px;">
+                    <p><strong>角色</strong>：<span class="role-badge" style="background-color: #2ecc71;">前端开发</span></p>
+                    <p><strong>目标</strong>：修改 <code>mistake_killer_code_lab/static/index.html</code></p>
+                    <ul>
+                        <li>🐛 <strong>Bug 修复</strong>：点击“保存”按钮没反应？按 F12 看报错！<br>
+                            <small>提示：<code>@click</code> 绑定的名字和 <code>methods</code> 里的名字不一样。</small>
+                        </li>
+                        <li>✨ <strong>体验优化</strong>：输入框里空空如也，请加上 <code>placeholder="例如：数学"</code>。</li>
+                    </ul>
+                    <div style="margin-top: 15px; border-left: 4px solid #2ecc71; padding-left: 10px;">
+                        <small>“不仅要能跑，还要跑得顺滑。”</small>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 9: 后端开发 -->
+            <section>
+                <h2>⚙️ 后端开发</h2>
+                <p><span class="role-badge" style="background-color: #34495e;">后端开发</span></p>
+                <pre><code class="python" data-trim data-line-numbers="1-4|6-9|11-15">
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+app = FastAPI()
+
+# 定义数据结构
+class Mistake(BaseModel):
+    subject: str
+    description: str
+
+# 只有几行代码，一个服务器就跑起来了
+@app.post("/api/mistakes")
+def create_mistake(mistake: Mistake):
+    save_to_file(mistake)
+    return {"status": "ok", "msg": "已保存"}
+                </code></pre>
+            </section>
+
+            <!-- Slide 9.5: Backend Task -->
+            <section>
+                <h3>🎯 任务卡：激活记忆体</h3>
+                <div style="text-align: left; font-size: 0.9em; background: #ebf5fb; padding: 20px; border-radius: 10px;">
+                    <p><strong>角色</strong>：<span class="role-badge" style="background-color: #34495e;">后端开发</span></p>
+                    <p><strong>目标</strong>：修改 <code>mistake_killer_code_lab/main.py</code></p>
+                    <ul>
+                        <li>🧠 <strong>逻辑激活</strong>：找到 <code>任务 B</code>，取消对 <code>db.append(data)</code> 的注释。<br>
+                            <small>没有这行代码，你的服务器就像得了健忘症。</small>
+                        </li>
+                        <li>🛡️ <strong>门卫校验</strong>：添加 <code>if</code> 判断，如果 <code>subject</code> 为空，则拒绝保存。</li>
+                    </ul>
+                    <div style="margin-top: 15px; border-left: 4px solid #34495e; padding-left: 10px;">
+                        <small>“数据持久化是后端的神圣使命。”</small>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 10: 测试 -->
+            <section>
+                <h2>🐞 测试与验收</h2>
+                <p><span class="role-badge" style="background-color: #e67e22;">测试 QA</span></p>
+                <p>"我觉得这里有 Bug。"</p>
+                <ul>
+                    <li class="fragment"><strong>空数据测试</strong>：不填科目直接提交？</li>
+                    <li class="fragment"><strong>边界测试</strong>：标题输入 10000 个字？</li>
+                    <li class="fragment"><strong>接口测试</strong>：后端没启动，前端白屏还是报错？</li>
+                </ul>
+                <p class="fragment" style="margin-top: 20px; color: #c0392b;"><strong>技能 Get：查看浏览器控制台 (Console)</strong></p>
+            </section>
+
+            <!-- Slide 10.5: QA Task -->
+            <section>
+                <h3>🎯 任务卡：找茬大作战</h3>
+                <div style="text-align: left; font-size: 0.9em; background: #fdedec; padding: 20px; border-radius: 10px;">
+                    <p><strong>角色</strong>：<span class="role-badge" style="background-color: #e67e22;">测试 QA</span></p>
+                    <p><strong>目标</strong>：测试 <code>mistake_killer_code_lab</code> 的默认状态</p>
+                    <ul>
+                        <li>🚨 <strong>功能验证</strong>：点击“保存提交”按钮，真的保存了吗？如果没有，是前端没发请求，还是后端没存？</li>
+                        <li>👻 <strong>空值攻击</strong>：如果科目和描述都留空，后端会照单全收吗？（这会产生脏数据！）</li>
+                    </ul>
+                    <div style="margin-top: 15px; border-left: 4px solid #e74c3c; padding-left: 10px;">
+                        <small>“开发说‘我写好了’的时候，通常才是噩梦的开始。”</small>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 11: 销售 -->
+            <section>
+                <h2>💰 销售 (Sales)</h2>
+                <p><span class="role-badge" style="background-color: #e74c3c;">销售</span></p>
+                <p><strong>第一性原理：价值交换</strong></p>
+                <div style="font-size: 0.8em; text-align: left; padding: 0 50px;">
+                    <p><strong>痛点营销 (Pain Point)：</strong><br>别说“我有错题本”，要说“你还在手抄错题浪费生命吗？”</p>
+                    <p><strong>电梯演讲 (Elevator Pitch)：</strong><br>假如你在电梯里遇到校长，你有 30 秒时间说服他购买全校版授权。</p>
+                </div>
+                <div class="fragment" style="margin-top: 20px; background: #fff3cd; padding: 15px; border-radius: 8px; font-size: 0.8em; color: #856404;">
+                    <strong>To B (卖给学校) vs To C (卖给同学)</strong><br>策略完全不同！
+                </div>
+            </section>
+
+            <!-- Slide 12: 运营 -->
+            <section>
+                <h2>📈 运营 (Operations)</h2>
+                <p><span class="role-badge" style="background-color: #8e44ad;">运营</span></p>
+                <p><strong>第一性原理：生命周期管理</strong></p>
+                <ul style="font-size: 0.85em;">
+                    <li class="fragment"><strong>冷启动 (Cold Start)</strong>：没人用怎么办？先拉 5 个学霸当“托”。</li>
+                    <li class="fragment"><strong>DAU (日活)</strong>：下载量不重要，重要的是多少人<strong>天天用</strong>。</li>
+                    <li class="fragment"><strong>私域流量</strong>：把用户拉进“错题互助群”，随时触达。</li>
+                </ul>
+                <p class="fragment" style="margin-top: 20px; font-weight: bold;">没有运营，产品就是一座鬼城。</p>
+            </section>
+
+            <!-- Slide 12.5: Sales/Ops Task -->
+            <section>
+                <h3>🎯 任务卡：如何搞钱？</h3>
+                <div style="text-align: left; font-size: 0.9em; background: #f4f6f7; padding: 20px; border-radius: 10px;">
+                    <p><strong>角色</strong>：<span class="role-badge" style="background-color: #8e44ad;">市场 & 运营</span></p>
+                    <p><strong>目标</strong>：填写 <code>05_市场部/商业计划书.md</code></p>
+                    <ul>
+                        <li>📢 <strong>Slogan</strong>：想一句直击灵魂的广告语。</li>
+                        <li>💎 <strong>定价策略</strong>：哪个功能值得让同学掏 5 块钱？</li>
+                    </ul>
+                    <div style="margin-top: 15px; border-left: 4px solid #9b59b6; padding-left: 10px;">
+                        <small>“不赚钱的项目都是做慈善。”</small>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 13: 总结 -->
+            <section>
+                <h2>🚀 什么是全栈 (Full Stack)?</h2>
+                <p>全栈不是“什么都懂一点”的万金油。</p>
+                <div class="fragment">
+                    <h3>是“有能力独立解决端到端问题的人”</h3>
+                    <div style="display: flex; justify-content: space-around; font-size: 0.6em; flex-wrap: wrap;">
+                        <div style="margin: 5px;">✅ 需求 (PM)</div>
+                        <div style="margin: 5px;">✅ 设计 (UI)</div>
+                        <div style="margin: 5px;">✅ 开发 (Dev)</div>
+                        <div style="margin: 5px;">✅ 测试 (QA)</div>
+                        <div style="margin: 5px;">✅ 变现 (Sales)</div>
+                        <div style="margin: 5px;">✅ 增长 (Ops)</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 14: 结束 -->
+            <section>
+                <h2>🏁 Let's Code!</h2>
+                <p>准备开始你的全栈之旅：</p>
+                <ol>
+                    <li>创建文件夹 <code>project_mistake</code></li>
+                    <li>安装依赖：<code>pip install fastapi uvicorn</code></li>
+                    <li>创建 <code>main.py</code> 和 <code>index.html</code></li>
+                </ol>
+                <h3 style="margin-top: 50px; color: #27ae60;">Ready? Go!</h3>
+            </section>
+
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/notes/notes.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/markdown/markdown.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.min.js"></script>
+    <script>
+        // More info about initialization & config:
+        // - https://revealjs.com/initialization/
+        // - https://revealjs.com/config/
+        Reveal.initialize({
+            hash: true,
+            controls: true,
+            progress: true,
+            center: true,
+            slideNumber: true,
+
+            // Learn about plugins: https://revealjs.com/plugins/
+            plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ]
+        });
+    </script>
+</body>
+</html>

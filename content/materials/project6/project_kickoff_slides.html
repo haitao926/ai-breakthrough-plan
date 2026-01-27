@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>项目6：综合实战启动会 - AI破壁计划</title>
+
+    <!-- Reveal.js 核心样式 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reset.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/theme/dracula.css">
+
+    <!-- 代码高亮样式 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/highlight/monokai.css">
+    
+    <!-- 图标库 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+    <style>
+        .reveal h1, .reveal h2, .reveal h3 { text-transform: none; font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+        .reveal { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+        .accent { color: #bd93f9; } /* Dracula Purple */
+        .highlight { color: #50fa7b; } /* Dracula Green */
+        .warning { color: #ffb86c; } /* Dracula Orange */
+        
+        /* 自定义卡片样式 */
+        .card-container { display: flex; gap: 20px; justify-content: center; margin-top: 30px; }
+        .card { 
+            background: rgba(255,255,255,0.1); 
+            border-radius: 15px; 
+            padding: 20px; 
+            flex: 1;
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: transform 0.3s;
+        }
+        .card:hover { transform: translateY(-10px); background: rgba(255,255,255,0.15); }
+        .btn-link {
+            display: inline-block;
+            background: #ff79c6;
+            color: #282a36;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+
+            <!-- 封面页 -->
+            <section data-background-gradient="linear-gradient(to bottom right, #282a36, #44475a)">
+                <div style="font-size: 80px; margin-bottom: 20px;">🚀</div>
+                <h1>Project 6 综合实战周</h1>
+                <h3 class="accent">从“学生作业”到“工程项目”</h3>
+                <p>AI破壁计划 · 最终章</p>
+                <div style="margin-top: 50px; font-size: 0.8em; opacity: 0.7;">
+                    按 <span class="key-box">空格</span> 或 <span class="key-box">→</span> 继续
+                </div>
+            </section>
+
+            <!-- 为什么要用工具？ -->
+            <section>
+                <h2>🚫 拒绝“小作坊”式开发</h2>
+                <div class="r-stack">
+                    <div class="fragment fade-out" data-fragment-index="0">
+                        <p class="warning">❌ 以前的你们：</p>
+                        <ul>
+                            <li>代码用 U 盘拷来拷去</li>
+                            <li>"最终版_v2_绝对不改了.zip"</li>
+                            <li>不知道队友干了什么，一合并就报错</li>
+                            <li>没有计划，想到哪写到哪</li>
+                        </ul>
+                    </div>
+                    <div class="fragment fade-in-then-out" data-fragment-index="0">
+                        <p class="highlight">✅ 现在的工程师（你们）：</p>
+                        <ul>
+                            <li><strong>敏捷开发</strong>：看板管理进度</li>
+                            <li><strong>版本控制</strong>：Git 代码托管</li>
+                            <li><strong>持续集成</strong>：自动化部署</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 介绍两大神器 -->
+            <section>
+                <h2>🛠️ 今天启用的两大神器</h2>
+                <div class="card-container">
+                    <div class="card">
+                        <i class="fas fa-rocket fa-3x accent"></i>
+                        <h3>项目驾驶舱</h3>
+                        <p style="font-size: 0.6em;">Project Dashboard</p>
+                        <ul style="font-size: 0.5em; text-align: left;">
+                            <li>产品规划</li>
+                            <li>任务分配</li>
+                            <li>进度可视化</li>
+                        </ul>
+                    </div>
+                    <div class="card">
+                        <i class="fab fa-github fa-3x highlight"></i>
+                        <h3>代码仓库</h3>
+                        <p style="font-size: 0.6em;">School Gitea</p>
+                        <ul style="font-size: 0.5em; text-align: left;">
+                            <li>代码托管</li>
+                            <li>版本回溯</li>
+                            <li>团队协作</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 模块一：项目驾驶舱 -->
+            <section>
+                <section>
+                    <h2 class="accent">🎮 Part 1: 项目驾驶舱</h2>
+                    <p>给组长和产品经理的“指挥中心”</p>
+                    <p style="font-size: 0.8em; margin-top: 20px;">
+                        访问地址：<br>
+                        <a href="http://10.20.219.93:8080/dashboard.html" target="_blank" class="highlight">http://10.20.219.93:8080/dashboard.html</a>
+                    </p>
+                </section>
+
+                <section>
+                    <h3>💡 产品设计 (Design)</h3>
+                    <p>左边写字，右边出图。告别画图软件。</p>
+                    <pre><code class="language-bash" data-trim>
+graph TD;
+    User[用户] -->|点击| Button[按钮];
+    Button -->|触发| AI[AI模型];
+    AI -->|返回| Result[结果];
+                    </code></pre>
+                    <p class="fragment" style="font-size: 0.6em; color: #bd93f9;">☝️ 这就是 Mermaid 语法，很简单！</p>
+                </section>
+
+                <section>
+                    <h3>📋 任务看板 (Kanban)</h3>
+                    <div style="display: flex; gap: 10px; font-size: 0.7em;">
+                        <div style="background: #e0e0e0; color:#333; padding: 10px; flex:1; border-radius: 5px;">
+                            <strong>To Do (待办)</strong><br>
+                            - 设计首页UI<br>
+                            - 搭建数据库
+                        </div>
+                        <div style="background: #bd93f9; color:#fff; padding: 10px; flex:1; border-radius: 5px;">
+                            <strong>Doing (进行中)</strong><br>
+                            - 编写登录API<br>
+                            <span style="font-size:0.8em">👤 张三</span>
+                        </div>
+                        <div style="background: #50fa7b; color:#333; padding: 10px; flex:1; border-radius: 5px;">
+                            <strong>Done (完成)</strong><br>
+                            - 需求调研<br>
+                            <span style="font-size:0.8em">👤 李四</span>
+                        </div>
+                    </div>
+                    <p class="fragment warning" style="margin-top: 20px;">⚡️ 只要有人拖动卡片，全组屏幕实时同步！</p>
+                </section>
+            </section>
+
+            <!-- 模块二：Gitea -->
+            <section>
+                <section>
+                    <h2 class="highlight">💻 Part 2: 代码仓库 (Gitea)</h2>
+                    <p>全栈工程师的“存盘点”</p>
+                    <p style="font-size: 0.8em; margin-top: 20px;">
+                        访问地址：<br>
+                        <a href="http://10.20.219.93:3000" target="_blank" class="accent">http://10.20.219.93:3000</a>
+                    </p>
+                </section>
+
+                <section>
+                    <h3>🧐 什么是 Git?</h3>
+                    <p>Git 是代码的<strong>时光机</strong>。</p>
+                    <ul>
+                        <li class="fragment">写崩了？👉 <strong>一键回滚</strong>到昨天。</li>
+                        <li class="fragment">误删了？👉 <strong>从历史记录</strong>里找回。</li>
+                        <li class="fragment">多人写？👉 <strong>自动合并</strong>大家的代码。</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h3>🚀 快速上手 (网页版)</h3>
+                    <ol style="font-size: 0.8em;">
+                        <li><strong>注册</strong>：点击右上角，组长和组员都注册。</li>
+                        <li><strong>建库</strong>：组长点击 <i class="fas fa-plus"></i> 创建仓库。</li>
+                        <li><strong>邀请</strong>：设置 -> 协作者 -> 添加组员。</li>
+                        <li><strong>上传</strong>：直接在网页点击“上传文件”。</li>
+                    </ol>
+                    <div class="fragment warning" style="border: 1px solid #ffb86c; padding: 10px; margin-top: 20px;">
+                        ⚠️ 警告：严禁把包含密码的文件传上去！
+                    </div>
+                </section>
+
+                <section>
+                    <h3>🔥 进阶：黑客模式 (命令行)</h3>
+                    <p style="font-size: 0.6em;">在终端输入这三行，你就入门了：</p>
+                    <pre><code class="language-bash" data-trim data-line-numbers="1|2|3">
+git add .               # 1. 把所有文件打包放入“发货箱”
+git commit -m "更新UI"   # 2. 贴上封条，写清楚改了什么
+git push                # 3. 让快递员把箱子送到服务器
+                    </code></pre>
+                </section>
+            </section>
+
+            <!-- 总结与行动 -->
+            <section>
+                <h2>🏁 现在的任务</h2>
+                <div style="text-align: left; margin-left: 20%; font-size: 0.8em;">
+                    <p>1️⃣ <strong>全员</strong>：打开浏览器，注册 Gitea 账号。</p>
+                    <p>2️⃣ <strong>组长</strong>：创建 Gitea 仓库，把组员拉进去。</p>
+                    <p>3️⃣ <strong>组长</strong>：登录“项目驾驶舱”，建立团队 (Team ID)。</p>
+                    <p>4️⃣ <strong>产品经理</strong>：在驾驶舱里写下第一个 User Story。</p>
+                </div>
+                <h3 class="accent" style="margin-top: 50px;">Ready? Go! 🚀</h3>
+            </section>
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/notes/notes.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/markdown/markdown.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/highlight/highlight.js"></script>
+    <script>
+        Reveal.initialize({
+            hash: true,
+            controls: true,
+            progress: true,
+            center: true,
+            transition: 'convex', // slide/convex/concave/zoom
+            plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ]
+        });
+    </script>
+</body>
+</html>

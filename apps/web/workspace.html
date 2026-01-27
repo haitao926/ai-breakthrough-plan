@@ -102,6 +102,10 @@
 
         <!-- Bottom User Profile -->
         <div class="p-4 border-t border-gray-100 bg-gray-50 shrink-0">
+            <a href="knowledge.html" target="_blank" class="block w-full mb-3 py-2 px-3 bg-indigo-50 border border-indigo-100 rounded-lg text-xs font-bold text-indigo-700 hover:bg-indigo-100 transition flex items-center justify-center">
+                <i class="fas fa-book-reader mr-2"></i> 创新知识库
+            </a>
+
              <div class="flex gap-2 mb-4">
                 <a href="index.html" class="flex-1 flex items-center justify-center py-2 text-xs font-bold text-gray-600 bg-white border border-gray-200 rounded-lg hover:text-indigo-600 hover:border-indigo-200 transition">
                     <i class="fas fa-home mr-2"></i> 首页
@@ -217,6 +221,11 @@
                     <input name="summary" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" required placeholder="这个项目是做什么的？解决什么问题？">
                 </div>
 
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-100 text-sm text-blue-800">
+                    <i class="fas fa-info-circle mr-1"></i> <strong>提示：</strong> 不确定做什么类型的项目？
+                    <a href="competencies.html" target="_blank" class="underline font-bold ml-1 hover:text-blue-600">阅读《项目类型指南》</a> 以确定方向。
+                </div>
+
                 <div class="pt-4 flex justify-end gap-3">
                     <button type="button" onclick="document.getElementById('createModal').classList.add('hidden')" class="px-6 py-2 text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition">取消</button>
                     <button type="submit" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold shadow-md transition transform active:scale-95">创建并开始</button>
@@ -231,6 +240,8 @@
         // Definition of Tools per Stage
         const stageTools = {
             'inception': [
+                { id: 'literature_review', name: '文献阅读', icon: 'fas fa-book' },
+                { id: 'pre_research', name: '前期调研', icon: 'fas fa-search' },
                 { id: 'goal_definition', name: '目标定调', icon: 'fas fa-bullseye' },
                 { id: 'architecture', name: '架构设计', icon: 'fas fa-sitemap' },
                 { id: 'wbs_planning', name: '路径规划', icon: 'fas fa-tasks' },
@@ -250,6 +261,12 @@
         };
 
         const renderFunctions = {
+            literature_review: function(c, p) {
+                c.innerHTML = `<iframe src="tools/literature.html?project=${p.id}" class="w-full h-full border-0 rounded-xl"></iframe>`;
+            },
+            pre_research: function(c, p) {
+                c.innerHTML = `<iframe src="tools/pre_research.html?project=${p.id}" class="w-full h-full border-0 rounded-xl"></iframe>`;
+            },
             goal_definition: function(c, p) {
                 c.innerHTML = `<iframe src="tools/charter.html?project=${p.id}" class="w-full h-full border-0 rounded-xl"></iframe>`;
             },
@@ -396,68 +413,235 @@
                     tasks = d.milestones || [];
                 } catch(e) { console.error(e); }
 
-                // Group tasks
-                const phases = { m1: [], m2: [], m3: [] };
-                tasks.forEach(t => { if(phases[t.description]) phases[t.description].push(t); else phases.m1.push(t); }); // default to m1
+                const normalizePhase = (phase) => (phase === 'm2' || phase === 'm3') ? phase : 'm1';
+                const safeTasks = tasks.map(t => ({
+                    ...t,
+                    id: Number(t.id),
+                    description: normalizePhase(t.description),
+                    parent_id: (t.parent_id === null || t.parent_id === undefined || t.parent_id === '') ? null : Number(t.parent_id),
+                    sort_order: (t.sort_order === null || t.sort_order === undefined || t.sort_order === '') ? null : Number(t.sort_order)
+                }));
 
-                const colClass = "flex-1 bg-gray-50 rounded-xl p-4 flex flex-col h-full border border-gray-100";
-                const listClass = "flex-1 overflow-y-auto space-y-2 min-h-0 pt-2";
-                
-                c.innerHTML = `
-                    <div class="flex flex-col h-full p-6">
-                        <div class="flex gap-4 mb-6">
-                            <input id="new-task-input" class="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" placeholder="添加新任务 (例如: 购买传感器)...">
-                            <button onclick="addTask('${p.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 rounded-xl font-bold transition shadow-sm"><i class="fas fa-plus mr-2"></i>添加</button>
-                        </div>
-                        <div class="flex-1 grid grid-cols-3 gap-6 overflow-hidden min-h-0">
-                            <div class="${colClass}">
-                                <div class="flex items-center justify-between mb-2">
-                                    <h4 class="font-bold text-gray-700"><span class="w-2 h-2 rounded-full bg-indigo-500 inline-block mr-2"></span>里程碑 1: 原型</h4>
-                                    <span class="text-xs font-bold bg-white px-2 py-1 rounded text-gray-500 border">${phases.m1.length}</span>
-                                </div>
-                                <div id="wbs-m1" class="${listClass}" data-phase="m1">
-                                    ${phases.m1.map(t=>renderTaskCard(t)).join('')}
-                                </div>
-                            </div>
-                            <div class="${colClass}">
-                                <div class="flex items-center justify-between mb-2">
-                                    <h4 class="font-bold text-gray-700"><span class="w-2 h-2 rounded-full bg-blue-500 inline-block mr-2"></span>里程碑 2: 测试</h4>
-                                    <span class="text-xs font-bold bg-white px-2 py-1 rounded text-gray-500 border">${phases.m2.length}</span>
-                                </div>
-                                <div id="wbs-m2" class="${listClass}" data-phase="m2">
-                                    ${phases.m2.map(t=>renderTaskCard(t)).join('')}
-                                </div>
-                            </div>
-                            <div class="${colClass}">
-                                <div class="flex items-center justify-between mb-2">
-                                    <h4 class="font-bold text-gray-700"><span class="w-2 h-2 rounded-full bg-green-500 inline-block mr-2"></span>里程碑 3: 交付</h4>
-                                    <span class="text-xs font-bold bg-white px-2 py-1 rounded text-gray-500 border">${phases.m3.length}</span>
-                                </div>
-                                <div id="wbs-m3" class="${listClass}" data-phase="m3">
-                                    ${phases.m3.map(t=>renderTaskCard(t)).join('')}
-                                </div>
-                            </div>
-                        </div>
-                    </div>`;
+                window.wbsTaskIndex = {};
+                safeTasks.forEach(t => { window.wbsTaskIndex[t.id] = t; });
+                window.wbsCurrentProjectId = p.id;
 
-                // Init Sortable
-                ['wbs-m1','wbs-m2','wbs-m3'].forEach(id=>{
-                    new Sortable(document.getElementById(id), {
-                        group: 'wbs',
-                        animation: 150,
-                        ghostClass: 'opacity-50',
-                        onAdd: async (evt) => {
-                            const taskId = evt.item.getAttribute('data-id');
-                            const newPhase = evt.to.getAttribute('data-phase');
-                            // API call to update phase (using 'description' field for phase storage for now)
-                            await window.auth.apiFetch(`/milestones/${taskId}`, {
-                                method: 'PATCH',
-                                headers: {'Content-Type':'application/json'},
-                                body: JSON.stringify({description: newPhase}) // Hack: storing phase in description
-                            });
+                const collapsedKey = `wbs_collapsed_${p.id}`;
+                const collapsedSet = new Set(JSON.parse(localStorage.getItem(collapsedKey) || '[]').map(String));
+
+                const saveCollapsed = () => {
+                    localStorage.setItem(collapsedKey, JSON.stringify(Array.from(collapsedSet)));
+                };
+
+                const escapeHtml = (value) => String(value || '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+
+                const compareOrder = (a, b) => {
+                    const aOrder = Number.isFinite(a.sort_order) ? a.sort_order : a.id;
+                    const bOrder = Number.isFinite(b.sort_order) ? b.sort_order : b.id;
+                    if (aOrder !== bOrder) return aOrder - bOrder;
+                    return a.id - b.id;
+                };
+
+                const buildTree = (items) => {
+                    const map = new Map();
+                    items.forEach(item => {
+                        map.set(item.id, { ...item, children: [] });
+                    });
+                    const roots = [];
+                    map.forEach(node => {
+                        const parentId = node.parent_id;
+                        if (parentId !== null && map.has(parentId)) {
+                            map.get(parentId).children.push(node);
+                        } else {
+                            roots.push(node);
                         }
                     });
-                });
+                    const sortNodes = (nodes) => {
+                        nodes.sort(compareOrder);
+                        nodes.forEach(n => sortNodes(n.children));
+                    };
+                    sortNodes(roots);
+                    return roots;
+                };
+
+                const renderNode = (node, depth) => {
+                    const hasChildren = node.children.length > 0;
+                    const isCollapsed = collapsedSet.has(String(node.id));
+                    const toggleBtn = hasChildren
+                        ? `<button onclick="toggleWbsNode('${node.id}')" class="w-5 h-5 flex items-center justify-center text-xs text-gray-500 hover:text-indigo-600 border border-gray-200 rounded">${isCollapsed ? '+' : '-'}</button>`
+                        : `<span class="w-5 h-5 inline-block"></span>`;
+                    const titleClass = depth === 0 ? 'font-semibold text-gray-800' : 'text-gray-700';
+                    const childHtml = (!isCollapsed && hasChildren)
+                        ? node.children.map(child => renderNode(child, depth + 1)).join('')
+                        : '';
+                    return `
+                        <div style="margin-left: ${depth * 16}px" class="mb-1">
+                            <div class="flex items-center gap-2 py-1">
+                                ${toggleBtn}
+                                <div class="flex-1 text-sm ${titleClass}">${escapeHtml(node.title)}</div>
+                                <button onclick="addSubTask('${node.id}')" class="text-xs text-indigo-600 hover:text-indigo-800">+ 子任务</button>
+                            </div>
+                            ${childHtml}
+                        </div>
+                    `;
+                };
+
+                const renderPhaseColumn = (phase, label, colorClass) => {
+                    const phaseTasks = safeTasks.filter(t => t.description === phase);
+                    const tree = buildTree(phaseTasks);
+                    const listHtml = tree.length
+                        ? tree.map(node => renderNode(node, 0)).join('')
+                        : '<div class="text-xs text-gray-400 italic">暂无任务</div>';
+                    return `
+                        <div class="flex-1 bg-gray-50 rounded-xl p-4 flex flex-col h-full border border-gray-100">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="font-bold text-gray-700"><span class="w-2 h-2 rounded-full ${colorClass} inline-block mr-2"></span>${label}</h4>
+                                <span class="text-xs font-bold bg-white px-2 py-1 rounded text-gray-500 border">${phaseTasks.length}</span>
+                            </div>
+                            <div class="flex-1 overflow-y-auto space-y-1 min-h-0 pt-2">
+                                ${listHtml}
+                            </div>
+                        </div>
+                    `;
+                };
+
+                window.toggleWbsNode = (nodeId) => {
+                    const key = String(nodeId);
+                    if (collapsedSet.has(key)) collapsedSet.delete(key);
+                    else collapsedSet.add(key);
+                    saveCollapsed();
+                    renderWbs();
+                };
+
+                window.addSubTask = async (parentId) => {
+                    const title = prompt('请输入子任务名称:');
+                    if (!title) return;
+                    const parentTask = window.wbsTaskIndex && window.wbsTaskIndex[parentId];
+                    const phase = parentTask ? parentTask.description : 'm1';
+                    await window.auth.apiFetch(`/projects/${p.id}/milestones`, {
+                        method: 'POST',
+                        headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify({ title: title.trim(), phase, parentId })
+                    });
+                    localStorage.setItem(`ai_course_wbs_${p.id}`, 'true');
+                    renderFunctions.wbs_planning(document.getElementById('main-content-area'), { id: p.id });
+                };
+
+                // WBS Templates
+                const wbsTemplates = {
+                    'innovation': [
+                        { title: '需求分析与竞品调研', phase: 'm1' },
+                        { title: '核心功能定义 (MVP)', phase: 'm1' },
+                        { title: '硬件选型与采购', phase: 'm1' },
+                        { title: '外观/结构草图设计', phase: 'm1' },
+                        { title: '核心代码编写', phase: 'm2' },
+                        { title: '电路连接与调试', phase: 'm2' },
+                        { title: '原型组装', phase: 'm2' },
+                        { title: '功能测试与Bug修复', phase: 'm2' },
+                        { title: '产品演示视频制作', phase: 'm3' },
+                        { title: '路演PPT制作', phase: 'm3' },
+                        { title: '最终成果发布', phase: 'm3' }
+                    ],
+                    'research': [
+                        { title: '确定研究课题', phase: 'm1' },
+                        { title: '文献综述 (Literature Review)', phase: 'm1' },
+                        { title: '提出研究假设', phase: 'm1' },
+                        { title: '设计实验/调查问卷', phase: 'm1' },
+                        { title: '数据收集与实验执行', phase: 'm2' },
+                        { title: '数据清洗与整理', phase: 'm2' },
+                        { title: '数据分析与假设验证', phase: 'm2' },
+                        { title: '撰写论文初稿', phase: 'm3' },
+                        { title: '同行评审与修改', phase: 'm3' },
+                        { title: '论文定稿与排版', phase: 'm3' },
+                        { title: '学术海报制作', phase: 'm3' }
+                    ],
+                    'impact': [
+                        { title: '界定社会问题', phase: 'm1' },
+                        { title: '利益相关方访谈', phase: 'm1' },
+                        { title: '制定行动方案', phase: 'm1' },
+                        { title: '招募志愿者/合作伙伴', phase: 'm1' },
+                        { title: '制作宣传物料', phase: 'm2' },
+                        { title: '开展线上/线下活动', phase: 'm2' },
+                        { title: '活动记录与拍摄', phase: 'm2' },
+                        { title: '收集反馈与影响力数据', phase: 'm3' },
+                        { title: '撰写项目总结报告', phase: 'm3' },
+                        { title: '成果展示与分享会', phase: 'm3' }
+                    ]
+                };
+
+                window.applyWbsTemplate = async (type) => {
+                    if (!confirm('应用模版将为您批量添加标准任务。确定要继续吗？')) return;
+                    
+                    const tasks = wbsTemplates[type];
+                    if (!tasks) return;
+
+                    // Batch add tasks (Serial for simplicity, parallel better for perf but simple is fine here)
+                    // Showing a loading state could be nice
+                    const btn = document.getElementById('template-btn');
+                    const originalText = btn.innerHTML;
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 生成中...';
+
+                    try {
+                        for (const t of tasks) {
+                            await window.auth.apiFetch(`/projects/${p.id}/milestones`, {
+                                method: 'POST',
+                                headers: {'Content-Type':'application/json'},
+                                body: JSON.stringify({ title: t.title, phase: t.phase })
+                            });
+                        }
+                        localStorage.setItem(`ai_course_wbs_${p.id}`, 'true');
+                        // Refresh
+                        renderFunctions.wbs_planning(document.getElementById('main-content-area'), { id: p.id });
+                    } catch (e) {
+                        alert('生成任务失败: ' + e.message);
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+                    }
+                };
+
+                const renderWbs = () => {
+                    c.innerHTML = `
+                        <div class="flex flex-col h-full p-6">
+                            <div class="flex flex-wrap gap-3 mb-4 items-center">
+                                <div class="dropdown relative group">
+                                    <button id="template-btn" class="bg-white border border-indigo-200 text-indigo-600 px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-50 transition shadow-sm flex items-center">
+                                        <i class="fas fa-magic mr-2"></i> 智能模版
+                                    </button>
+                                    <div class="hidden group-hover:block absolute top-full left-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+                                        <div class="py-1">
+                                            <button onclick="applyWbsTemplate('innovation')" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600"><i class="fas fa-lightbulb mr-2"></i> 科技创新类</button>
+                                            <button onclick="applyWbsTemplate('research')" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600"><i class="fas fa-book mr-2"></i> 学术研究类</button>
+                                            <button onclick="applyWbsTemplate('impact')" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600"><i class="fas fa-hands-helping mr-2"></i> 社会公益类</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="w-px h-8 bg-gray-200 mx-2"></div>
+                                <input id="new-task-input" class="flex-1 min-w-[220px] px-4 py-2.5 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" placeholder="添加根任务 (例如: 购买传感器)...">
+                                <select id="new-task-phase" class="px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 outline-none focus:ring-2 focus:ring-indigo-500">
+                                    <option value="m1">里程碑 1: 原型</option>
+                                    <option value="m2">里程碑 2: 测试</option>
+                                    <option value="m3">里程碑 3: 交付</option>
+                                </select>
+                                <button onclick="addTask('${p.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl font-bold transition shadow-sm"><i class="fas fa-plus mr-2"></i>添加</button>
+                            </div>
+                            <div class="text-xs text-gray-400 mb-4 flex items-center gap-2">
+                                <i class="fas fa-info-circle"></i> 提示：点击“智能模版”可一键生成标准任务流。
+                            </div>
+                            <div class="flex-1 grid grid-cols-3 gap-6 overflow-hidden min-h-0">
+                                ${renderPhaseColumn('m1', '里程碑 1: 原型/规划', 'bg-indigo-500')}
+                                ${renderPhaseColumn('m2', '里程碑 2: 实施/验证', 'bg-blue-500')}
+                                ${renderPhaseColumn('m3', '里程碑 3: 交付/结题', 'bg-green-500')}
+                            </div>
+                        </div>`;
+                };
+
+                renderWbs();
             },
             kanban: function(c) {
                 c.innerHTML = `<iframe src="tools/kanban.html" class="w-full h-full border-0"></iframe>`;
@@ -527,6 +711,8 @@
                 // Helper to check local status
                 const checkStatus = (taskId) => {
                     const keyMap = {
+                        'literature_review': `ai_course_literature_${p.id}`,
+                        'pre_research': `ai_course_pre_research_${p.id}`,
                         'goal_definition': `ai_course_charter_${p.id}`,
                         'wbs_planning': `ai_course_wbs_${p.id}`, 
                         'kanban': `ai_course_kanban_${p.id}`,
@@ -608,9 +794,18 @@
 
         // Global Action Proxies
         window.addTask = async (pid) => {
-            const val=document.getElementById('new-task-input').value;if(!val)return;
-            await window.auth.apiFetch(`/projects/${pid}/milestones`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:val,description:'m1'})});
+            const input = document.getElementById('new-task-input');
+            const phaseSelect = document.getElementById('new-task-phase');
+            const val = input ? input.value.trim() : '';
+            if(!val) return;
+            const phase = phaseSelect ? phaseSelect.value : 'm1';
+            await window.auth.apiFetch(`/projects/${pid}/milestones`, {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ title: val, phase })
+            });
             localStorage.setItem(`ai_course_wbs_${pid}`, 'true'); // Flag for Gateway
+            if (input) input.value = '';
             // Refresh
             const dummyC = document.getElementById('main-content-area');
             renderFunctions.wbs_planning(dummyC, {id: pid});

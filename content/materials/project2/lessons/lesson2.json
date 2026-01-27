@@ -1,0 +1,53 @@
+{
+  "id": "p2-l2",
+  "project": "project2",
+  "title": "第2课：掌控混乱 (Project Management)",
+  "duration": 45,
+  "description": "学习 WBS 拆解法，制定可执行的项目计划。",
+  "phases": [
+    {
+      "id": "step1",
+      "title": "🐘 0-10分：大象装冰箱",
+      "duration": 10,
+      "student": {
+        "title": "结构化思维",
+        "content": "<p>如何把大象装进冰箱？分三步：开门、装、关门。</p><p>如何举办一场元旦晚会？这就复杂了。我们需要 <strong>WBS (Work Breakdown Structure)</strong> —— 任务分解结构。</p>",
+        "tasks": [
+            "思考：如果要举办晚会，需要做哪几大块工作？（如：场地、节目、物资...）"
+        ]
+      }
+    },
+    {
+      "id": "step2",
+      "title": "🔪 10-30分：任务拆解",
+      "duration": 20,
+      "student": {
+        "title": "WBS 实战",
+        "content": "<p>任务要拆解到<strong>可以执行</strong>为止。比如“准备零食”不是一个好任务，“去超市买5包薯片”才是。</p>",
+        "prompts": [
+          {
+            "label": "AI 拆解助手",
+            "text": "我要做一个[智能错题本APP]。请用 WBS 方法帮我拆解项目任务，分为：需求、设计、开发、测试、发布 5个阶段。请列出每个阶段具体的子任务。"
+          }
+        ],
+        "tasks": [
+            "使用 AI 生成项目任务清单",
+            "将任务复制到 <a href='tools/kanban.html' target='_blank' class='text-indigo-600 underline'>敏捷看板</a> 中"
+        ]
+      }
+    },
+    {
+      "id": "step3",
+      "title": "📅 30-45分：甘特图与排期",
+      "duration": 15,
+      "student": {
+        "title": "时间管理",
+        "content": "<p>任务有了，还要有 Deadline。没有截止日期的计划只是愿望。</p>",
+        "tasks": [
+            "为你的核心任务设置截止时间",
+            "思考：如果开发进度落后了，作为项目经理该怎么办？（砍功能？加班？）"
+        ]
+      }
+    }
+  ]
+}

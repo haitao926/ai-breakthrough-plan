@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>前后端全栈开发详解 - 智能错题本项目</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+        }
+
+        .slides-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            transition: transform 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .slide {
+            min-width: 100vw;
+            min-height: 100vh;
+            padding: 60px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: white;
+            position: relative;
+        }
+
+        .slide h1 {
+            font-size: 3.5em;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .slide h2 {
+            font-size: 2.5em;
+            color: #3498db;
+            margin-bottom: 25px;
+            border-bottom: 4px solid #3498db;
+            padding-bottom: 15px;
+        }
+
+        .slide h3 {
+            font-size: 2em;
+            color: #e74c3c;
+            margin: 25px 0 15px 0;
+        }
+
+        .slide p, .slide li {
+            font-size: 1.3em;
+            line-height: 1.8;
+            color: #34495e;
+            margin-bottom: 15px;
+        }
+
+        .slide ul, .slide ol {
+            margin-left: 40px;
+            margin-bottom: 20px;
+        }
+
+        .code-block {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 25px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 1.1em;
+            overflow-x: auto;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        }
+
+        .code-block code {
+            display: block;
+            white-space: pre;
+        }
+
+        .highlight {
+            background: #f39c12;
+            padding: 5px 10px;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #3498db;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin-right: 10px;
+        }
+
+        .badge.frontend {
+            background: #e74c3c;
+        }
+
+        .badge.backend {
+            background: #27ae60;
+        }
+
+        .badge.database {
+            background: #f39c12;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin: 20px 0;
+        }
+
+        .box {
+            background: #ecf0f1;
+            padding: 25px;
+            border-radius: 10px;
+            border-left: 5px solid #3498db;
+        }
+
+        .box.warning {
+            border-left-color: #e74c3c;
+            background: #fadbd8;
+        }
+
+        .box.success {
+            border-left-color: #27ae60;
+            background: #d5f4e6;
+        }
+
+        .box.info {
+            border-left-color: #f39c12;
+            background: #fef5e7;
+        }
+
+        .navigation {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+            display: flex;
+            gap: 15px;
+        }
+
+        .nav-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1.2em;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: all 0.3s;
+        }
+
+        .nav-btn:hover {
+            background: #2980b9;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+        }
+
+        .nav-btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 5px;
+            background: #3498db;
+            transition: width 0.3s;
+            z-index: 1000;
+        }
+
+        .slide-number {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1.1em;
+            z-index: 1000;
+        }
+
+        .icon {
+            font-size: 3em;
+            margin-bottom: 20px;
+        }
+
+        .center {
+            text-align: center;
+        }
+
+        .architecture-diagram {
+            background: #ecf0f1;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+            text-align: center;
+        }
+
+        .layer {
+            background: white;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .layer.frontend { border-left: 8px solid #e74c3c; }
+        .layer.backend { border-left: 8px solid #27ae60; }
+        .layer.database { border-left: 8px solid #f39c12; }
+
+        .example-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            margin: 20px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        th {
+            background: #3498db;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-size: 1.2em;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #ecf0f1;
+            font-size: 1.1em;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .api-endpoint {
+            background: #2c3e50;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 1.2em;
+            margin: 15px 0;
+            display: inline-block;
+        }
+
+        .http-method {
+            background: #27ae60;
+            padding: 5px 12px;
+            border-radius: 5px;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+
+        .http-method.post { background: #e74c3c; }
+        .http-method.put { background: #f39c12; }
+        .http-method.delete { background: #c0392b; }
+    </style>
+</head>
+<body>
+    <div class="progress-bar" id="progressBar"></div>
+    <div class="slide-number" id="slideNumber">1 / 20</div>
+
+    <div class="slides-container" id="slidesContainer">
+        <!-- Slide 1: 封面 -->
+        <div class="slide center">
+            <div class="icon">🚀</div>
+            <h1>前后端全栈开发详解</h1>
+            <h2 style="color: #e74c3c;">从零开始构建智能错题本</h2>
+            <p style="font-size: 1.5em; margin-top: 50px;">
+                <span class="badge frontend">前端开发</span>
+                <span class="badge backend">后端开发</span>
+                <span class="badge database">数据库设计</span>
+            </p>
+            <p style="margin-top: 50px; font-size: 1.4em; color: #7f8c8d;">
+                💻 适用对象：高一学生 | 🎯 目标：掌握全栈开发核心技能
+            </p>
+        </div>
+
+        <!-- Slide 2: 全栈架构总览 -->
+        <div class="slide">
+            <h2>🏗️ 全栈架构总览</h2>
+            <p>全栈开发 = <span class="highlight">前端</span> + <span class="highlight">后端</span> + <span class="highlight">数据库</span></p>
+
+            <div class="architecture-diagram">
+                <div class="layer frontend">
+                    🎨 前端层 (Frontend)<br>
+                    用户界面 | HTML + CSS + JavaScript
+                </div>
+                <div style="font-size: 2em; margin: 10px 0;">⬇️ HTTP 请求 ⬇️</div>
+                <div class="layer backend">
+                    ⚙️ 后端层 (Backend)<br>
+                    业务逻辑 | Python FastAPI
+                </div>
+                <div style="font-size: 2em; margin: 10px 0;">⬇️ 数据操作 ⬇️</div>
+                <div class="layer database">
+                    🗄️ 数据层 (Database)<br>
+                    数据存储 | SQLite
+                </div>
+            </div>
+
+            <div class="box info">
+                <strong>💡 核心理念：</strong>前端负责"面子"（好看），后端负责"里子"（好用），数据库负责"记忆"（数据持久化）
+            </div>
+        </div>
+
+        <!-- Slide 3: 前端开发 - 概述 -->
+        <div class="slide">
+            <h2>🎨 前端开发 - 什么是前端？</h2>
+
+            <h3>定义</h3>
+            <p>前端就是用户能看到、能点击、能交互的<span class="highlight">网页界面</span></p>
+
+            <h3>前端三剑客</h3>
+            <div class="two-column">
+                <div class="box">
+                    <h4 style="color: #e74c3c; font-size: 1.5em;">📄 HTML (骨架)</h4>
+                    <p>HyperText Markup Language</p>
+                    <p><strong>作用：</strong>定义网页结构</p>
+                    <p><strong>比喻：</strong>房子的框架</p>
+                </div>
+                <div class="box">
+                    <h4 style="color: #3498db; font-size: 1.5em;">🎨 CSS (皮肤)</h4>
+                    <p>Cascading Style Sheets</p>
+                    <p><strong>作用：</strong>美化网页样式</p>
+                    <p><strong>比喻：</strong>房子的装修</p>
+                </div>
+            </div>
+            <div class="box">
+                <h4 style="color: #f39c12; font-size: 1.5em;">⚡ JavaScript (灵魂)</h4>
+                <p><strong>作用：</strong>实现交互逻辑、处理用户操作</p>
+                <p><strong>比喻：</strong>房子的智能家居系统</p>
+            </div>
+
+            <div class="box success">
+                <strong>🎯 前端工程师的使命：</strong>让用户用得爽、看得舒服、操作流畅！
+            </div>
+        </div>
+
+        <!-- Slide 4: HTML 基础 -->
+        <div class="slide">
+            <h2>📄 HTML - 网页的骨架</h2>
+
+            <h3>HTML 是什么？</h3>
+            <p>HTML 使用<span class="highlight">标签（Tags）</span>来描述网页的结构</p>
+
+            <div class="code-block"><code>&lt;!DOCTYPE html&gt;
+&lt;html lang="zh-CN"&gt;
+&lt;head&gt;
+    &lt;meta charset="UTF-8"&gt;
+    &lt;title&gt;智能错题本&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;h1&gt;我的错题本&lt;/h1&gt;
+    &lt;p&gt;这是一个段落&lt;/p&gt;
+    &lt;button&gt;点击我&lt;/button&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></div>
+
+            <h3>常用 HTML 标签</h3>
+            <table>
+                <tr>
+                    <th>标签</th>
+                    <th>作用</th>
+                    <th>示例</th>
+                </tr>
+                <tr>
+                    <td>&lt;h1&gt; ~ &lt;h6&gt;</td>
+                    <td>标题（1最大，6最小）</td>
+                    <td>&lt;h1&gt;主标题&lt;/h1&gt;</td>
+                </tr>
+                <tr>
+                    <td>&lt;p&gt;</td>
+                    <td>段落</td>
+                    <td>&lt;p&gt;这是段落&lt;/p&gt;</td>
+                </tr>
+                <tr>
+                    <td>&lt;div&gt;</td>
+                    <td>容器（块级）</td>
+                    <td>&lt;div&gt;内容区域&lt;/div&gt;</td>
+                </tr>
+                <tr>
+                    <td>&lt;button&gt;</td>
+                    <td>按钮</td>
+                    <td>&lt;button&gt;提交&lt;/button&gt;</td>
+                </tr>
+                <tr>
+                    <td>&lt;input&gt;</td>
+                    <td>输入框</td>
+                    <td>&lt;input type="text"&gt;</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Slide 5: CSS 基础 -->
+        <div class="slide">
+            <h2>🎨 CSS - 网页的美化师</h2>
+
+            <h3>CSS 是什么？</h3>
+            <p>CSS 用来<span class="highlight">控制网页的样式</span>，包括颜色、字体、布局等</p>
+
+            <div class="two-column">
+                <div>
+                    <h4>CSS 语法结构</h4>
+                    <div class="code-block"><code>选择器 {
+    属性: 值;
+    属性: 值;
+}
+
+/* 示例 */
+button {
+    background-color: #3498db;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+}</code></div>
+                </div>
+                <div>
+                    <h4>三种引入方式</h4>
+                    <div class="box">
+                        <strong>1. 内联样式</strong>
+                        <p style="font-size: 0.9em;">&lt;p style="color: red"&gt;文本&lt;/p&gt;</p>
+                    </div>
+                    <div class="box">
+                        <strong>2. 内部样式</strong>
+                        <p style="font-size: 0.9em;">&lt;style&gt; p { color: red; } &lt;/style&gt;</p>
+                    </div>
+                    <div class="box">
+                        <strong>3. 外部样式 ✅ 推荐</strong>
+                        <p style="font-size: 0.9em;">&lt;link rel="stylesheet" href="style.css"&gt;</p>
+                    </div>
+                </div>
+            </div>
+
+            <h3>常用 CSS 属性</h3>
+            <ul>
+                <li><strong>color</strong> - 文字颜色</li>
+                <li><strong>background-color</strong> - 背景颜色</li>
+                <li><strong>font-size</strong> - 字体大小</li>
+                <li><strong>padding</strong> - 内边距 | <strong>margin</strong> - 外边距</li>
+                <li><strong>border</strong> - 边框 | <strong>border-radius</strong> - 圆角</li>
+            </ul>
+        </div>
+
+        <!-- Slide 6: JavaScript 基础 -->
+        <div class="slide">
+            <h2>⚡ JavaScript - 网页的灵魂</h2>
+
+            <h3>JavaScript 能做什么？</h3>
+            <ul>
+                <li>响应用户操作（点击、输入、滚动）</li>
+                <li>修改网页内容和样式</li>
+                <li>发送网络请求（与后端通信）</li>
+                <li>验证表单数据</li>
+            </ul>
+
+            <div class="two-column">
+                <div>
+                    <h4>基础语法</h4>
+                    <div class="code-block"><code>// 变量声明
+let name = "张三";
+const age = 16;
+
+// 函数定义
+function sayHello() {
+    alert("你好！");
+}
+
+// 条件判断
+if (age >= 18) {
+    console.log("成年");
+} else {
+    console.log("未成年");
+}</code></div>
+                </div>
+                <div>
+                    <h4>DOM 操作</h4>
+                    <div class="code-block"><code>// 获取元素
+let btn = document.getElementById("myBtn");
+
+// 修改内容
+btn.textContent = "新文本";
+
+// 修改样式
+btn.style.color = "red";
+
+// 绑定事件
+btn.addEventListener("click", function() {
+    alert("按钮被点击了！");
+});</code></div>
+                </div>
+            </div>
+
+            <div class="box warning">
+                <strong>⚠️ 注意：</strong>JavaScript 代码通常放在 &lt;body&gt; 底部或使用 defer 属性，确保 HTML 加载完成后再执行
+            </div>
+        </div>
+
+        <!-- Slide 7: 前端实战 - 错题列表页面 -->
+        <div class="slide">
+            <h2>💻 前端实战 - 错题列表页面</h2>
+
+            <h3>需求分析</h3>
+            <ul>
+                <li>显示所有错题（标题、科目、日期）</li>
+                <li>点击"添加错题"按钮弹出表单</li>
+                <li>点击错题可查看详情</li>
+            </ul>
+
+            <div class="code-block"><code>&lt;!-- HTML 结构 --&gt;
+&lt;div class="container"&gt;
+    &lt;h1&gt;我的错题本&lt;/h1&gt;
+    &lt;button id="addBtn" class="btn-primary"&gt;➕ 添加错题&lt;/button&gt;
+
+    &lt;div id="mistakeList" class="mistake-list"&gt;
+        &lt;!-- 错题卡片会动态插入这里 --&gt;
+        &lt;div class="mistake-card"&gt;
+            &lt;h3&gt;三角函数综合题&lt;/h3&gt;
+            &lt;span class="badge"&gt;数学&lt;/span&gt;
+            &lt;span class="date"&gt;2025-12-15&lt;/span&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+&lt;/div&gt;</code></div>
+
+            <div class="code-block"><code>/* CSS 样式 */
+.mistake-card {
+    background: white;
+    padding: 20px;
+    margin: 15px 0;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    cursor: pointer;
+    transition: transform 0.3s;
+}
+
+.mistake-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}</code></div>
+        </div>
+
+        <!-- Slide 8: 前端实战 - JavaScript 交互 -->
+        <div class="slide">
+            <h2>💻 前端实战 - JavaScript 交互逻辑</h2>
+
+            <h3>功能 1: 动态渲染错题列表</h3>
+            <div class="code-block"><code>// 模拟数据（后续会从后端获取）
+const mistakes = [
+    { id: 1, title: "三角函数综合题", subject: "数学", date: "2025-12-15" },
+    { id: 2, title: "化学反应方程式", subject: "化学", date: "2025-12-14" }
+];
+
+// 渲染列表
+function renderMistakes() {
+    const listContainer = document.getElementById("mistakeList");
+    listContainer.innerHTML = ""; // 清空
+
+    mistakes.forEach(mistake => {
+        const card = document.createElement("div");
+        card.className = "mistake-card";
+        card.innerHTML = `
+            &lt;h3&gt;${mistake.title}&lt;/h3&gt;
+            &lt;span class="badge"&gt;${mistake.subject}&lt;/span&gt;
+            &lt;span class="date"&gt;${mistake.date}&lt;/span&gt;
+        `;
+        card.onclick = () => viewDetail(mistake.id);
+        listContainer.appendChild(card);
+    });
+}
+
+renderMistakes(); // 页面加载时调用</code></div>
+        </div>
+
+        <!-- Slide 9: 前端与后端的桥梁 - HTTP & API -->
+        <div class="slide">
+            <h2>🌉 前端与后端的桥梁 - HTTP 请求</h2>
+
+            <h3>什么是 HTTP？</h3>
+            <p>HTTP (HyperText Transfer Protocol) 是<span class="highlight">浏览器和服务器之间的通信协议</span></p>
+
+            <h3>HTTP 常用方法</h3>
+            <table>
+                <tr>
+                    <th>方法</th>
+                    <th>作用</th>
+                    <th>示例场景</th>
+                </tr>
+                <tr>
+                    <td><span class="http-method">GET</span></td>
+                    <td>获取数据</td>
+                    <td>查询错题列表</td>
+                </tr>
+                <tr>
+                    <td><span class="http-method post">POST</span></td>
+                    <td>创建数据</td>
+                    <td>添加新错题</td>
+                </tr>
+                <tr>
+                    <td><span class="http-method put">PUT</span></td>
+                    <td>更新数据</td>
+                    <td>修改错题内容</td>
+                </tr>
+                <tr>
+                    <td><span class="http-method delete">DELETE</span></td>
+                    <td>删除数据</td>
+                    <td>删除错题</td>
+                </tr>
+            </table>
+
+            <h3>前端发送请求 - Fetch API</h3>
+            <div class="code-block"><code>// GET 请求 - 获取错题列表
+fetch("http://localhost:8000/api/mistakes")
+    .then(response => response.json())
+    .then(data => {
+        console.log("获取到的数据:", data);
+        renderMistakes(data);
+    })
+    .catch(error => console.error("请求失败:", error));</code></div>
+        </div>
+
+        <!-- Slide 10: 前端发送 POST 请求 -->
+        <div class="slide">
+            <h2>📤 前端发送 POST 请求 - 添加错题</h2>
+
+            <div class="code-block"><code>// POST 请求 - 添加新错题
+function addMistake() {
+    const newMistake = {
+        title: document.getElementById("titleInput").value,
+        subject: document.getElementById("subjectInput").value,
+        content: document.getElementById("contentInput").value,
+        answer: document.getElementById("answerInput").value
+    };
+
+    fetch("http://localhost:8000/api/mistakes", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(newMistake)
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert("添加成功！");
+        loadMistakes(); // 重新加载列表
+    })
+    .catch(error => {
+        alert("添加失败: " + error);
+    });
+}
+
+// 绑定到按钮
+document.getElementById("submitBtn").addEventListener("click", addMistake);</code></div>
+
+            <div class="box info">
+                <strong>💡 关键点：</strong>
+                <ul>
+                    <li>method: "POST" - 指定请求方法</li>
+                    <li>headers - 告诉服务器数据格式是 JSON</li>
+                    <li>body - 将 JavaScript 对象转换为 JSON 字符串</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Slide 11: 后端开发 - 概述 -->
+        <div class="slide">
+            <h2>⚙️ 后端开发 - 什么是后端？</h2>
+
+            <h3>定义</h3>
+            <p>后端是运行在<span class="highlight">服务器</span>上的程序，处理业务逻辑、数据存储、权限控制等</p>
+
+            <div class="two-column">
+                <div class="box">
+                    <h4 style="color: #e74c3c; font-size: 1.5em;">🎯 前端</h4>
+                    <p>✅ 用户能看到</p>
+                    <p>✅ 运行在浏览器</p>
+                    <p>✅ 负责展示和交互</p>
+                    <p>❌ 不能直接操作数据库</p>
+                </div>
+                <div class="box">
+                    <h4 style="color: #27ae60; font-size: 1.5em;">🛠️ 后端</h4>
+                    <p>❌ 用户看不到</p>
+                    <p>✅ 运行在服务器</p>
+                    <p>✅ 负责业务逻辑</p>
+                    <p>✅ 直接操作数据库</p>
+                </div>
+            </div>
+
+            <h3>后端的核心职责</h3>
+            <ul>
+                <li>📥 接收前端请求，解析参数</li>
+                <li>🧠 执行业务逻辑（如数据验证、计算）</li>
+                <li>💾 操作数据库（增删改查）</li>
+                <li>📤 返回处理结果给前端</li>
+            </ul>
+
+            <div class="box success">
+                <strong>🎯 后端工程师的使命：</strong>确保数据安全、逻辑正确、性能高效！
+            </div>
+        </div>
+
+        <!-- Slide 12: Python FastAPI 框架 -->
+        <div class="slide">
+            <h2>🐍 Python FastAPI - 现代化后端框架</h2>
+
+            <h3>为什么选择 FastAPI？</h3>
+            <ul>
+                <li>⚡ <strong>极快</strong>：性能接近 Node.js 和 Go</li>
+                <li>🎓 <strong>易学</strong>：语法简洁，适合初学者</li>
+                <li>📚 <strong>自动文档</strong>：自动生成 API 文档</li>
+                <li>🔒 <strong>类型检查</strong>：减少错误</li>
+            </ul>
+
+            <h3>FastAPI 安装</h3>
+            <div class="code-block"><code># 使用 pip 安装
+pip install fastapi uvicorn
+
+# uvicorn 是运行 FastAPI 的服务器</code></div>
+
+            <h3>第一个 FastAPI 应用</h3>
+            <div class="code-block"><code>from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/")
+def read_root():
+    return {"message": "欢迎来到智能错题本后端！"}
+
+# 运行命令：uvicorn main:app --reload
+# 访问：http://localhost:8000</code></div>
+        </div>
+
+        <!-- Slide 13: API 接口设计 -->
+        <div class="slide">
+            <h2>🎯 API 接口设计 - RESTful 规范</h2>
+
+            <h3>什么是 RESTful API？</h3>
+            <p>一种设计<span class="highlight">API 接口</span>的规范，让接口更清晰、更规范</p>
+
+            <h3>错题本项目的 API 设计</h3>
+
+            <div class="api-endpoint">
+                <span class="http-method">GET</span> /api/mistakes
+            </div>
+            <p>功能：获取所有错题列表</p>
+
+            <div class="api-endpoint">
+                <span class="http-method">GET</span> /api/mistakes/{id}
+            </div>
+            <p>功能：获取指定 ID 的错题详情</p>
+
+            <div class="api-endpoint">
+                <span class="http-method post">POST</span> /api/mistakes
+            </div>
+            <p>功能：创建新错题</p>
+
+            <div class="api-endpoint">
+                <span class="http-method put">PUT</span> /api/mistakes/{id}
+            </div>
+            <p>功能：更新指定错题</p>
+
+            <div class="api-endpoint">
+                <span class="http-method delete">DELETE</span> /api/mistakes/{id}
+            </div>
+            <p>功能:删除指定错题</p>
+        </div>
+
+        <!-- Slide 14: 后端实战 - 获取错题列表 -->
+        <div class="slide">
+            <h2>💻 后端实战 - 获取错题列表 API</h2>
+
+            <div class="code-block"><code>from fastapi import FastAPI
+from typing import List
+from pydantic import BaseModel
+from datetime import datetime
+
+app = FastAPI()
+
+# 定义数据模型
+class Mistake(BaseModel):
+    id: int
+    title: str
+    subject: str
+    content: str
+    answer: str
+    created_at: datetime
+
+# 模拟数据库（实际项目中会连接真实数据库）
+fake_db = [
+    {
+        "id": 1,
+        "title": "三角函数综合题",
+        "subject": "数学",
+        "content": "求 sin(π/3) 的值",
+        "answer": "√3/2",
+        "created_at": datetime.now()
+    }
+]
+
+# API 端点：获取所有错题
+@app.get("/api/mistakes", response_model=List[Mistake])
+def get_mistakes():
+    return fake_db</code></div>
+
+            <div class="box success">
+                <strong>✅ 测试：</strong>启动服务器后，访问 http://localhost:8000/api/mistakes 即可看到 JSON 数据
+            </div>
+        </div>
+
+        <!-- Slide 15: 后端实战 - 创建错题 API -->
+        <div class="slide">
+            <h2>💻 后端实战 - 创建错题 API</h2>
+
+            <div class="code-block"><code>from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+
+class MistakeCreate(BaseModel):
+    title: str
+    subject: str
+    content: str
+    answer: str
+
+@app.post("/api/mistakes")
+def create_mistake(mistake: MistakeCreate):
+    # 生成新 ID
+    new_id = max([m["id"] for m in fake_db]) + 1 if fake_db else 1
+
+    # 创建新错题
+    new_mistake = {
+        "id": new_id,
+        "title": mistake.title,
+        "subject": mistake.subject,
+        "content": mistake.content,
+        "answer": mistake.answer,
+        "created_at": datetime.now()
+    }
+
+    # 添加到数据库
+    fake_db.append(new_mistake)
+
+    return {
+        "message": "错题添加成功！",
+        "data": new_mistake
+    }</code></div>
+
+            <div class="box info">
+                <strong>💡 Pydantic 模型的作用：</strong>
+                <ul>
+                    <li>自动验证数据类型</li>
+                    <li>自动生成 API 文档</li>
+                    <li>提供清晰的数据结构定义</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Slide 16: 数据库基础 -->
+        <div class="slide">
+            <h2>🗄️ 数据库 - 数据的永久存储</h2>
+
+            <h3>为什么需要数据库？</h3>
+            <p>将数据存储在<span class="highlight">列表变量</span>中，程序关闭后数据就丢失了！</p>
+            <p>数据库可以<span class="highlight">持久化存储</span>数据，即使服务器重启，数据依然存在。</p>
+
+            <h3>SQLite 数据库</h3>
+            <ul>
+                <li>✅ 轻量级，无需单独安装服务器</li>
+                <li>✅ 数据存储在单个文件中（.db 文件）</li>
+                <li>✅ Python 内置支持，开箱即用</li>
+                <li>✅ 非常适合小型项目和学习</li>
+            </ul>
+
+            <h3>SQL 语言基础</h3>
+            <div class="code-block"><code>-- 创建表
+CREATE TABLE mistakes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    subject TEXT,
+    content TEXT,
+    answer TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 插入数据
+INSERT INTO mistakes (title, subject, content, answer)
+VALUES ('三角函数题', '数学', '题目内容', '答案');
+
+-- 查询数据
+SELECT * FROM mistakes;
+
+-- 删除数据
+DELETE FROM mistakes WHERE id = 1;</code></div>
+        </div>
+
+        <!-- Slide 17: 后端连接数据库 -->
+        <div class="slide">
+            <h2>💻 后端连接数据库 - SQLite 集成</h2>
+
+            <div class="code-block"><code>import sqlite3
+from fastapi import FastAPI
+from contextlib import contextmanager
+
+app = FastAPI()
+
+# 数据库文件路径
+DATABASE = "mistakes.db"
+
+# 数据库连接上下文管理器
+@contextmanager
+def get_db():
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row  # 返回字典格式
+    try:
+        yield conn
+    finally:
+        conn.close()
+
+# 初始化数据库表
+def init_db():
+    with get_db() as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS mistakes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                subject TEXT,
+                content TEXT,
+                answer TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        conn.commit()
+
+# 启动时初始化数据库
+init_db()</code></div>
+        </div>
+
+        <!-- Slide 18: 完整的 CRUD 操作 -->
+        <div class="slide">
+            <h2>💻 完整的 CRUD 操作</h2>
+
+            <div class="code-block"><code>@app.get("/api/mistakes")
+def get_all_mistakes():
+    with get_db() as conn:
+        cursor = conn.execute("SELECT * FROM mistakes ORDER BY created_at DESC")
+        mistakes = [dict(row) for row in cursor.fetchall()]
+        return mistakes
+
+@app.get("/api/mistakes/{mistake_id}")
+def get_mistake(mistake_id: int):
+    with get_db() as conn:
+        cursor = conn.execute("SELECT * FROM mistakes WHERE id = ?", (mistake_id,))
+        mistake = cursor.fetchone()
+        if not mistake:
+            raise HTTPException(status_code=404, detail="错题不存在")
+        return dict(mistake)
+
+@app.post("/api/mistakes")
+def create_mistake(mistake: MistakeCreate):
+    with get_db() as conn:
+        cursor = conn.execute(
+            "INSERT INTO mistakes (title, subject, content, answer) VALUES (?, ?, ?, ?)",
+            (mistake.title, mistake.subject, mistake.content, mistake.answer)
+        )
+        conn.commit()
+        return {"message": "创建成功", "id": cursor.lastrowid}
+
+@app.delete("/api/mistakes/{mistake_id}")
+def delete_mistake(mistake_id: int):
+    with get_db() as conn:
+        conn.execute("DELETE FROM mistakes WHERE id = ?", (mistake_id,))
+        conn.commit()
+        return {"message": "删除成功"}</code></div>
+        </div>
+
+        <!-- Slide 19: 前后端联调 -->
+        <div class="slide">
+            <h2>🔗 前后端联调 - 打通全流程</h2>
+
+            <h3>跨域问题 (CORS)</h3>
+            <div class="box warning">
+                <strong>⚠️ 问题：</strong>前端（localhost:5500）访问后端（localhost:8000）会被浏览器阻止
+            </div>
+
+            <h3>解决方案：FastAPI 配置 CORS</h3>
+            <div class="code-block"><code>from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI()
+
+# 配置 CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 允许所有来源（生产环境需限制）
+    allow_credentials=True,
+    allow_methods=["*"],  # 允许所有 HTTP 方法
+    allow_headers=["*"],  # 允许所有请求头
+)</code></div>
+
+            <h3>完整开发流程</h3>
+            <ol>
+                <li>✅ 后端：编写 API，测试接口（使用 Postman 或浏览器）</li>
+                <li>✅ 前端：编写页面，调用 API</li>
+                <li>✅ 联调：前端发起请求，后端返回数据，验证功能</li>
+                <li>✅ 测试：模拟各种场景，确保稳定性</li>
+            </ol>
+        </div>
+
+        <!-- Slide 20: 总结与展望 -->
+        <div class="slide center">
+            <h2>🎓 恭喜你！全栈开发技能解锁</h2>
+
+            <div class="two-column">
+                <div class="box">
+                    <h3 style="color: #e74c3c;">前端技能 ✅</h3>
+                    <ul style="text-align: left;">
+                        <li>HTML 页面结构</li>
+                        <li>CSS 样式美化</li>
+                        <li>JavaScript 交互</li>
+                        <li>Fetch API 请求</li>
+                    </ul>
+                </div>
+                <div class="box">
+                    <h3 style="color: #27ae60;">后端技能 ✅</h3>
+                    <ul style="text-align: left;">
+                        <li>FastAPI 框架</li>
+                        <li>RESTful API 设计</li>
+                        <li>SQLite 数据库</li>
+                        <li>CRUD 操作</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="box success" style="margin-top: 40px;">
+                <h3>🚀 下一步</h3>
+                <ul style="text-align: left; font-size: 1.2em;">
+                    <li>✨ 添加用户认证功能</li>
+                    <li>📊 增加数据统计图表</li>
+                    <li>🔍 实现错题搜索功能</li>
+                    <li>📱 优化移动端适配</li>
+                    <li>☁️ 部署到云服务器</li>
+                </ul>
+            </div>
+
+            <p style="font-size: 2em; margin-top: 50px;">💪 你已经是一名全栈工程师了！</p>
+        </div>
+    </div>
+
+    <div class="navigation">
+        <button class="nav-btn" id="prevBtn" onclick="prevSlide()">← 上一页</button>
+        <button class="nav-btn" id="nextBtn" onclick="nextSlide()">下一页 →</button>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+
+        function updateSlide() {
+            const container = document.getElementById('slidesContainer');
+            container.style.transform = `translateX(-${currentSlide * 100}vw)`;
+
+            // 更新进度条
+            const progress = ((currentSlide + 1) / totalSlides) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+
+            // 更新页码
+            document.getElementById('slideNumber').textContent = `${currentSlide + 1} / ${totalSlides}`;
+
+            // 更新按钮状态
+            document.getElementById('prevBtn').disabled = currentSlide === 0;
+            document.getElementById('nextBtn').disabled = currentSlide === totalSlides - 1;
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides - 1) {
+                currentSlide++;
+                updateSlide();
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                currentSlide--;
+                updateSlide();
+            }
+        }
+
+        // 键盘控制
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowRight') nextSlide();
+            if (e.key === 'ArrowLeft') prevSlide();
+        });
+
+        // 初始化
+        updateSlide();
+    </script>
+</body>
+</html>

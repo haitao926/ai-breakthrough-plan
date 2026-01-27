@@ -99,6 +99,38 @@
     </header>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        
+        <!-- Inspiration Gallery (New Section) -->
+        <section class="mb-20">
+            <div class="flex items-center gap-3 mb-8">
+                <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl">
+                    <i class="fas fa-lightbulb"></i>
+                </div>
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">灵感风暴</h2>
+                    <p class="text-sm text-gray-500">不知道做什么？看看这些不同赛道的精彩切入点。</p>
+                </div>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-6" id="inspiration-grid">
+                <!-- Content loaded via JS -->
+                <div class="col-span-full text-center py-10 text-gray-300">
+                    <i class="fas fa-spinner fa-spin mr-2"></i> 加载灵感中...
+                </div>
+            </div>
+        </section>
+
+        <!-- Existing Showcase Grid -->
+        <div class="flex items-center gap-3 mb-8">
+            <div class="w-10 h-10 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center text-xl">
+                <i class="fas fa-trophy"></i>
+            </div>
+            <div>
+                <h2 class="text-2xl font-bold text-gray-900">学生作品墙</h2>
+                <p class="text-sm text-gray-500">来自同学们的真实提交。</p>
+            </div>
+        </div>
+
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8" id="showcase-grid">
             <!-- Loading State -->
             <div class="col-span-full text-center py-20 text-gray-400">
@@ -143,6 +175,10 @@
                         <option value="">加载中...</option>
                     </select>
                 </div>
+                <div id="name-group">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">你的名字</label>
+                    <input id="submit-name" name="studentName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" required placeholder="请填写真实姓名">
+                </div>
                 <div>
                     <label class="block text-sm font-bold text-gray-700 mb-1">作品标题</label>
                     <input id="submit-title" name="title" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" required placeholder="例如：我的智能小车">
@@ -167,8 +203,67 @@
         let allSubmissions = [];
 
         document.addEventListener('DOMContentLoaded', async () => {
+            loadInspiration();
             await loadSubmissions();
         });
+
+        async function loadInspiration() {
+            const container = document.getElementById('inspiration-grid');
+            try {
+                const res = await fetch('data/showcase_data.json');
+                if (!res.ok) throw new Error('Failed to load data');
+                const data = await res.json();
+                
+                container.innerHTML = data.map((item, index) => {
+                    const bgClass = `bg-${item.color}-50`;
+                    const borderClass = `border-${item.color}-100`;
+                    const textClass = `text-${item.color}-600`;
+                    const num = String(index + 1).padStart(2, '0');
+
+                    return `
+                    <div class="relative overflow-hidden rounded-2xl border ${borderClass} ${bgClass} p-6 hover:shadow-lg transition group">
+                        <!-- Header -->
+                        <div class="flex justify-between items-start mb-4 relative z-10">
+                            <div>
+                                <div class="text-4xl font-black ${textClass} opacity-20 absolute -top-4 -left-2 select-none">${num}</div>
+                                <h3 class="text-xl font-bold text-gray-900 mt-2">${item.title}</h3>
+                                <p class="text-xs font-bold uppercase tracking-wider ${textClass}">${item.subtitle}</p>
+                            </div>
+                            <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm ${textClass}">
+                                <i class="${item.icon}"></i>
+                            </div>
+                        </div>
+
+                        <!-- Tags -->
+                        <div class="mb-4 relative z-10">
+                            <div class="flex flex-wrap gap-1 mb-2">
+                                ${item.keywords.map(k => `<span class="px-2 py-0.5 bg-white/60 rounded text-[10px] font-bold text-gray-600 border border-white/50">${k}</span>`).join('')}
+                            </div>
+                            <div class="text-[10px] text-gray-500 border-t border-black/5 pt-2 mt-2">
+                                <span class="font-bold">相关学科：</span>${item.subjects}
+                            </div>
+                        </div>
+
+                        <!-- Examples -->
+                        <div class="space-y-3 relative z-10">
+                            ${item.examples.map(ex => `
+                                <div class="bg-white/80 p-3 rounded-lg border border-white shadow-sm hover:scale-[1.02] transition">
+                                    <div class="text-xs font-bold ${textClass} mb-0.5"><i class="fas fa-question-circle mr-1"></i> ${ex.question}</div>
+                                    <div class="text-xs text-gray-700 leading-tight">${ex.project}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <!-- Decor -->
+                        <div class="absolute -bottom-10 -right-10 w-40 h-40 bg-${item.color}-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30"></div>
+                    </div>`;
+                }).join('');
+
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = ''; // Hide on error
+            }
+        }
 
         async function loadSubmissions() {
             const grid = document.getElementById('showcase-grid');
@@ -185,13 +280,17 @@
                 allSubmissions = items.flatMap(item => {
                     const pid = `project${item.project.id}`; // Map ID (1) to 'project1'
                     const attachments = item.showcase.attachments || [];
+                    const details = item.showcase.details || {};
+                    const author = details.studentName || item.project.team_members || '匿名创作者';
                     
                     return attachments.map(att => ({
                         project: pid,
                         filename: att.name,
                         url: att.url,
                         fileType: /\.(png|jpg|jpeg|gif|svg|webp)$/i.test(att.name) ? 'image' : 'document',
-                        title: item.showcase.title
+                        title: item.showcase.title,
+                        studentName: author,
+                        savedAt: item.showcase.created_at
                     }));
                 });
                 
@@ -341,8 +440,9 @@
                     </div>
                     <div class="p-5">
                         <div class="flex justify-between items-start mb-2">
-                            <h3 class="font-bold text-gray-900 group-hover:text-indigo-600 transition truncate pr-2" title="${item.filename}">${item.filename.split('_').slice(1).join('_') || item.filename}</h3>
+                            <h3 class="font-bold text-gray-900 group-hover:text-indigo-600 transition truncate pr-2" title="${item.title}">${item.title}</h3>
                         </div>
+                        <div class="mb-3 text-xs text-gray-400 truncate" title="${item.filename}"><i class="fas fa-file mr-1"></i> ${item.filename.split('_').slice(1).join('_') || item.filename}</div>
                         <div class="flex items-center gap-2 mb-3">
                             <span class="text-xs font-bold bg-${color}-100 text-${color}-700 px-2 py-0.5 rounded">${pName}</span>
                             <span class="text-xs text-gray-400">${new Date(item.savedAt).toLocaleDateString()}</span>
@@ -406,27 +506,40 @@
         // Submission Logic
         async function openSubmitModal() {
             const user = window.auth.getAuthUser();
-            if (!user) {
-                alert('请先登录后再提交作品');
-                window.location.href = 'login.html';
-                return;
-            }
-
             const modal = document.getElementById('submit-modal');
             const select = document.getElementById('submit-project');
             const teamGroup = document.getElementById('team-select-group');
+            const nameGroup = document.getElementById('name-group');
+            const nameInput = document.getElementById('submit-name');
             
             modal.classList.remove('hidden');
             select.innerHTML = '<option>加载中...</option>';
 
+            // Anonymous Handling
+            if (!user) {
+                nameGroup.classList.remove('hidden');
+                nameInput.required = true;
+                // Anonymous users can't fetch their projects, so we default to a public ID (e.g., 1) or hide selection
+                teamGroup.classList.add('hidden');
+                // We will handle the project ID in submit (default to 1)
+                select.innerHTML = '<option value="1" selected>公共战队</option>';
+                return;
+            }
+
+            // Logged In Handling
+            nameGroup.classList.add('hidden');
+            nameInput.required = false;
+
             try {
                 const res = await window.auth.apiFetch('/projects');
+                if (!res.ok) throw new Error('Auth error');
                 const data = await res.json();
                 const projects = data.projects || [];
                 
                 if (projects.length === 0) {
-                    alert('你还没有加入任何战队，请先创建或加入一个项目。');
-                    modal.classList.add('hidden');
+                    alert('你还没有加入任何战队，将默认提交到公共区。');
+                    select.innerHTML = '<option value="1" selected>公共战队</option>';
+                    teamGroup.classList.add('hidden');
                     return;
                 }
 
@@ -440,8 +553,9 @@
                     teamGroup.classList.remove('hidden');
                 }
             } catch (err) {
-                console.error(err);
-                select.innerHTML = '<option value="">加载失败</option>';
+                console.warn('Failed to load projects, defaulting to public:', err);
+                select.innerHTML = '<option value="1" selected>公共战队</option>';
+                teamGroup.classList.add('hidden');
             }
         }
 
@@ -454,12 +568,12 @@
 
             try {
                 const formData = new FormData(e.target);
-                const projectId = formData.get('project');
+                const projectId = formData.get('project') || '1'; // Default to Public Project 1
                 const file = formData.get('file');
                 const course = formData.get('course');
                 let title = formData.get('title');
                 
-                if (!projectId || !file) throw new Error('信息不完整');
+                if (!file) throw new Error('请选择文件');
 
                 // Prepend Course to Title
                 if (course) {
@@ -468,7 +582,17 @@
                 }
 
                 formData.append('type', 'showcase');
-                formData.append('content', `Course: ${course}`);
+                // Title is already in formData
+                // Content defaults to empty
+                formData.append('content', `Course: ${course || 'General'}`);
+                
+                // Construct details JSON
+                const studentName = formData.get('studentName') || '';
+                const details = {
+                    showcaseSummary: `用户上传作品 - ${title || '无标题'} `,
+                    studentName: studentName
+                };
+                formData.append('details', JSON.stringify(details));
 
                 const res = await window.auth.apiFetch(`/projects/${projectId}/submissions`, {
                     method: 'POST',

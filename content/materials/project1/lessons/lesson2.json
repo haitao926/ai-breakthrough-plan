@@ -1,0 +1,70 @@
+{
+  "id": "p1-l2",
+  "project": "project1",
+  "title": "第2课：游戏架构搭建 (Game Logic)",
+  "duration": 45,
+  "description": "理解游戏循环，使用 Phaser.js 快速生成游戏原型。",
+  "phases": [
+    {
+      "id": "step1",
+      "title": "🎬 0-5分：回顾与引入",
+      "duration": 5,
+      "student": {
+        "title": "从视觉到游戏",
+        "content": "<p>上节课我们已经能让电脑“看见”手了。但光有坐标没用，得有游戏给它控制。</p><p>今天我们暂时放下摄像头，用 30 分钟写出一个能玩的游戏。</p>",
+        "tasks": [
+            "打开 VS Code，确保 `hand-tracking` 文件夹已打开",
+            "新建一个文件 `game.js` (或者我们将直接在 `index.html` 里写)",
+            "思考：你玩过的跑酷游戏（如天天酷跑）有哪些核心元素？（主角、障碍物、金币...）"
+        ]
+      }
+    },
+    {
+      "id": "step2",
+      "title": "🤖 5-20分：Prompt Engineering",
+      "duration": 15,
+      "student": {
+        "title": "AI 游戏生成器",
+        "content": "<p>AI 是一个超级实习生，你必须把任务说清楚。写游戏不是靠背语法，而是靠<strong>Prompt (提示词)</strong>。</p><div class='bg-yellow-50 p-4 rounded-lg border border-yellow-100 mb-4'><h4 class='font-bold text-yellow-800'>❌ 差评 Prompt</h4><p class='text-sm text-yellow-700'>“帮我写个游戏。” (太模糊，AI 会瞎编)</p><h4 class='font-bold text-green-800 mt-2'>✅ 好评 Prompt</h4><p class='text-sm text-green-700'>“请使用 Phaser.js 框架写一个简单的横版跑酷游戏。背景是黑色，主角是一个红色方块，会自动向右跑。按下空格键时主角跳跃。地面上有随机出现的绿色障碍物，碰到障碍物游戏结束。”</p></div>",
+        "prompts": [
+          {
+            "label": "生成游戏代码",
+            "text": "请使用 Phaser.js 框架写一个简单的横版跑酷游戏。要求：\n1. 单个 HTML 文件，通过 CDN 引入 Phaser。\n2. 游戏场景：宽 800，高 400，背景黑色。\n3. 主角：红色方块，受重力影响，在地面奔跑。\n4. 交互：按下空格键跳跃。\n5. 障碍物：绿色柱子，从右向左移动，随机生成。\n6. 规则：主角碰到障碍物，游戏停止并弹出“Game Over”。"
+          }
+        ],
+        "tasks": [
+            "新建 `game.html`",
+            "复制 Prompt 发送给 Claude",
+            "将生成的代码粘贴到 `game.html`，右键 Live Server 运行"
+        ]
+      }
+    },
+    {
+      "id": "step3",
+      "title": "🔧 20-35分：参数调试",
+      "duration": 15,
+      "student": {
+        "title": "上帝视角",
+        "content": "<p>游戏太难了？或者太简单了？作为开发者，你可以修改物理定律。</p><p>在代码中找到控制<strong>跳跃高度</strong>和<strong>重力</strong>的变量。</p>",
+        "tasks": [
+            "找到 `jumpVelocity` (或类似名字) 变量，把它改大一点，试试能不能跳出屏幕",
+            "找到 `gravity` (重力) 变量，把它改小，体验月球漫步的感觉",
+            "<strong>挑战</strong>：能不能让障碍物移动得越来越快？"
+        ]
+      }
+    },
+    {
+      "id": "step4",
+      "title": "🏁 35-45分：总结",
+      "duration": 10,
+      "student": {
+        "title": "核心函数",
+        "content": "<p>Phaser 游戏通常有三个核心函数：</p><ul class='list-disc pl-4'><li><strong>preload()</strong>: 加载图片素材</li><li><strong>create()</strong>: 生成游戏对象（主角、地面）</li><li><strong>update()</strong>: 每一帧运行的逻辑（比如检测碰撞）</li></ul>",
+        "tasks": [
+            "在代码中找到这三个函数",
+            "预习：下节课我们要把“按空格跳”改成“动鼻子跳”。"
+        ]
+      }
+    }
+  ]
+}

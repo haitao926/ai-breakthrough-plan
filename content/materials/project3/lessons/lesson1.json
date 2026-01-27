@@ -1,0 +1,74 @@
+{
+  "id": "p3-l1",
+  "project": "project3",
+  "title": "第1课：全栈原型设计 (Design Day)",
+  "duration": 45,
+  "description": "从零开始设计‘智能错题本’，完成 HTML 骨架搭建。",
+  "phases": [
+    {
+      "id": "step1",
+      "title": "🎨 0-15分：产品定义",
+      "duration": 15,
+      "student": {
+        "title": "定义 MVP (最小可行性产品)",
+        "content": "<p>我们要开发一个“智能错题本”网页应用。在写代码前，必须先想清楚它长什么样。</p><div class='bg-yellow-50 p-4 rounded-lg border border-yellow-100 mb-4'><h4 class='font-bold text-yellow-800'>核心功能</h4><ul class='list-disc pl-4 text-sm text-yellow-700'><li>上传错题图片</li><li>填写科目和备注</li><li>错题列表展示</li></ul></div>",
+        "tasks": [
+            "拿出一张纸，画出你心目中的 APP 界面草图（线框图）",
+            "思考：‘添加按钮’放在哪里最顺手？"
+        ]
+      }
+    },
+    {
+      "id": "step2",
+      "title": "🏗️ 15-30分：HTML 骨架",
+      "duration": 15,
+      "student": {
+        "title": "搭建页面结构",
+        "content": "<p>网页的骨架是 HTML。我们不需要背标签，直接描述给 AI 听。</p>",
+        "prompts": [
+          {
+            "label": "生成 HTML",
+            "text": "请帮我写一个‘错题本’的 HTML 页面结构。要求：\n1. 顶部有一个导航栏，标题是‘Mistake Killer’。\n2. 中间是一个‘错题卡片流’区域，每个卡片包含图片占位符、科目标签、文字描述。\n3. 底部有一个悬浮的‘+’号按钮，用于添加错题。\n4. 使用 Tailwind CSS 进行简单的样式美化。"
+          }
+        ],
+        "tasks": [
+            "在 VS Code 新建 <code>index.html</code>",
+            "将 AI 生成的代码粘贴进去",
+            "使用 Live Server 预览效果"
+        ]
+      }
+    },
+    {
+      "id": "step3",
+      "title": "💅 30-40分：CSS 美化",
+      "duration": 10,
+      "student": {
+        "title": "让页面变好看",
+        "content": "<p>现在的页面可能有点简陋。我们让 AI 帮我们‘精装修’一下。</p>",
+        "prompts": [
+            {
+                "label": "样式优化",
+                "text": "现在的界面有点单调。请修改代码：\n1. 给卡片增加圆角和阴影效果，鼠标悬停时有轻微上浮动画。\n2. 顶部导航栏使用渐变色背景。\n3. 字体使用无衬线字体 (Sans-serif)，看起来更现代。"
+            }
+        ],
+        "tasks": [
+            "更新代码并观察变化",
+            "尝试修改代码中的颜色值（比如 `bg-blue-500` 改为 `bg-purple-500`）"
+        ]
+      }
+    },
+    {
+      "id": "step4",
+      "title": "🏁 40-45分：总结",
+      "duration": 5,
+      "student": {
+        "title": "前端初体验",
+        "content": "<p>你已经完成了一个静态网页（前端）。</p><p>但现在的按钮点击没反应，数据也是写死的。下节课，我们将学习 <strong>JavaScript</strong>，让页面“动”起来。</p>",
+        "tasks": [
+            "保存好你的 <code>index.html</code> 文件",
+            "预习：什么是 API？"
+        ]
+      }
+    }
+  ]
+}

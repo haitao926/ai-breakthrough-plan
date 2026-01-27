@@ -1,0 +1,74 @@
+/* 
+   -------------------------------------------------------
+   【UI 设计师任务卡 (难度: ⭐⭐)】
+   -------------------------------------------------------
+*/
+
+:root {
+    /* 1. 定义品牌色 */
+    --primary-color: #3498db; 
+    --secondary-color: #2c3e50;
+}
+
+body {
+    background-color: #f5f7fa;
+    font-family: sans-serif;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+}
+
+#app { width: 100%; max-width: 600px; }
+
+.navbar {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: bold;
+    margin-bottom: 20px;
+}
+
+/* --- 👇 你的任务区 👇 --- */
+
+/* 任务 A: 现在的卡片太扁平了，不好看。 */
+.card {
+    background: white;
+    padding: 20px;
+    margin-bottom: 15px;
+    
+    /* TODO 1: 给卡片加上圆角 (8px) */
+    border-radius: 0px; /* 现在是直角，请改成 8px 或 12px */
+
+    /* TODO 2: 给卡片加上阴影 (让它浮起来) */
+    /* box-shadow: 0 4px 8px rgba(0,0,0,0.1); */
+    
+    border-left: 5px solid var(--secondary-color);
+}
+
+.mistake-item {
+    border-bottom: 1px solid #eee;
+    padding: 10px 0;
+}
+
+/* 任务 B: 现在的按钮太生硬了，鼠标放上去没反应。 */
+button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    width: 100%;
+    font-size: 1em;
+    cursor: pointer;
+    margin-top: 10px;
+
+    /* TODO 3: 让按钮变圆一点 (20px) */
+    border-radius: 0px; 
+}
+
+/* TODO 4: 编写“鼠标悬停”时的样式 */
+button:hover {
+    /* 请在这里写代码，让背景色变深一点 */
+    /* opacity: 0.8; */
+}

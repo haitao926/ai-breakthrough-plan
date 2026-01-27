@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>登录 | 科创项目平台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-800">
+  <div class="min-h-screen flex items-center justify-center p-6">
+    <div class="bg-white shadow-xl rounded-2xl p-8 max-w-md w-full space-y-6">
+      <div>
+        <h1 class="text-2xl font-bold">登录</h1>
+        <p class="text-gray-500 text-sm mt-1">请输入账号信息进入平台</p>
+      </div>
+      <form id="loginForm" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">邮箱</label>
+          <input name="email" type="email" required class="w-full border border-gray-300 rounded-lg px-3 py-2" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">密码</label>
+          <input name="password" type="password" required class="w-full border border-gray-300 rounded-lg px-3 py-2" />
+        </div>
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 rounded-lg">登录</button>
+        <p id="loginStatus" class="text-sm text-gray-500"></p>
+      </form>
+        <p class="mt-8 text-center text-sm text-gray-400">
+          如忘记密码，请联系任课老师重置
+        </p>
+    </div>
+  </div>
+  <script src="js/auth.js"></script>
+  <script src="js/login.js"></script>
+</body>
+</html>

@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Coding 实验室</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.2/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        
+        .markdown-body p { margin-bottom: 1rem; line-height: 1.6; color: #374151; }
+        .markdown-body strong { color: #111827; font-weight: 700; }
+        
+        .prompt-card {
+            background: linear-gradient(to right, #ffffff, #f9fafb);
+            border-left: 4px solid #6366f1;
+            transition: all 0.2s;
+        }
+        .prompt-card:hover {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transform: translateX(4px);
+        }
+        
+        .task-checkbox:checked + span {
+            text-decoration: line-through;
+            color: #9ca3af;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 h-16 flex items-center px-6 justify-between flex-none z-50">
+        <div class="flex items-center gap-3">
+            <a href="index.html" class="text-gray-400 hover:text-indigo-600 mr-2"><i class="fas fa-arrow-left"></i></a>
+            <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">
+                <i class="fas fa-code"></i>
+            </div>
+            <h1 class="font-bold text-gray-900" id="lesson-title">Loading...</h1>
+        </div>
+        <div class="flex bg-gray-100 p-1 rounded-lg">
+            <button onclick="setMode('mission')" id="btn-mode-mission" class="px-4 py-1.5 rounded-md text-sm font-bold shadow-sm bg-white text-indigo-600 transition">🎯 任务模式</button>
+            <button onclick="setMode('guide')" id="btn-mode-guide" class="px-4 py-1.5 rounded-md text-sm font-medium text-gray-500 hover:text-gray-900 transition">📖 完整讲义</button>
+        </div>
+    </header>
+
+    <div id="mission-view" class="flex flex-1 overflow-hidden">
+        
+        <!-- 1. Left: Steps Nav -->
+        <div class="w-64 bg-white border-r border-gray-200 flex flex-col overflow-y-auto flex-none z-10">
+            <div class="p-4">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">MISSION LOG</h3>
+                <div class="space-y-1" id="nav-container">
+                    <!-- Nav items injected by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Center: Content -->
+        <div class="flex-1 overflow-y-auto p-8 bg-gray-50 scroll-smooth" id="main-scroll">
+            <div class="max-w-4xl mx-auto space-y-8">
+                
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 min-h-[500px]" id="content-card">
+                    <!-- Content injected by JS -->
+                </div>
+                
+                <!-- Navigation Buttons -->
+                <div class="flex justify-between pb-12">
+                    <button id="prev-btn" class="px-6 py-2 rounded-lg bg-white border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition">
+                        <i class="fas fa-arrow-left mr-2"></i> 上一步
+                    </button>
+                    <button id="next-btn" class="px-6 py-2 rounded-lg bg-indigo-600 text-white font-bold hover:bg-indigo-700 shadow-md hover:shadow-lg disabled:opacity-50 transition">
+                        下一步 <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Right: Resources Sidebar (New) -->
+        <div class="w-80 bg-white border-l border-gray-200 flex-col overflow-y-auto flex-none hidden xl:flex">
+            
+            <!-- Course Files -->
+            <div class="p-6 border-b border-gray-100">
+                <h3 class="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <i class="fas fa-folder-open text-yellow-500"></i> 本课资源
+                </h3>
+                <div id="resource-list" class="space-y-2">
+                    <div class="text-gray-400 text-sm flex items-center justify-center py-4">
+                        <i class="fas fa-spinner fa-spin mr-2"></i> 加载中...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Tools -->
+            <div class="p-6">
+                <h3 class="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <i class="fas fa-toolbox text-indigo-500"></i> 常用工具
+                </h3>
+                <div class="space-y-3">
+                    <a href="https://claude.ai" target="_blank" class="block p-3 rounded-lg bg-orange-50 border border-orange-100 hover:border-orange-300 transition group">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="font-bold text-orange-800 text-sm">Claude Code</span>
+                            <i class="fas fa-external-link-alt text-orange-400 text-xs opacity-0 group-hover:opacity-100"></i>
+                        </div>
+                        <p class="text-xs text-orange-600">VS Code 沉浸式编程</p>
+                    </a>
+                    <a href="#" onclick="window.open(`http://${window.location.hostname}:3000`, '_blank'); return false;" class="block p-3 rounded-lg bg-green-50 border border-green-100 hover:border-green-300 transition group">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="font-bold text-green-800 text-sm">校内代码仓</span>
+                            <i class="fas fa-code-branch text-green-400 text-xs opacity-0 group-hover:opacity-100"></i>
+                        </div>
+                        <p class="text-xs text-green-600">提交代码作业</p>
+                    </a>
+                    <a href="https://mediapipe-studio.web.app/" target="_blank" class="block p-3 rounded-lg bg-blue-50 border border-blue-100 hover:border-blue-300 transition group">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="font-bold text-blue-800 text-sm">MediaPipe Studio</span>
+                            <i class="fas fa-eye text-blue-400 text-xs opacity-0 group-hover:opacity-100"></i>
+                        </div>
+                        <p class="text-xs text-blue-600">算法可视化调试</p>
+                    </a>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Guidebook View (Hidden by default) -->
+    <div id="guide-view" class="flex-1 overflow-y-auto bg-white hidden">
+        <div class="max-w-4xl mx-auto py-12 px-8">
+            <div id="markdown-content" class="markdown-body prose prose-indigo max-w-none">
+                <div class="flex items-center justify-center h-64 text-gray-400">
+                    <i class="fas fa-spinner fa-spin mr-2"></i> 正在加载完整讲义...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-8 right-8 bg-gray-900 text-white px-6 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0 transition duration-300 flex items-center gap-3 z-50">
+        <i class="fas fa-check-circle text-green-400"></i>
+        <span>Copied to clipboard!</span>
+    </div>
+
+    <script>
+        let lessonData = null;
+        let currentStep = 0;
+        
+        // Parse URL params
+        const urlParams = new URLSearchParams(window.location.search);
+        const projectId = urlParams.get('project') || 'project1';
+        const lessonId = urlParams.get('lesson') || 'lesson1';
+
+        // Markdown File Mapping
+        const guideFiles = {
+            'project1': '/course-files/project1/项目1-VibeCoding.md',
+            'project2': '/course-files/project2/项目2-产品经理与项目经理.md',
+            'project3': '/course-files/project3/项目3-全栈工程师.md',
+            'project4': '/course-files/project4/项目4-算法工程师.md',
+            'project5': '/course-files/project5/项目5-嵌入式工程师.md'
+        };
+
+        function setMode(mode) {
+            const missionView = document.getElementById('mission-view');
+            const guideView = document.getElementById('guide-view');
+            const btnMission = document.getElementById('btn-mode-mission');
+            const btnGuide = document.getElementById('btn-mode-guide');
+
+            if (mode === 'mission') {
+                missionView.classList.remove('hidden');
+                guideView.classList.add('hidden');
+                btnMission.classList.add('bg-white', 'text-indigo-600', 'shadow-sm');
+                btnMission.classList.remove('text-gray-500', 'hover:text-gray-900');
+                btnGuide.classList.remove('bg-white', 'text-indigo-600', 'shadow-sm');
+                btnGuide.classList.add('text-gray-500', 'hover:text-gray-900');
+            } else {
+                missionView.classList.add('hidden');
+                guideView.classList.remove('hidden');
+                btnGuide.classList.add('bg-white', 'text-indigo-600', 'shadow-sm');
+                btnGuide.classList.remove('text-gray-500', 'hover:text-gray-900');
+                btnMission.classList.remove('bg-white', 'text-indigo-600', 'shadow-sm');
+                btnMission.classList.add('text-gray-500', 'hover:text-gray-900');
+                
+                loadGuidebook();
+            }
+        }
+
+        async function loadGuidebook() {
+            const container = document.getElementById('markdown-content');
+            if (container.dataset.loaded === 'true') return;
+
+            const url = guideFiles[projectId];
+            if (!url) {
+                container.innerHTML = '<div class="text-red-500 text-center">暂无完整讲义</div>';
+                return;
+            }
+
+            try {
+                const res = await axios.get(url);
+                container.innerHTML = marked.parse(res.data);
+                container.dataset.loaded = 'true';
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = '<div class="text-red-500 text-center">加载讲义失败: 文件不存在</div>';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // Load Lesson Data
+                const res = await axios.get(`/course-files/${projectId}/lessons/${lessonId}.json`);
+                lessonData = res.data;
+                initUI();
+                
+                // Load Resources
+                loadResources(projectId);
+            } catch (err) {
+                console.error(err);
+                document.getElementById('content-card').innerHTML = '<div class="text-red-500 p-4">无法加载课程数据。请确保 URL 参数正确 (例如 ?project=project2&lesson=lesson1)，且对应 JSON 文件存在。</div>';
+            }
+        });
+
+        function initUI() {
+            document.getElementById('lesson-title').textContent = lessonData.title;
+            renderNav();
+            loadStep(0);
+
+            document.getElementById('prev-btn').onclick = () => {
+                if(currentStep > 0) loadStep(currentStep - 1);
+            };
+
+        }
+
+        async function loadResources(pid) {
+            const container = document.getElementById('resource-list');
+            try {
+                // Fetch files from /api/files/:project
+                const res = await axios.get(`/api/files/${pid}`);
+                const files = res.data.files;
+
+                if (!files || files.length === 0) {
+                    container.innerHTML = '<div class="text-gray-400 text-xs text-center py-2">暂无资源文件</div>';
+                    return;
+                }
+
+                container.innerHTML = '';
+                files.forEach(file => {
+                    const isFolder = file.isDirectory;
+                    const iconClass = isFolder ? 'fas fa-folder text-yellow-400' : getFileIcon(file.name);
+                    // For folders, link to downloads page. For files, direct download.
+                    const url = isFolder 
+                        ? `downloads.html?project=${pid}&path=${encodeURIComponent(file.path)}#files`
+                        : `/api/download/${pid}/${encodeURIComponent(file.path)}`;
+                    
+                    const item = document.createElement('a');
+                    item.href = url;
+                    item.target = '_blank'; // Always new tab for simplicity
+                    item.className = 'flex items-center gap-3 p-2 rounded hover:bg-gray-50 transition group';
+                    item.innerHTML = `
+                        <div class="w-8 h-8 rounded bg-gray-100 flex items-center justify-center text-gray-500 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition">
+                            <i class="${iconClass}"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm font-medium text-gray-700 truncate group-hover:text-indigo-700">${file.name}</div>
+                            <div class="text-xs text-gray-400">${isFolder ? '文件夹' : formatBytes(file.size)}</div>
+                        </div>
+                        <i class="${isFolder ? 'fas fa-external-link-alt' : 'fas fa-download'} text-gray-300 opacity-0 group-hover:opacity-100 transition"></i>
+                    `;
+                    container.appendChild(item);
+                });
+
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = '<div class="text-red-400 text-xs text-center">加载失败</div>';
+            }
+        }
+
+        function getFileIcon(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const icons = {
+                'pdf': 'fas fa-file-pdf text-red-500',
+                'doc': 'fas fa-file-word text-blue-500', 'docx': 'fas fa-file-word text-blue-500',
+                'ppt': 'fas fa-file-powerpoint text-orange-500', 'pptx': 'fas fa-file-powerpoint text-orange-500',
+                'zip': 'fas fa-file-archive text-yellow-500', 'rar': 'fas fa-file-archive text-yellow-500',
+                'py': 'fab fa-python text-blue-600', 'js': 'fab fa-js text-yellow-400', 'html': 'fab fa-html5 text-orange-600',
+                'png': 'fas fa-image text-purple-500', 'jpg': 'fas fa-image text-purple-500'
+            };
+            return icons[ext] || 'fas fa-file text-gray-400';
+        }
+
+        function formatBytes(bytes) {
+            if (!+bytes) return '0B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))}${sizes[i]}`;
+        }
+
+        function renderNav() {
+            const container = document.getElementById('nav-container');
+            container.innerHTML = '';
+            
+            lessonData.phases.forEach((phase, index) => {
+                const btn = document.createElement('button');
+                btn.className = `w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-3 ${index === 0 ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}`;
+                btn.id = `nav-${index}`;
+                btn.onclick = () => loadStep(index);
+                btn.innerHTML = `
+                    <div class="w-6 h-6 rounded-full border border-current flex items-center justify-center text-xs opacity-70">${index + 1}</div>
+                    <span class="truncate">${phase.student.title || phase.title}</span>
+                `;
+                container.appendChild(btn);
+            });
+        }
+
+        function loadStep(index) {
+            currentStep = index;
+            const phase = lessonData.phases[index];
+            const data = phase.student;
+
+            // Update Nav
+            document.querySelectorAll('#nav-container button').forEach((el, i) => {
+                if (i === index) {
+                    el.classList.add('bg-indigo-50', 'text-indigo-700');
+                    el.classList.remove('text-gray-600', 'hover:bg-gray-50');
+                } else {
+                    el.classList.remove('bg-indigo-50', 'text-indigo-700');
+                    el.classList.add('text-gray-600', 'hover:bg-gray-50');
+                }
+            });
+
+            // Update Content
+            const container = document.getElementById('content-card');
+            
+            // Build Prompts HTML
+            let promptsHtml = '';
+            if (data.prompts && data.prompts.length > 0) {
+                promptsHtml = `<div class="space-y-4 my-6">`;
+                data.prompts.forEach(p => {
+                    promptsHtml += `
+                        <div class="prompt-card p-4 rounded-lg border border-gray-200 cursor-pointer group" data-prompt="${escapeHtml(p.text)}" onclick="copyText(this.getAttribute('data-prompt'))">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs font-bold text-indigo-600 uppercase tracking-wide"><i class="fas fa-robot mr-1"></i> ${p.label || 'AI Prompt'}</span>
+                                <span class="text-xs text-gray-400 group-hover:text-indigo-500 transition"><i class="far fa-copy"></i> 点击复制</span>
+                            </div>
+                            <p class="text-gray-800 text-sm font-medium font-mono whitespace-pre-wrap pointer-events-none">${escapeHtml(p.text)}</p>
+                        </div>
+                    `;
+                });
+                promptsHtml += `</div>`;
+            }
+
+            // Build Tasks HTML
+            let tasksHtml = '';
+            if (data.tasks && data.tasks.length > 0) {
+                tasksHtml = `<div class="bg-gray-50 rounded-xl p-6 mt-8">
+                    <h3 class="font-bold text-gray-900 mb-4 flex items-center gap-2"><i class="fas fa-list-check text-green-500"></i> 当前任务</h3>
+                    <div class="space-y-3">`;
+                data.tasks.forEach((t, i) => {
+                    tasksHtml += `
+                        <label class="flex items-start gap-3 cursor-pointer">
+                            <input type="checkbox" class="task-checkbox mt-1 w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
+                            <span class="text-gray-700 text-sm select-none">${t}</span>
+                        </label>
+                    `;
+                });
+                tasksHtml += `</div></div>`;
+            }
+
+            container.innerHTML = `
+                <div class="mb-2 text-indigo-600 font-bold text-sm uppercase tracking-wider">Step ${index + 1}</div>
+                <h2 class="text-3xl font-bold text-gray-900 mb-6">${data.title || phase.title}</h2>
+                <div class="markdown-body text-gray-600">
+                    ${data.content || ''}
+                </div>
+                ${promptsHtml}
+                ${tasksHtml}
+            `;
+
+            // Scroll to top
+            document.getElementById('main-scroll').scrollTop = 0;
+
+            // Update Buttons State
+            document.getElementById('prev-btn').disabled = index === 0;
+            
+            const nextBtn = document.getElementById('next-btn');
+            // Reset styles
+            nextBtn.classList.remove('bg-green-600', 'hover:bg-green-700', 'opacity-50', 'cursor-not-allowed');
+            nextBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+
+            if (index === lessonData.phases.length - 1) {
+                // Last step: Offer next lesson
+                const currentNum = parseInt(lessonId.replace('lesson', '')) || 1;
+                // Check if we should show next lesson (assuming max 4)
+                if (currentNum < 4) {
+                    nextBtn.innerHTML = `下一课 <i class="fas fa-forward ml-2"></i>`;
+                    nextBtn.disabled = false;
+                    nextBtn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+                    nextBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+                    nextBtn.onclick = () => {
+                        window.location.href = `lesson-student.html?project=${projectId}&lesson=lesson${currentNum + 1}`;
+                    };
+                } else {
+                    nextBtn.innerHTML = `课程完成 <i class="fas fa-check ml-2"></i>`;
+                    nextBtn.disabled = true;
+                    nextBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                }
+            } else {
+                // Normal step
+                nextBtn.innerHTML = `下一步 <i class="fas fa-arrow-right ml-2"></i>`;
+                nextBtn.disabled = false;
+                nextBtn.onclick = () => loadStep(index + 1);
+            }
+            
+            // Update Header status (Removed)
+            // document.getElementById('current-phase').textContent = `${index + 1} / ${lessonData.phases.length}`;
+        }
+
+        function copyText(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast();
+            });
+        }
+
+        function showToast() {
+            const toast = document.getElementById('toast');
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2000);
+        }
+
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>

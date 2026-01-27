@@ -1,0 +1,57 @@
+{
+  "id": "p5-l4",
+  "project": "project5",
+  "title": "第4课：自主实践 - 产品封装 (Product Lab)",
+  "duration": 45,
+  "description": "【自主实践】配置开机自启，制作外壳，交付最终智能硬件。",
+  "phases": [
+    {
+      "id": "step1",
+      "title": "🚀 0-15分：脱离电脑",
+      "duration": 15,
+      "student": {
+        "title": "开机自启",
+        "content": "<p>真正的产品插电就能用，不需要连显示器敲命令。</p>",
+        "prompts": [
+            {
+                "label": "配置服务",
+                "text": "我想让我的 `main.py` 在树莓派开机时自动在后台运行。请教我怎么使用 `systemd` 创建一个服务 (Service)。"
+            }
+        ],
+        "tasks": [
+            "创建 `my_project.service`",
+            "启用服务 `sudo systemctl enable my_project`",
+            "重启测试"
+        ]
+      }
+    },
+    {
+      "id": "step2",
+      "title": "📦 15-35分：外壳组装",
+      "duration": 20,
+      "student": {
+        "title": "结构设计",
+        "content": "<p>用乐高、硬纸板或 3D 打印件，把乱糟糟的线藏起来。</p>",
+        "tasks": [
+            "固定摄像头位置",
+            "确保散热孔不被堵住",
+            "贴上你的产品 Logo"
+        ]
+      }
+    },
+    {
+      "id": "step3",
+      "title": "📹 35-45分：成果演示",
+      "duration": 10,
+      "student": {
+        "title": "产品发布",
+        "content": "<p>你的智能硬件诞生了。</p>",
+        "tasks": [
+            "拍摄一段 1分钟 的演示视频",
+            "上传到平台",
+            "把作品摆在讲台上展示"
+        ]
+      }
+    }
+  ]
+}

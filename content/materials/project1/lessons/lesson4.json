@@ -1,0 +1,61 @@
+{
+  "id": "p1-l4",
+  "project": "project1",
+  "title": "第4课：产品化与发布 (Product Launch)",
+  "duration": 45,
+  "description": "优化用户体验，增加视觉特效，发布最终作品。",
+  "phases": [
+    {
+      "id": "step1",
+      "title": "🎨 0-15分：视觉升级",
+      "duration": 15,
+      "student": {
+        "title": "拒绝丑陋",
+        "content": "<p>现在的游戏能玩，但只是红色方块和绿色柱子，太像 Demo 了。</p><p>我们要把它包装成可以在科技节展示的产品。</p>",
+        "prompts": [
+          {
+            "label": "特效 Prompt",
+            "text": "现有代码运行正常。请帮我美化视觉效果：\n1. 给主角增加一个拖尾粒子特效 (Particle Emitter)。\n2. 游戏结束时，显示巨大的、发光的“GAME OVER”文字。\n3. 背景颜色改为深蓝色渐变。"
+          }
+        ],
+        "tasks": [
+            "应用代码，观察特效",
+            "如果不满意，继续要求 AI 修改（例如：“粒子颜色要五彩斑斓”）"
+        ]
+      }
+    },
+    {
+      "id": "step2",
+      "title": "🕹️ 15-30分：交互优化",
+      "duration": 15,
+      "student": {
+        "title": "大屏适配",
+        "content": "<p>想象这个游戏投屏在学校大厅的大屏幕上。</p><p><strong>痛点</strong>：游戏结束后，还得跑回电脑前按 F5 刷新吗？太 Low 了。</p><p><strong>方案</strong>：增加“挥手重开”功能。</p>",
+        "prompts": [
+            {
+                "label": "挥手重开 Prompt",
+                "text": "请增加一个逻辑：当游戏处于 Game Over 状态时，如果检测到手部挥动（比如手腕 x 坐标快速变化，或者简单的双手举高），就自动重启游戏 (Restart)。" 
+            }
+        ],
+        "tasks": [
+            "测试“无接触重开”功能",
+            "调整触发条件，防止误触"
+        ]
+      }
+    },
+    {
+      "id": "step3",
+      "title": "🚀 30-45分：发布会",
+      "duration": 15,
+      "student": {
+        "title": "Demo Day",
+        "content": "<p>恭喜！你完成了一个完整的 AI 体感项目。</p>",
+        "tasks": [
+            "将你的最终代码保存为 `final_showcase.html`",
+            "请一位同学上来试玩，你作为“产品经理”在旁边解说",
+            "<strong>提交作业</strong>：将你的 HTML 文件上传到平台"
+        ]
+      }
+    }
+  ]
+}

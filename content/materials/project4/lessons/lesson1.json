@@ -1,0 +1,68 @@
+{
+  "id": "p4-l1",
+  "project": "project4",
+  "title": "第1课：论文侦探 (Paper Reading)",
+  "duration": 45,
+  "description": "打破对英文论文的恐惧，利用 AI 快速提取顶级会议论文的核心思想。",
+  "phases": [
+    {
+      "id": "step1",
+      "title": "🕵️ 0-10分：学术初探",
+      "duration": 10,
+      "student": {
+        "title": "最新的技术在哪里？",
+        "content": "<p>教科书里的知识通常滞后 5-10 年。AI 领域最前沿的技术，都藏在 <strong>Paper (论文)</strong> 里。</p><p>今天我们的任务是：读懂一篇你也看不懂的 AI 论文。</p>",
+        "tasks": [
+            "打开 <a href='https://paperswithcode.com' target='_blank' class='text-indigo-600 underline'>Papers With Code</a>",
+            "浏览 Trending 列表，找一篇带有 'Image' 或 'Vision' 标签的论文"
+        ]
+      }
+    },
+    {
+      "id": "step2",
+      "title": "🤖 10-25分：AI 辅助阅读",
+      "duration": 15,
+      "student": {
+        "title": "论文摘要提取",
+        "content": "<p>面对满屏的公式和英文，不要慌。Claude 是你的随身翻译官。</p>",
+        "prompts": [
+          {
+            "label": "论文解读 Prompt",
+            "text": "请扮演一位人工智能教授。我是一名高中生。请帮我解读这篇论文（把论文标题或摘要粘贴在这里）。\n请用通俗易懂的语言回答：\n1. 这篇论文想解决什么问题？\n2. 它的核心创新点是什么？（用比喻来解释）\n3. 它的效果比以前的方法好在哪里？"
+          }
+        ],
+        "tasks": [
+            "复制 Prompt，替换掉里面的占位符",
+            "阅读 AI 的解释，理解核心概念（如 'Residual Block' 或 'Attention'）"
+        ]
+      }
+    },
+    {
+      "id": "step3",
+      "title": "📝 25-40分：调研报告",
+      "duration": 15,
+      "student": {
+        "title": "撰写调研笔记",
+        "content": "<p>科学家不仅要会读，还要会写。请整理刚才 AI 讲的内容，写一份简短的笔记。</p>",
+        "tasks": [
+            "新建一个 Markdown 文件 <code>research.md</code>",
+            "记录论文标题、解决的问题、核心技术",
+            "尝试画一张草图来表达它的原理"
+        ]
+      }
+    },
+    {
+      "id": "step4",
+      "title": "🏁 40-45分：总结",
+      "duration": 5,
+      "student": {
+        "title": "下节预告",
+        "content": "<p>今天我们搞懂了理论。下节课，我们将直接<strong>运行</strong>这些科学家发明的模型！</p>",
+        "tasks": [
+            "确保电脑上安装了 Python 环境",
+            "准备一张模糊的照片，下节课我们要用 AI 把它变清晰（或者做分类）。"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>项目库 | Project Library</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="js/auth.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #f8fafc; }
+        .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.3); }
+        .tab-btn.active { border-bottom: 2px solid #4f46e5; color: #4f46e5; font-weight: 600; }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <!-- 导航栏 -->
+    <nav class="fixed w-full z-50 bg-white/90 backdrop-blur-md border-b border-gray-200/50 transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <!-- Left: Logo -->
+                <div class="flex items-center gap-3 shrink-0">
+                    <a href="index.html" class="flex items-center gap-2 group">
+                        <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold shadow-md group-hover:bg-indigo-700 transition">AI</div>
+                        <span class="font-bold text-xl tracking-tight text-gray-900 group-hover:text-indigo-600 transition">破壁计划</span>
+                    </a>
+                </div>
+
+                <!-- Center: Navigation Links (Stabilized) -->
+                <div class="hidden md:flex items-center space-x-1">
+                    <a href="knowledge.html" class="px-3 py-2 rounded-md text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-all flex items-center">
+                        <i class="fas fa-book-reader mr-2 text-xs"></i>创新知识库
+                    </a>
+                    <a href="competencies.html" class="px-3 py-2 rounded-md text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-all flex items-center">
+                        <i class="fas fa-graduation-cap mr-2 text-xs"></i>学术指导
+                    </a>
+                    <a href="projects.html" class="px-3 py-2 rounded-md text-sm font-medium bg-indigo-50 text-indigo-700 transition-all flex items-center">
+                        <i class="fas fa-layer-group mr-2 text-xs"></i>项目库
+                    </a>
+                    <a href="downloads.html" class="px-3 py-2 rounded-md text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-all flex items-center">
+                        <i class="fas fa-folder-open mr-2"></i>课程资料库
+                    </a>
+                </div>
+
+                <!-- Right: Workspace CTA -->
+                <div class="flex gap-3 items-center shrink-0">
+                    <a href="workspace.html" class="inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all transform hover:-translate-y-0.5">
+                        <i class="fas fa-rocket mr-2"></i> 进入工作台
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Header -->
+    <header class="pt-32 pb-10 bg-white border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h1 class="text-3xl font-extrabold text-gray-900 mb-6">发现与探索</h1>
+            
+            <!-- Tabs -->
+            <div class="flex gap-8 border-b border-gray-200">
+                <button onclick="switchTab('topics')" id="tab-topics" class="tab-btn active pb-4 px-2 text-gray-500 hover:text-gray-700 transition">
+                    <i class="fas fa-list-ul mr-2"></i> 课题选题库
+                </button>
+                <button onclick="switchTab('showcase')" id="tab-showcase" class="tab-btn pb-4 px-2 text-gray-500 hover:text-gray-700 transition">
+                    <i class="fas fa-trophy mr-2"></i> 往届优秀作品
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 min-h-screen">
+
+        <!-- Tab 1: Topic Library -->
+        <div id="view-topics" class="space-y-12">
+            
+            <!-- 1. Bounty Hunter -->
+            <section>
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-sm shadow-sm"><i class="fas fa-bullhorn"></i></div>
+                    <h2 class="text-xl font-bold text-gray-900">🔥 教师悬赏令</h2>
+                </div>
+                <div class="grid md:grid-cols-2 gap-6" id="bounty-grid">
+                    <!-- Loaded via JS -->
+                    <div class="text-gray-400 text-sm">加载中...</div>
+                </div>
+            </section>
+
+            <!-- 2. Teacher Topics -->
+            <section>
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm shadow-sm"><i class="fas fa-chalkboard-teacher"></i></div>
+                    <h2 class="text-xl font-bold text-gray-900">📚 推荐课题</h2>
+                </div>
+                <div class="grid md:grid-cols-3 gap-6" id="topic-grid">
+                    <!-- Loaded via JS -->
+                    <div class="text-gray-400 text-sm">加载中...</div>
+                </div>
+            </section>
+
+        </div>
+
+        <!-- Tab 2: Showcase (Ported from showcase.html) -->
+        <div id="view-showcase" class="hidden">
+            <!-- Filters -->
+            <div class="flex gap-2 overflow-x-auto pb-6 mb-4">
+                <button onclick="filterShowcase('all')" class="showcase-filter active px-3 py-1.5 bg-gray-900 text-white rounded-lg text-xs font-bold transition">全部</button>
+                <button onclick="filterShowcase('project1')" class="showcase-filter px-3 py-1.5 bg-white border border-gray-200 text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-50 transition">Vibe Coding</button>
+                <button onclick="filterShowcase('project2')" class="showcase-filter px-3 py-1.5 bg-white border border-gray-200 text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-50 transition">产品设计</button>
+                <button onclick="filterShowcase('project5')" class="showcase-filter px-3 py-1.5 bg-white border border-gray-200 text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-50 transition">智能硬件</button>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8" id="showcase-grid">
+                <!-- Loaded via JS -->
+                <div class="text-center py-20 text-gray-400 w-full col-span-3">
+                    <i class="fas fa-spinner fa-spin text-2xl mb-2"></i><br>加载作品中...
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // --- Tab Logic ---
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            
+            if (tab === 'topics') {
+                document.getElementById('view-topics').classList.remove('hidden');
+                document.getElementById('view-showcase').classList.add('hidden');
+            } else {
+                document.getElementById('view-topics').classList.add('hidden');
+                document.getElementById('view-showcase').classList.remove('hidden');
+                // Lazy load showcase if empty
+                if (document.getElementById('showcase-grid').childElementCount <= 1) {
+                    loadShowcase();
+                }
+            }
+        }
+
+        // --- Load Topics Data ---
+        async function loadTopics() {
+            try {
+                const res = await fetch('data/topics_data.json');
+                const data = await res.json();
+                
+                // Render Bounties
+                const bountyContainer = document.getElementById('bounty-grid');
+                bountyContainer.innerHTML = data.bounties.map(b => `
+                    <div class="bg-white rounded-xl p-6 border border-red-100 shadow-sm card-hover relative overflow-hidden group cursor-pointer" onclick="alert('请联系 ${b.requester} 认领此任务')">
+                        <div class="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg">悬赏</div>
+                        <h3 class="font-bold text-gray-900 mb-2 group-hover:text-red-600 transition">${b.title}</h3>
+                        <p class="text-sm text-gray-500 mb-4 line-clamp-2">${b.description}</p>
+                        <div class="flex justify-between items-center text-xs border-t border-gray-50 pt-3">
+                            <span class="font-bold text-red-500"><i class="fas fa-gift mr-1"></i> ${b.reward}</span>
+                            <span class="text-gray-400">截止: ${b.deadline}</span>
+                        </div>
+                    </div>
+                `).join('');
+
+                // Render Topics
+                const topicContainer = document.getElementById('topic-grid');
+                topicContainer.innerHTML = data.teacher_topics.map(t => `
+                    <div class="bg-white rounded-xl p-6 border border-blue-50 shadow-sm card-hover flex flex-col h-full cursor-pointer" onclick="window.location.href='workspace.html?create=true&topic=${t.id}'">
+                        <div class="flex justify-between items-start mb-3">
+                            <span class="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-0.5 rounded">${t.category}</span>
+                            <span class="text-[10px] text-gray-400">${t.difficulty}</span>
+                        </div>
+                        <h3 class="font-bold text-gray-900 mb-2 flex-1 hover:text-indigo-600 transition">${t.title}</h3>
+                        <p class="text-xs text-gray-500 mb-4 line-clamp-3">${t.description}</p>
+                        <div class="flex gap-1 flex-wrap">
+                            ${t.tags.map(tag => `<span class="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">#${tag}</span>`).join('')}
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // --- Load Showcase Data (Reused Logic) ---
+        let allSubmissions = [];
+        async function loadShowcase() {
+            try {
+                const res = await fetch('/api/v1/showcase');
+                const data = await res.json();
+                const items = data.items || [];
+
+                allSubmissions = items.flatMap(item => {
+                    const pid = `project${item.project.id}`;
+                    return (item.showcase.attachments || []).map(att => ({
+                        project: pid,
+                        filename: att.name,
+                        url: att.url,
+                        title: item.showcase.title,
+                        studentName: item.showcase.details?.studentName || '匿名'
+                    }));
+                });
+                renderShowcase('all');
+            } catch (err) {
+                document.getElementById('showcase-grid').innerHTML = '<div class="col-span-3 text-center text-red-400">加载失败</div>';
+            }
+        }
+
+        function renderShowcase(filter) {
+            const grid = document.getElementById('showcase-grid');
+            grid.innerHTML = '';
+            
+            // Update Filter Buttons
+            document.querySelectorAll('.showcase-filter').forEach(btn => {
+                if(btn.innerText.includes('全部') && filter === 'all') {
+                    btn.className = 'showcase-filter active px-3 py-1.5 bg-gray-900 text-white rounded-lg text-xs font-bold transition';
+                } else if(btn.getAttribute('onclick').includes(filter)) {
+                    btn.className = 'showcase-filter active px-3 py-1.5 bg-gray-900 text-white rounded-lg text-xs font-bold transition';
+                } else {
+                    btn.className = 'showcase-filter px-3 py-1.5 bg-white border border-gray-200 text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-50 transition';
+                }
+            });
+
+            const list = filter === 'all' ? allSubmissions : allSubmissions.filter(i => i.project === filter);
+            
+            if(list.length === 0) {
+                grid.innerHTML = '<div class="col-span-3 text-center text-gray-400 py-10">暂无作品</div>';
+                return;
+            }
+
+            list.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm card-hover';
+                card.innerHTML = `
+                    <div class="h-40 bg-gray-100 relative group overflow-hidden">
+                        ${/\.(png|jpg|jpeg)$/i.test(item.filename) 
+                            ? `<img src="${item.url}" class="w-full h-full object-cover transition duration-500 group-hover:scale-105">` 
+                            : `<div class="w-full h-full flex items-center justify-center text-gray-300 text-4xl"><i class="fas fa-file-alt"></i></div>`
+                        }
+                    </div>
+                    <div class="p-4">
+                        <h4 class="font-bold text-gray-900 text-sm truncate" title="${item.title}">${item.title}</h4>
+                        <div class="flex justify-between items-center mt-2 text-xs text-gray-500">
+                            <span><i class="fas fa-user mr-1"></i> ${item.studentName}</span>
+                            <a href="${item.url}" target="_blank" class="text-indigo-600 font-bold hover:underline">查看</a>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+        window.filterShowcase = renderShowcase;
+
+        // Init
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTopics();
+        });
+    </script>
+</body>
+</html>

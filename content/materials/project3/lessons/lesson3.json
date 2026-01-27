@@ -1,0 +1,55 @@
+{
+  "id": "p3-l3",
+  "project": "project3",
+  "title": "第3课：自主实践 - 后端开发 (Backend Lab)",
+  "duration": 45,
+  "description": "【自主实践】编写 Python 后端 API，处理真实数据逻辑。",
+  "phases": [
+    {
+      "id": "step1",
+      "title": "🐍 0-15分：API 设计",
+      "duration": 15,
+      "student": {
+        "title": "定义接口",
+        "content": "<p>前端已经有了。现在你需要为它提供数据。</p>",
+        "tasks": [
+            "新建 `main.py`",
+            "设计两个接口：`GET /mistakes` (获取列表) 和 `POST /mistake` (添加错题)",
+            "<strong>挑战</strong>：不看参考代码，只通过询问 AI 完成 FastAPI 的基础框架搭建。"
+        ]
+      }
+    },
+    {
+      "id": "step2",
+      "title": "💾 15-35分：数据存储",
+      "duration": 20,
+      "student": {
+        "title": "持久化",
+        "content": "<p>现在的数组存在内存里，重启就没了。尝试把数据存到文件里。</p>",
+        "prompts": [
+            {
+                "label": "文件存储逻辑",
+                "text": "我想修改 FastAPI 代码。当接收到 POST 请求时，不要只存到列表，而是追加写入到 `data.json` 文件中。当 GET 请求时，从 `data.json` 读取。"
+            }
+        ],
+        "tasks": [
+            "实现 JSON 文件读写",
+            "重启服务器，验证数据是否还在"
+        ]
+      }
+    },
+    {
+      "id": "step3",
+      "title": "🧪 35-45分：接口测试",
+      "duration": 10,
+      "student": {
+        "title": "Postman / Docs",
+        "content": "<p>FastAPI 自带了文档。打开 `http://127.0.0.1:8000/docs`。</p>",
+        "tasks": [
+            "在网页上测试你的接口",
+            "尝试发送一条错误的数据，看后端会不会报错（健壮性测试）"
+        ]
+      }
+    }
+  ]
+}

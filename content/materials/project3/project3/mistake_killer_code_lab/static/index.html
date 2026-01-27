@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>错题杀手 - 前端任务</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="theme.css">
+</head>
+<body>
+
+    <div id="app">
+        <div class="navbar">Mistake Killer</div>
+
+        <div class="card">
+            <h3>📸 上传新错题</h3>
+            
+            <p>科目：</p>
+            <!-- 任务 A: 体验优化 -->
+            <!-- 目前输入框没有提示文字 (placeholder)，用户不知道填什么。请加上 placeholder="例如：数学" -->
+            <input type="text" v-model="newSubject">
+
+            <p>题目描述：</p>
+            <input type="text" v-model="newDesc">
+
+            <br><br>
+            
+            <!-- 
+               任务 B: ⚠️ 这是一个 Bug！
+               点击按钮没反应？请按 F12 打开控制台看报错。
+               原因：@click 调用的名字(saveData) 和下面 methods 里的名字(uploadData) 不一样。
+               请修改这里，或者修改下面的函数名，让它们保持一致。
+            -->
+            <button @click="saveData">保存提交</button>
+        </div>
+
+        <div class="card">
+            <h3>📋 错题本列表</h3>
+
+            <!-- 列表渲染已经写好了，但因为后端没存数据，所以这里永远是空的 -->
+            <div class="mistake-item" v-for="item in mistakeList">
+                <strong>科目：{{ item.subject }}</strong>
+                <br>
+                <span>内容：{{ item.desc }}</span>
+            </div>
+            
+            <div v-if="mistakeList.length === 0" style="color: gray; padding: 20px;">
+                (暂无错题，请先修复后端存入逻辑)
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue
+
+        createApp({
+            data() {
+                return {
+                    newSubject: '',
+                    newDesc: '',
+                    mistakeList: []
+                }
+            },
+            mounted() {
+                // 页面加载时自动获取列表
+                this.fetchList();
+            },
+            methods: {
+                // 注意看这里的名字！是 uploadData 还是 saveData？
+                async uploadData() {
+                    // 简单的校验
+                    if (!this.newSubject) {
+                        alert("科目不能为空！");
+                        return;
+                    }
+
+                    const payload = {
+                        subject: this.newSubject,
+                        desc: this.newDesc
+                    };
+
+                    try {
+                        const response = await fetch('/api/mistakes', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify(payload)
+                        });
+                        const result = await response.json();
+
+                        if (result.status === 'success') {
+                            alert("后端返回：" + result.msg);
+                            // 刷新列表
+                            this.fetchList();
+                            this.newSubject = ''; 
+                            this.newDesc = '';
+                        } else {
+                            alert("错误：" + result.msg);
+                        }
+                    } catch (e) {
+                        alert("发送失败，请检查后端 main.py 是否启动");
+                        console.error(e);
+                    }
+                },
+                async fetchList() {
+                    try {
+                        const res = await fetch('/api/mistakes');
+                        this.mistakeList = await res.json();
+                    } catch(e) {
+                        console.error("获取列表失败", e);
+                    }
+                }
+            }
+        }).mount('#app')
+    </script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+{
+  "id": "p3-l4",
+  "project": "project3",
+  "title": "第4课：自主实践 - 全栈联调 (Integration)",
+  "duration": 45,
+  "description": "【自主实践】打通前后端，完成“错题本” v1.0 版本。",
+  "phases": [
+    {
+      "id": "step1",
+      "title": "🔗 0-20分：Fetch API",
+      "duration": 20,
+      "student": {
+        "title": "前端请求后端",
+        "content": "<p>回到 `index.html`。我们要删掉假数据，改为从后端获取。</p>",
+        "tasks": [
+            "删除 JS 中的 `const mistakes = [...]`",
+            "编写 `fetch('http://localhost:8000/mistakes')` 逻辑",
+            "<strong>挑战</strong>：处理网络错误（如果后端没开，前端应该提示‘连接失败’）"
+        ]
+      }
+    },
+    {
+      "id": "step2",
+      "title": "🐛 20-35分：全栈 Debug",
+      "duration": 15,
+      "student": {
+        "title": "捉虫行动",
+        "content": "<p>一定会报错的（跨域？端口不对？字段名写错？）。</p>",
+        "tasks": [
+            "遇到 CORS 错误？去问 AI 怎么在 FastAPI 里加 CORS Middleware",
+            "遇到 422 错误？检查发送的数据格式是否符合 Pydantic 定义"
+        ]
+      }
+    },
+    {
+      "id": "step3",
+      "title": "🚀 35-45分：发布交付",
+      "duration": 10,
+      "student": {
+        "title": "交付时刻",
+        "content": "<p>你的全栈应用完成了。</p>",
+        "tasks": [
+            "录制一个 30秒 的演示视频",
+            "将代码打包（前端+后端+数据文件）",
+            "上传到平台"
+        ]
+      }
+    }
+  ]
+}

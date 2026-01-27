@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PM & PJM 面试题库</title>
+<style>
+  :root {
+      --pm-color: #e67e22;
+      --pm-bg: #fdf2e9;
+      --pjm-color: #27ae60;
+      --pjm-bg: #e9f7ef;
+      --text-main: #2c3e50;
+  }
+  body {
+      margin: 0;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background-color: #f4f6f9;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+  }
+  .card {
+      width: 90%;
+      max-width: 900px;
+      height: 85vh;
+      background: white;
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.08);
+      padding: 60px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow-y: auto;
+      transition: border-top-color 0.3s;
+      border-top: 12px solid #ccc;
+  }
+  .theme-pm { border-top-color: var(--pm-color); }
+  .theme-pjm { border-top-color: var(--pjm-color); }
+
+  .badge {
+      display: inline-block;
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-size: 1em;
+      font-weight: 700;
+      margin-bottom: 25px;
+      align-self: flex-start;
+  }
+  .theme-pm .badge { background: var(--pm-bg); color: var(--pm-color); }
+  .theme-pjm .badge { background: var(--pjm-bg); color: var(--pjm-color); }
+
+  h1 { font-size: 2.2em; margin: 0 0 30px 0; color: var(--text-main); line-height: 1.3; }
+
+  .question-box {
+      font-size: 1.5em;
+      color: #34495e;
+      line-height: 1.6;
+      margin-bottom: 40px;
+      flex-grow: 1;
+      font-weight: 400;
+  }
+  
+  .timer-display {
+      font-size: 1.2em;
+      font-weight: bold;
+      color: #e74c3c;
+      margin-top: 10px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+  }
+
+  .answer-box {
+      background: #fafafa;
+      border-radius: 16px;
+      padding: 30px;
+      border-left: 6px solid #ccc;
+      display: none;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.4s ease;
+      margin-top: 20px;
+  }
+  .theme-pm .answer-box { border-color: var(--pm-color); background: #fffbf5; }
+  .theme-pjm .answer-box { border-color: var(--pjm-color); background: #f0fbf4; }
+
+  .answer-box.show { display: block; opacity: 1; transform: translateY(0); }
+  
+  .answer-box p { margin: 12px 0; font-size: 1.15em; line-height: 1.7; color: #444; }
+  .answer-box strong { color: #000; background: rgba(255,255,0,0.25); padding: 0 4px; font-weight: 700; }
+
+  .controls {
+      position: fixed;
+      bottom: 30px;
+      display: flex;
+      gap: 20px;
+      background: rgba(255,255,255,0.9);
+      padding: 15px 30px;
+      border-radius: 50px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      backdrop-filter: blur(10px);
+      z-index: 100;
+  }
+
+  button {
+      padding: 12px 28px;
+      border: none;
+      background: #ecf0f1;
+      color: #2c3e50;
+      border-radius: 30px;
+      cursor: pointer;
+      font-size: 1.1em;
+      font-weight: 600;
+      transition: transform 0.2s, background 0.2s;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  }
+  button:hover { transform: translateY(-2px); background: #bdc3c7; }
+  
+  button.reveal-btn { background: #2c3e50; color: white; min-width: 160px; }
+  button.reveal-btn:hover { background: #1a252f; }
+
+  .counter { position: absolute; top: 30px; right: 40px; color: #bdc3c7; font-weight: 700; font-size: 1.3em; }
+</style>
+</head>
+<body>
+
+<div class="card" id="card">
+    <div class="badge" id="categoryBadge">Category</div>
+    <div class="counter" id="counter">1 / 40</div>
+    <h1 id="title">Title</h1>
+    <div class="question-box" id="question">Question...</div>
+    <div class="timer-display" id="timerDisplay">⏳ 思考倒计时: <span id="timerVal">30</span>s</div>
+    <div class="answer-box" id="answerBox"><div id="answerContent"></div></div>
+</div>
+
+<div class="controls">
+    <button onclick="changeSlide(-1)">← 上一题</button>
+    <button class="reveal-btn" onclick="toggleAnswer()" id="revealBtn">👀 查看深度解析</button>
+    <button onclick="changeSlide(1)">下一题 →</button>
+</div>
+
+<script>
+const slides = [
+  // --- 基础篇：产品经理 ---
+  {
+    "category": "基础篇 - 产品经理",
+    "title": "产品洞察",
+    "question": "请拿出你现在的手机，打开你最喜欢的一个APP。请告诉我它好在哪里？如果要你给它增加一个功能，你会加什么？为什么？",
+    "answer": "<p><strong>深度解析：</strong>不要只说“好用/好看”。面试官考察的是你的<strong>产品感 (Product Sense)</strong>。你需要从“视觉、交互、价值”三个维度去拆解。</p><p><strong>参考回答：</strong>“我最喜欢《网易云音乐》。好在它的‘评论区’氛围，不仅是听歌，更是看故事，满足了孤独感（情感价值）。如果加一个功能，我会加‘情绪地图’，能看到此时此刻跟我听同一首歌的人在地球的哪里，增强连接感。”</p><p><strong>避坑：</strong>千万别说“我没什么特别喜欢的”或者“我觉得都挺好”。</p>"
+  },
+  {
+    "category": "基础篇 - 产品经理",
+    "title": "痛点挖掘",
+    "question": "观察一下我们的教室。如果你是教室的“产品经理”，你觉得目前哪个设施设计得最不合理？你会怎么改进它？",
+    "answer": "<p><strong>深度解析：</strong>考察你对<strong>身边细节的敏锐度</strong>。真正的痛点往往隐藏在习以为常的不便中。</p><p><strong>参考回答：</strong>“我觉得黑板擦的设计不合理。每次擦黑板粉笔灰乱飞，前排同学吃灰。改进方案：设计一个‘吸尘黑板擦’，内置一个小风扇和集尘盒，擦的时候自动把粉笔灰吸进去。”</p>"
+  },
+  {
+    "category": "基础篇 - 产品经理",
+    "title": "用户同理心",
+    "question": "如果要给你的爷爷奶奶设计一款“老年人专用的微信”，你会砍掉现在的哪些功能？保留或放大哪些功能？",
+    "answer": "<p><strong>深度解析：</strong>考察<strong>用户画像 (User Persona)</strong>。老年人的特征是：视力差、手指不灵活、怕被骗、怕麻烦。</p><p><strong>参考回答：</strong>“我会砍掉‘发现’页面的游戏、小程序、视频号，防止误触和被骗。保留并放大‘语音通话’和‘照片’功能。新增一个‘紧急呼叫’的大按钮，遇到困难一键联系子女。”</p>"
+  },
+  {
+    "category": "基础篇 - 产品经理",
+    "title": "需求分析",
+    "question": "著名的汽车大王福特说过：“在汽车发明前，如果你问客户想要什么，他们会说要一匹更快的马。” 这句话说明了什么道理？",
+    "answer": "<p><strong>深度解析：</strong>这是产品经理的圣经。说明<strong>用户往往描述的是解决方案（马），而不是真实需求（更快的速度）</strong>。PM 的职责是透过现象看本质。</p><p><strong>参考回答：</strong>“这说明用户有时不知道自己真正想要什么。作为 PM，不能盲目听从用户的‘指令’，而要挖掘他们指令背后的‘目的’。如果只给更快的马，永远造不出汽车。”</p>"
+  },
+  {
+    "category": "基础篇 - 产品经理",
+    "title": "优先级判断",
+    "question": "假设你正在设计一款新的“智能书包”，工程师告诉你时间不够了，下面三个功能只能选一个先做，你怎么选？<br>A. 带GPS定位防丢功能<br>B. 自动整理书本的机械臂<br>C. 还能当午睡枕头的软垫背部",
+    "answer": "<p><strong>深度解析：</strong>考察<strong>MVP（最小可行性产品）思维</strong>。做选择前，必须先定义“谁是买单的人”。</p><p><strong>参考回答：</strong>“我会先问：这个书包是卖给家长还是学生？如果是家长买单，我选 A（安全是刚需）；如果是学生自己买，我选 C（舒服是刚需）。B 技术太难，风险大，最后做。”</p>"
+  },
+  {
+    "category": "基础篇 - 产品经理",
+    "title": "场景思考",
+    "question": "为什么电影院的爆米花通常只卖大桶和中桶，而不卖小桶？",
+    "answer": "<p><strong>深度解析：</strong>考察<strong>商业逻辑</strong>和<strong>价格锚点</strong>。</p><p><strong>参考回答：</strong>“为了让你觉得买大桶很划算。假设中桶 20 元，大桶 22 元，你肯定会买大桶。中桶的存在不是为了卖，而是为了衬托大桶的‘性价比’。同时，看电影通常是情侣或朋友结伴，小桶不够吃，不符合社交场景。”</p>"
+  },
+  {
+    "category": "基础篇 - 产品经理",
+    "title": "解决冲突",
+    "question": "如果你是班服设计的负责人（产品经理），大多数同学想要黑色的酷炫风，但班主任坚持要白色的阳光风，你怎么办？",
+    "answer": "<p><strong>深度解析：</strong>考察<strong>沟通协调</strong>和<strong>双赢思维</strong>。不要硬刚，也不要盲从。</p><p><strong>参考回答：</strong>“我会先搞清楚班主任担心什么（可能是怕黑色显得压抑/吸热），再搞清楚同学想要什么（个性）。解决方案：设计双面穿的班服，或者正面白色（应付检查）背面酷炫图案（满足个性）。这样双方都满意。”</p>"
+  },
+  {
+    "category": "基础篇 - 产品经理",
+    "title": "数据意识",
+    "question": "你设计了一款“帮助同学早起”的闹钟APP。你怎么判断这款APP是不是成功了？你会看什么数据？",
+    "answer": "<p><strong>深度解析：</strong>考察<strong>虚荣指标 vs 核心指标</strong>。下载量没用，只有真的用了才有用。</p><p><strong>参考回答：</strong>“我不看下载量，我看‘早起打卡率’和‘贪睡按钮点击次数’。如果用户下载了但每天都按‘再睡5分钟’，说明我的产品失败了，没能唤醒他们。”</p>"
+  },
+  {
+    "category": "基础篇 - 产品经理",
+    "title": "逆向思维",
+    "question": "请列举出3个你认为“反人类”的设计（比如蚊香很难拆、USB接口永远插不准）。",
+    "answer": "<p><strong>深度解析：</strong>考察<strong>吐槽背后的逻辑</strong>。</p><p><strong>参考回答：</strong>“1. 衣服领口的标签，扎脖子（应该印在衣服上）。2. 五孔插座，两孔和三孔离得太近，永远只能插一个。3. 蚊香盘，两个缠在一起，一掰就断。”</p>"
+  },
+  {
+    "category": "基础篇 - 产品经理",
+    "title": "创新脑洞",
+    "question": "给你一分钟，请尽可能多地列举出一枚回形针的用途（除了夹纸以外）。",
+    "answer": "<p><strong>深度解析：</strong>考察<strong>发散性思维</strong>。不要局限于物体本身，可以拆开、通电、做装饰。</p><p><strong>参考回答：</strong>“取卡针、做书签、用作鱼钩、当项链吊坠、通电导线、清理指甲缝、做成拉链头、甚至作为‘货币’去交换别的东西。”</p>"
+  },
+
+  // --- 基础篇：项目经理 ---
+  {
+    "category": "基础篇 - 项目经理",
+    "title": "目标拆解",
+    "question": "如果让你负责策划全班的“秋游”活动，你会把这件事分成哪几个大的阶段？",
+    "answer": "<p><strong>深度解析：</strong>考察<strong>WBS（工作分解结构）</strong>。大项目必须切碎。</p><p><strong>参考回答：</strong>“我会分为三个阶段：1. <strong>筹备期</strong>（选址、收钱、定路线）；2. <strong>执行期</strong>（集合点名、游玩安全、午餐安排）；3. <strong>复盘期</strong>（清点人数、报账、分享照片）。”</p>"
+  },
+  {
+    "category": "基础篇 - 项目经理",
+    "title": "风险管理",
+    "question": "你组织了一场篮球赛，定在周五下午。但周四晚上天气预报说周五可能会下大雨。作为项目经理，你有哪些备选方案（Plan B）？",
+    "answer": "<p><strong>深度解析：</strong>考察<strong>风险应对 Plan B</strong>。合格的 PM 永远不打无准备之仗。</p><p><strong>参考回答：</strong>“方案 A（首选）：如果雨小，借用体育馆室内场地。方案 B（备选）：改成室内桌游或电竞比赛。方案 C（下策）：延期到下周五，并立刻通知大家，安抚情绪。”</p>"
+  },
+  {
+    "category": "基础篇 - 项目经理",
+    "title": "进度控制",
+    "question": "你和小组成员约定周日晚上要把作业汇总给你，但到了周日中午，还有两个人没动静，发消息也不回。你怎么办？",
+    "answer": "<p><strong>深度解析：</strong>考察<strong>主动性</strong>和<strong>解决问题</strong>。不要坐以待毙。</p><p><strong>参考回答：</strong>“我不会等到晚上。中午没回，我会立刻打电话（比发微信更有效）。如果还联系不上，我会先帮他们做一部分最基础的，或者联系他们最好的朋友找人。必须保证周一交作业时有东西可交（保底思维）。”</p>"
+  },
+  {
+    "category": "基础篇 - 项目经理",
+    "title": "资源协调",
+    "question": "运动会马上开始了，但班费只剩下50元，买不齐所有运动员的水和葡萄糖了。作为后勤负责人，你怎么解决这个问题？",
+    "answer": "<p><strong>深度解析：</strong>考察<strong>资源受限下的变通能力</strong>。</p><p><strong>参考回答：</strong>“开源节流。节流：不买瓶装水，买两个大桶水（便宜）加纸杯。开源：发动班级同学每人赞助一瓶水，或者找学校旁边的小卖部拉赞助（挂横幅广告换水）。”</p>"
+  },
+  {
+    "category": "基础篇 - 项目经理",
+    "title": "应对变更",
+    "question": "还有三天就要期末考试了，老师突然宣布考试范围增加了整整两个单元。面对这个突发变故，你如何调整你的复习计划？",
+    "answer": "<p><strong>深度解析：</strong>考察<strong>动态调整</strong>和<strong>拥抱变化</strong>。</p><p><strong>参考回答：</strong>“我会重新评估优先级。新增的两个单元通常是考点（老师特意加的），我会分配 50% 的时间突击新内容。对于原来已复习好的内容，减少复习时间。策略从‘追求满分’调整为‘确保新单元不丢分’。”</p>"
+  },
+  {
+    "category": "基础篇 - 项目经理",
+    "title": "团队协作",
+    "question": "你的项目小组里，有一个同学特别聪明由于但性格孤僻不爱说话，另一个同学很热情但总是马虎出错。作为组长，你会怎么分配他们的任务？",
+    "answer": "<p><strong>深度解析：</strong>考察<strong>知人善任</strong>。没有废人，只有放错位置的人。</p><p><strong>参考回答：</strong>“让聪明的同学做‘技术攻坚’（如解难题、写PPT核心逻辑），独立完成，不需要太多沟通。让热情的同学做‘对外联络’和‘资料收集’，并安排细心的同学帮他做最后检查（Review）。”</p>"
+  },
+  {
+    "category": "基础篇 - 项目经理",
+    "title": "多任务处理",
+    "question": "今晚你要做三件事：1.写明天要交的数学卷子（需要1小时）；2.帮妈妈洗碗（需要20分钟）；3.看必看的球赛直播（2小时后结束）。你怎么安排时间？",
+    "answer": "<p><strong>深度解析：</strong>考察<strong>时间管理</strong>和<strong>并行处理</strong>。</p><p><strong>参考回答：</strong>“球赛不能暂停，且不用动脑。我会边看球赛边洗碗（利用中场休息或垃圾时间）。球赛结束前30分钟如果大局已定，我就关掉电视开始写卷子。或者先写卷子，球赛看回放（如果能忍住不被剧透）。”</p>"
+  },
+  {
+    "category": "基础篇 - 项目经理",
+    "title": "沟通汇报",
+    "question": "班主任让你负责出黑板报，但他没时间管细节。你会多久向他汇报一次进度？怎么汇报？",
+    "answer": "<p><strong>深度解析：</strong>考察<strong>向上管理</strong>。不要事事问，也不要最后才说。</p><p><strong>参考回答：</strong>“我会汇报三次关键节点。1. <strong>起步时</strong>：把设计草图发给他，确认主题方向不错。2. <strong>50%时</strong>：拍张照片发过去，证明在按时做。3. <strong>完工时</strong>：请他来现场验收。形式用微信留言，不打电话打扰。”</p>"
+  },
+  {
+    "category": "基础篇 - 项目经理",
+    "title": "复盘总结",
+    "question": "你的小组在学校合唱比赛中只拿了最后一名。比赛结束后，大家都很沮丧。作为队长，你会对大家说什么？接下来做什么？",
+    "answer": "<p><strong>深度解析：</strong>考察<strong>领导力 (Leadership)</strong>。先处理心情，再处理事情。</p><p><strong>参考回答：</strong>“第一步（共情）：‘大家辛苦了，我也很难过，但我们排练时的快乐是真的。’ 第二步（归因）：‘这次主要输在选歌太难，不是大家唱得不好。’ 第三步（展望）：‘晚上我请大家喝奶茶，我们聊聊下次怎么赢回来。’”</p>"
+  },
+  {
+    "category": "基础篇 - 项目经理",
+    "title": "工具意识",
+    "question": "你更喜欢把要做的事情记在脑子里，还是写在纸上/手机里？为什么？",
+    "answer": "<p><strong>深度解析：</strong>考察<strong>职业素养</strong>。大脑是用来思考的，不是用来记事的。</p><p><strong>参考回答：</strong>“一定要写下来（清单/日历）。因为人脑内存有限，记在脑子里会产生‘后台焦虑’，影响专注。写下来才能清空大脑，专注于当下的任务，而且方便划掉已完成项，有成就感。”</p>"
+  },
+
+  // --- 进阶篇：产品经理 ---
+  {
+    "category": "进阶篇 - 产品经理",
+    "title": "痛点挖掘 [校园]",
+    "question": "如果让你重新设计我们学校的“食堂饭卡”，你会增加或减少什么功能？为什么？",
+    "answer": "<p><strong>深度解析：</strong><strong>高频痛点</strong>通常在于“排队”和“信息不透明”。</p><p><strong>参考回答：</strong>“痛点是充值排队太长，且不知道卡里剩多少钱。我会增加‘NFC手机充值’功能，不用去窗口排队。减少‘挂失’的复杂流程，改成APP一键冻结。”</p>"
+  },
+  {
+    "category": "进阶篇 - 产品经理",
+    "title": "用户分层 [校园]",
+    "question": "学校要举办运动会，如果是你负责设计比赛项目，你会为“体育特长生”和“不想动弹的宅男宅女”分别设计什么不同的项目？",
+    "answer": "<p><strong>深度解析：</strong><strong>用户细分 (Segmentation)</strong>。不同用户群体的需求完全相反。</p><p><strong>参考回答：</strong>“特长生：要‘竞技感’和‘荣耀’，设计百米飞人、跳高，颁发大奖杯。宅男宅女：要‘参与感’和‘不累’，设计趣味运动，如毛毛虫竞速、电竞比赛、或者做‘啦啦队/摄影组’。”</p>"
+  },
+  {
+    "category": "进阶篇 - 产品经理",
+    "title": "需求真伪 [校园]",
+    "question": "很多同学建议学校把“早自习”取消，这肯定是一个“强需求”。如果你是校长（产品负责人），你会采纳吗？为什么？",
+    "answer": "<p><strong>深度解析：</strong><strong>欲望 vs 需求</strong>。用户想偷懒（欲望），但产品的核心价值是教育（需求）。</p><p><strong>参考回答：</strong>“不采纳。产品（学校）的核心价值是‘提升成绩’，早自习虽然体验不好，但对核心价值有帮助。但我会优化体验，比如把死记硬背改为‘晨读朗诵比赛’，降低枯燥感。”</p>"
+  },
+  {
+    "category": "进阶篇 - 产品经理",
+    "title": "竞品分析 [校园]",
+    "question": "对比一下“做纸质试卷”和“在iPad上做题”，你觉得对于学生来说，iPad做题最大的**坏处**是什么？",
+    "answer": "<p><strong>深度解析：</strong><strong>批判性思维</strong>。新科技不一定全是好的，要看迁移成本。</p><p><strong>参考回答：</strong>“坏处是‘书写感差’和‘容易分心’。纸质卷子可以随意圈画、折叠，有肌肉记忆，而玻璃屏幕太滑。且 iPad 上弹出的消息通知会严重打断心流（Focus）。”</p>"
+  },
+  {
+    "category": "进阶篇 - 产品经理",
+    "title": "场景触发 [校园]",
+    "question": "如果要在教室后门的垃圾桶旁边贴一张标语，让大家分类扔垃圾。你会写什么内容才能最有效地达到目的？",
+    "answer": "<p><strong>深度解析：</strong><strong>文案 (Copywriting)</strong> 要具体行动，不要空洞口号。</p><p><strong>参考回答：</strong>“不要写‘人人有责’。要写具体的行动指令：‘瓶子请喝光再扔’，‘外卖盒请把汤倒掉’。或者用幽默感：‘我（垃圾桶）不想喝没喝完的奶茶’。”</p>"
+  },
+  {
+    "category": "进阶篇 - 产品经理",
+    "title": "功能取舍 [实战]",
+    "question": "我们正在开发一款类似于微信的聊天APP，明天就要上线了，突然发现“发送表情包”功能有一个小BUG（偶尔会发送失败），但“文字聊天”功能完全正常。你会选择推迟上线修BUG，还是按时上线但暂时屏蔽表情包功能？",
+    "answer": "<p><strong>深度解析：</strong><strong>MVP 思维</strong>。核心业务（文字）必须保住，非核心（表情）可以牺牲。</p><p><strong>参考回答：</strong>“按时上线，屏蔽表情包。理由：1. 信用比功能重要，承诺的时间要兑现。2. 文字聊天是核心，没有表情包用户也能用，但不上线用户就跑了。3. 可以在下周的版本中快速修复上线表情包。”</p>"
+  },
+  {
+    "category": "进阶篇 - 产品经理",
+    "title": "用户反馈 [实战]",
+    "question": "你负责的一款短视频APP，后台收到了1000条用户差评，其中800条说“视频加载太慢”，200条说“界面太丑”。你先解决哪个？",
+    "answer": "<p><strong>深度解析：</strong><strong>性能 > 体验</strong>。加载慢是“不可用”，丑是“不好用”。</p><p><strong>参考回答：</strong>“先解决加载慢。因为加载慢会导致用户直接流失（看不见内容），而界面丑用户还能忍受。性能问题通常是致命伤。”</p>"
+  },
+  {
+    "category": "进阶篇 - 产品经理",
+    "title": "新增功能 [实战]",
+    "question": "微信为什么没有“已读”功能（显示对方是否阅读了消息）？请从心理学角度分析张小龙（微信之父）的考量。",
+    "answer": "<p><strong>深度解析：</strong><strong>人性洞察</strong>。即时通讯工具需要给人压迫感吗？</p><p><strong>参考回答：</strong>“为了保护发送者和接收者的心理压力。如果显示‘已读不回’，发送者会焦虑，接收者会感到被迫回复。微信希望聊天是轻松的，保留一点‘我假装没看见’的社交喘息空间。”</p>"
+  },
+  {
+    "category": "进阶篇 - 产品经理",
+    "title": "数据指标 [实战]",
+    "question": "如果你是“抖音”的产品经理，你觉得哪个数据更重要？是“APP下载量”还是“用户每天观看时长”？为什么？",
+    "answer": "<p><strong>深度解析：</strong><strong>北极星指标 (North Star Metric)</strong>。留存 > 拉新。</p><p><strong>参考回答：</strong>“观看时长更重要。下载量只是‘拉新’，花钱就能买到。但‘观看时长’代表了用户真的喜欢（留存）。如果大家下载了但不看，APP 很快就死掉了。”</p>"
+  },
+  {
+    "category": "进阶篇 - 产品经理",
+    "title": "创新定义 [实战]",
+    "question": "现在AI（人工智能）很火。如果要在你的“文具盒”里植入一个AI芯片，你希望它帮你解决什么问题？",
+    "answer": "<p><strong>深度解析：</strong><strong>技术落地</strong>。AI 不是噱头，要解决实际问题。</p><p><strong>参考回答：</strong>“我希望它能‘自动整理错题’。每次我把笔放进去，它能扫描我刚才做错的卷子，自动生成一个‘错题本’文档发到我手机上，省去我抄题的时间。”</p>"
+  },
+
+  // --- 进阶篇：项目经理 ---
+  {
+    "category": "进阶篇 - 项目经理",
+    "title": "WBS拆解 [校园]",
+    "question": "班级要出这一期的“黑板报”，要在周五前完成。作为负责人，请列出至少3个关键步骤，并说明每个步骤需要几天？",
+    "answer": "<p><strong>深度解析：</strong><strong>关键路径</strong>。不能所有事一起做，有先后顺序。</p><p><strong>参考回答：</strong>“1. <strong>定主题与找素材</strong>（周一，1天）：确定画什么。2. <strong>画刊头与排版</strong>（周二-周三，2天）：先把骨架搭好，这是最难的。3. <strong>填色与抄文字</strong>（周四，1天）：这可以多人并行做，很快。周五验收。”</p>"
+  },
+  {
+    "category": "进阶篇 - 项目经理",
+    "title": "资源冲突 [校园]",
+    "question": "你是小组长，组员A英语好但数学差，组员B数学好但英语差。现在有一项作业是“用英文统计并分析全班身高的数学图表”。你怎么分配任务？",
+    "answer": "<p><strong>深度解析：</strong><strong>优势互补</strong>。让专业的人做专业的事。</p><p><strong>参考回答：</strong>“让 B（数学好）负责数据统计和画图表，保证数据准确。让 A（英语好）负责把 B 画好的图表翻译成英文，并撰写分析报告。最后两人互相检查一遍。”</p>"
+  },
+  {
+    "category": "进阶篇 - 项目经理",
+    "title": "进度延期 [校园]",
+    "question": "你和同学约好周六去图书馆复习，结果周六早上你睡过头了，肯定会迟到1小时。你会怎么做？（不仅是道歉）。",
+    "answer": "<p><strong>深度解析：</strong><strong>管理预期 (Manage Expectation)</strong>。坏消息要早说，且要有补偿。</p><p><strong>参考回答：</strong>“1. <strong>立刻告知</strong>：醒来第一秒就发消息，不要等到见面才说。2. <strong>修改计划</strong>：‘你先复习英语，不用等我。’ 3. <strong>补偿</strong>：‘中午我请你喝奶茶赔罪，或者晚上我们晚走一小时补回来。’”</p>"
+  },
+  {
+    "category": "进阶篇 - 项目经理",
+    "title": "干系人管理 [校园]",
+    "question": "你要组织班级篮球赛，体育老师说场地没问题，但班主任担心影响学习不同意。你作为组织者，怎么去说服班主任？",
+    "answer": "<p><strong>深度解析：</strong><strong>利益相关者分析</strong>。搞定关键反对者，找到他的利益点。</p><p><strong>参考回答：</strong>“不要跟班主任谈‘玩’，要谈‘学习’。‘老师，大家最近复习压力太大，状态不好。打一场球能释放压力，下周学习效率肯定更高。而且我们保证只利用午休时间，不占自习课。’”</p>"
+  },
+  {
+    "category": "进阶篇 - 项目经理",
+    "title": "成本控制 [校园]",
+    "question": "班费只剩100元，要给全班50人买“元旦礼物”。作为采购负责人，你会怎么买？",
+    "answer": "<p><strong>深度解析：</strong><strong>有限资源下的最优解</strong>。</p><p><strong>参考回答：</strong>“人均 2 元买不到什么好东西。策略：1. <strong>制造惊喜</strong>：买 50 张彩票（刮刮乐），万一中奖了呢？2. <strong>情感价值</strong>：买精美的信纸，每个人给同桌写一封夸夸信。3. <strong>实用主义</strong>：批发 50 支好用的红笔，以此祝大家期末‘开门红’。”</p>"
+  },
+  {
+    "category": "进阶篇 - 项目经理",
+    "title": "需求变更 [实战]",
+    "question": "你的团队正在开发一个网站，原计划下周上线。今天老板突然冲进来说：“这个颜色不好看，全部换成红色，并且加个大转盘抽奖功能！”作为项目经理，你该怎么回答？",
+    "answer": "<p><strong>深度解析：</strong><strong>范围管理 (Scope Creep)</strong>。面对无理要求，要学会“温柔的拒绝”。</p><p><strong>参考回答：</strong>“老板，换颜色没问题，我们今晚加班改（给面子）。但是‘大转盘’功能太复杂，现在加肯定会延期上线。建议：这次先上线红色版本，‘大转盘’作为二期功能，我们下个月重点做（给方案）。”</p>"
+  },
+  {
+    "category": "进阶篇 - 项目经理",
+    "title": "风险突发 [实战]",
+    "question": "项目还有3天交付，主力程序员突然生病住院了，代码还差一半没写完。你该怎么办？",
+    "answer": "<p><strong>深度解析：</strong><strong>危机公关</strong>。做减法 > 加人。</p><p><strong>参考回答：</strong>“1. <strong>盘点</strong>：看剩下的代码哪些是必须写的，哪些是锦上添花的。2. <strong>砍</strong>：把锦上添花的功能全部砍掉，只保核心功能。3. <strong>求援</strong>：虽然加人很难上手，但可以让其他组的程序员帮忙做一些简单的测试工作，分担压力。”</p>"
+  },
+  {
+    "category": "进阶篇 - 项目经理",
+    "title": "跨部门沟通 [实战]",
+    "question": "设计师说“我要追求完美，再给我2天优化图片”，程序员说“再不给我图，我就开发不完了”。两人吵起来了，你帮谁？",
+    "answer": "<p><strong>深度解析：</strong><strong>大局观</strong>。PM 必须保交付时间。</p><p><strong>参考回答：</strong>“帮程序员。我会对设计师说：‘现在上线是第一位的。你先给一版 60 分的图让程序员开发。上线后，你再慢慢优化那张 100 分的图，我们通过热更新替换上去。’”</p>"
+  },
+  {
+    "category": "进阶篇 - 项目经理",
+    "title": "站会制度 [实战]",
+    "question": "在软件公司，每天早上大家都要站着开15分钟的会（站会）。你觉得为什么要“站着”开？",
+    "answer": "<p><strong>深度解析：</strong><strong>高效会议</strong>。形式服务于内容。</p><p><strong>参考回答：</strong>“因为站着累。这强迫大家长话短说，只同步‘进度’和‘困难’，不开茶话会。这是敏捷开发（Agile）为了提高效率设计的一种仪式感。”</p>"
+  },
+  {
+    "category": "进阶篇 - 项目经理",
+    "title": "项目复盘 [实战]",
+    "question": "APP上线后出现了严重故障，服务器崩了2小时。问题解决后，团队士气低落。作为项目经理，你召集大家开“复盘会”，第一句话该说什么？",
+    "answer": "<p><strong>深度解析：</strong><strong>对事不对人</strong>。复盘是为了改进，不是为了甩锅。</p><p><strong>参考回答：</strong>“‘大家辛苦了，刚才的故障已经解决了。今天开会<strong>不追究是谁的责任</strong>，我们只讨论一个问题：<strong>流程上哪里出了漏洞</strong>，导致这个 Bug 没被测出来？下次怎么避免同样的坑？’”</p>"
+  }
+];
+
+let currentIndex = 0;
+const card = document.getElementById('card');
+const categoryBadge = document.getElementById('categoryBadge');
+const titleEl = document.getElementById('title');
+const questionEl = document.getElementById('question');
+const answerBox = document.getElementById('answerBox');
+const answerContent = document.getElementById('answerContent');
+const counterEl = document.getElementById('counter');
+const revealBtn = document.getElementById('revealBtn');
+const timerValEl = document.getElementById('timerVal');
+const timerDisplayEl = document.getElementById('timerDisplay');
+
+let timerInterval = null;
+const TIME_LIMIT = 30;
+
+function startTimer() {
+    clearInterval(timerInterval);
+    let timeLeft = TIME_LIMIT;
+    timerValEl.textContent = timeLeft;
+    timerDisplayEl.style.opacity = 1;
+    
+    timerInterval = setInterval(() => {
+        timeLeft--;
+        timerValEl.textContent = timeLeft;
+        
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            // 自动显示答案，但不自动滚动到底部（防止突然跳动干扰）
+            if (!answerBox.classList.contains('show')) {
+                toggleAnswer(false);
+            }
+        }
+    }, 1000);
+}
+
+function resetTimer() {
+    clearInterval(timerInterval);
+    timerValEl.textContent = TIME_LIMIT;
+}
+
+function renderSlide(index) {
+    const slide = slides[index];
+    
+    if (slide.category.includes("产品")) {
+        card.className = "card theme-pm";
+    } else {
+        card.className = "card theme-pjm";
+    }
+    
+    categoryBadge.textContent = slide.category;
+    titleEl.textContent = slide.title;
+    questionEl.innerHTML = slide.question;
+    answerContent.innerHTML = slide.answer;
+    
+    answerBox.className = "answer-box"; 
+    revealBtn.textContent = "👀 查看深度解析";
+    counterEl.textContent = (index + 1) + " / " + slides.length;
+    
+    // 重置并开始计时
+    resetTimer();
+    // 稍微延迟启动，让切题动画流畅
+    setTimeout(startTimer, 100);
+}
+
+function changeSlide(direction) {
+    const newIndex = currentIndex + direction;
+    if (newIndex >= 0 && newIndex < slides.length) {
+        currentIndex = newIndex;
+        renderSlide(currentIndex);
+    }
+}
+
+function toggleAnswer(autoScroll = true) {
+    // 无论是手动还是自动触发，只要答案显示了，就停止计时
+    clearInterval(timerInterval);
+    
+    if (answerBox.classList.contains('show')) {
+        answerBox.classList.remove('show');
+        revealBtn.textContent = "👀 查看深度解析";
+    } else {
+        answerBox.classList.add('show');
+        revealBtn.textContent = "🙈 隐藏解析";
+        if (autoScroll) {
+            setTimeout(() => {
+                card.scrollTo({ top: card.scrollHeight, behavior: 'smooth' });
+            }, 100);
+        }
+    }
+}
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === "ArrowRight") changeSlide(1);
+    if (e.key === "ArrowLeft") changeSlide(-1);
+    if (e.key === " " || e.key === "Enter") toggleAnswer();
+});
+
+renderSlide(0);
+</script>
+</body>
+</html>

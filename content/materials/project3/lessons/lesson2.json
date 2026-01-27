@@ -1,0 +1,60 @@
+{
+  "id": "p3-l2",
+  "project": "project3",
+  "title": "第2课：赋予灵魂 (JavaScript Logic)",
+  "duration": 45,
+  "description": "学习 JavaScript 基础，让静态网页动起来。",
+  "phases": [
+    {
+      "id": "step1",
+      "title": "⚡ 0-10分：JS 初体验",
+      "duration": 10,
+      "student": {
+        "title": "Script 标签",
+        "content": "<p>HTML 是骨架，CSS 是皮肤，JavaScript 是肌肉。</p><p>我们在 `index.html` 的 `</body>` 之前添加 `<script>` 标签。</p>",
+        "tasks": [
+            "输入 `console.log('Hello World');`",
+            "打开浏览器控制台 (F12)，查看输出"
+        ]
+      }
+    },
+    {
+      "id": "step2",
+      "title": "🎲 10-30分：Mock Data (假数据)",
+      "duration": 20,
+      "student": {
+        "title": "动态渲染",
+        "content": "<p>现在卡片是写死在 HTML 里的。我们要用 JS 数组来生成它们。</p>",
+        "prompts": [
+          {
+            "label": "生成渲染代码",
+            "text": "我有这样一个 HTML 结构（粘贴卡片代码）。请帮我写一段 JavaScript：\n1. 定义一个数组 `mistakes`，包含3个错题对象（科目、内容、时间）。\n2. 编写一个 render 函数，遍历数组，生成 HTML 字符串并插入到页面中。"
+          }
+        ],
+        "tasks": [
+            "替换 HTML 中的静态卡片为 `<div id='list'></div>`",
+            "运行 JS 代码，看卡片是否自动生成"
+        ]
+      }
+    },
+    {
+      "id": "step3",
+      "title": "🖱️ 30-45分：事件交互",
+      "duration": 15,
+      "student": {
+        "title": "点击事件",
+        "content": "<p>让“添加按钮”生效。</p>",
+        "prompts": [
+            {
+                "label": "交互逻辑",
+                "text": "请给“添加按钮”绑定点击事件。当点击时，弹出一个输入框（prompt），让用户输入错题内容，然后把新错题添加到数组，并重新渲染列表。"
+            }
+        ],
+        "tasks": [
+            "测试添加功能",
+            "思考：刷新页面后数据还在吗？为什么？"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "id": "p5-l3",
+  "project": "project5",
+  "title": "第3课：自主实践 - 传感器综合 (Sensor Lab)",
+  "duration": 45,
+  "description": "【自主实践】尝试接入新的传感器，实现更复杂的逻辑。",
+  "phases": [
+    {
+      "id": "step1",
+      "title": "🔍 0-15分：阅读文档",
+      "duration": 15,
+      "student": {
+        "title": "新硬件接入",
+        "content": "<p>今天我们加入一个 <strong>超声波测距传感器</strong> (HC-SR04) 或者 <strong>按钮</strong>。</p>",
+        "tasks": [
+            "搜索 `HC-SR04 Raspberry Pi python`",
+            "找到接线图（注意：Echo引脚可能需要分压，或者直接问 AI 安全接法）"
+        ]
+      }
+    },
+    {
+      "id": "step2",
+      "title": "💻 15-35分：编写驱动",
+      "duration": 20,
+      "student": {
+        "title": "读取数据",
+        "content": "<p>你需要写代码来读取传感器的数值。</p>",
+        "prompts": [
+            {
+                "label": "驱动代码生成",
+                "text": "请帮我写一段 Python 代码，读取连接在 GPIO 23 (Trig) 和 24 (Echo) 的超声波传感器距离。每 0.5 秒打印一次距离。"
+            }
+        ],
+        "tasks": [
+            "运行代码，用手遮挡传感器，看数值变化",
+            "<strong>挑战</strong>：当距离小于 10cm 时，让 LED 灯报警（闪烁）。"
+        ]
+      }
+    },
+    {
+      "id": "step3",
+      "title": "🧠 35-45分：逻辑集成",
+      "duration": 10,
+      "student": {
+        "title": "智能判断",
+        "content": "<p>把传感器数据和 AI 识别结合起来。</p>",
+        "tasks": [
+            "思考：如何实现“只有当人靠近时（距离<50cm），才开启摄像头识别”？（省电模式）"
+        ]
+      }
+    }
+  ]
+}
