@@ -1,7 +1,7 @@
 .DS_Store
 node_modules/
 *.log
-.local-cache/
+**/.local-cache/
 gitea/
 
 storage/db/*.sqlite
@@ -16,3 +16,11 @@ services/gitea/gitea-*
 archive/
 content/materials/project1/ycaistartup2025.ppt
 content/materials/project4/何恺明MIT第一课：深度学习卷积神经网络 Deep Learning Bootcamp_ Kaiming He.mp4
+content/materials/**/*.mp4
+content/materials/**/*.mov
+content/materials/**/*.ppt
+content/materials/**/*.pptx
+content/materials/**/*.pdf
+content/materials/**/*.zip
+content/materials/**/*.rar
+content/materials/**/*.7z
