@@ -1,0 +1,215 @@
+# File Inventory (Scope: apps/, scripts/, docs/, content/)
+
+Scope: apps/, scripts/, docs/, content/.
+Exclusions: node_modules/, .git/, __pycache__/, .DS_Store, .local-cache/, .cache/, dist/, build/.
+
+Key directories overview:
+- apps: Application layer (Vue frontend, api backend, assessment manager).
+- scripts: Operations and maintenance scripts for local/dev/prod tasks.
+- docs: Documentation and planning artifacts.
+- content: Course content and teaching materials.
+
+## apps
+- apps/api: Fastify API server, auth, submissions, uploads, Gitea/AI integrations.
+- apps/assessment-data-manager: Teacher CSV upload manager for assessments.
+- apps/web-vue: Vue 3 + Vite frontend migration workspace.
+  - Legacy static frontends archived under docs/archive/ (web-legacy-2026-01-31, legacy-2026-01-31).
+
+Files:
+- apps/api/create_tests.js
+- apps/api/db.js
+- apps/api/package-lock.json
+- apps/api/package.json
+- apps/api/server.js
+- apps/api/server.log
+- apps/assessment-data-manager/app.js
+- apps/assessment-data-manager/index.html
+- apps/web-vue/README.md
+- apps/web-vue/index.html
+- apps/web-vue/package.json
+- apps/web-vue/public/config.json
+- apps/web-vue/public/data/topics_data.json
+- apps/web-vue/src/App.vue
+- apps/web-vue/src/api/auth.js
+- apps/web-vue/src/api/authApi.js
+- apps/web-vue/src/api/client.js
+- apps/web-vue/src/components/ProposalStatus.vue
+- apps/web-vue/src/components/SiteFooter.vue
+- apps/web-vue/src/components/SiteNav.vue
+- apps/web-vue/src/main.js
+- apps/web-vue/src/modules/inception/proposal.js
+- apps/web-vue/src/modules/inception/storage.js
+- apps/web-vue/src/modules/workspace/draft.js
+- apps/web-vue/src/modules/workspace/report.js
+- apps/web-vue/src/modules/workspace/stages.js
+- apps/web-vue/src/pages/Competencies.vue
+- apps/web-vue/src/pages/Downloads.vue
+- apps/web-vue/src/pages/Home.vue
+- apps/web-vue/src/pages/Knowledge.vue
+- apps/web-vue/src/pages/Login.vue
+- apps/web-vue/src/pages/MissionControl.vue
+- apps/web-vue/src/pages/Projects.vue
+- apps/web-vue/src/pages/Register.vue
+- apps/web-vue/src/pages/Showcase.vue
+- apps/web-vue/src/pages/SmartWorkspace.vue
+- apps/web-vue/src/pages/Study.vue
+- apps/web-vue/src/pages/Teacher.vue
+- apps/web-vue/src/pages/Tools.vue
+- apps/web-vue/src/pages/Workspace.vue
+- apps/web-vue/src/pages/tools/Charter.vue
+- apps/web-vue/src/pages/tools/Innovation.vue
+- apps/web-vue/src/pages/tools/Kanban.vue
+- apps/web-vue/src/pages/tools/Literature.vue
+- apps/web-vue/src/pages/tools/PreResearch.vue
+- apps/web-vue/src/pages/tools/Wbs.vue
+- apps/web-vue/src/router/index.js
+- apps/web-vue/src/styles/base.css
+- apps/web-vue/vite.config.js
+
+## scripts
+Files:
+- scripts/Enable-LAN-Access.ps1
+- scripts/Start-Platform-Mac.command
+- scripts/accounts_teacher_1768982562470.csv
+- scripts/accounts_test_1768960883580.csv
+- scripts/create_student_accounts.js
+- scripts/debug_login.js
+- scripts/fill-missing-uploads.js
+- scripts/migrate-jsonl-to-sqlite.js
+- scripts/organize-docs.bat
+- scripts/report-missing-uploads.js
+- scripts/run.bat
+- scripts/start.log
+- scripts/start.sh
+- scripts/start_git_server.sh
+
+## docs
+- docs/planning: Active plans and action items (current).
+- docs/archive: Archived or superseded documents.
+
+Files:
+- docs/README.md
+- docs/architecture/2_architecture.md
+- docs/architecture/3_design_principles.md
+- docs/architecture/architecture.md
+- docs/archive/2026-01-30/1_product_requirements.md
+- docs/archive/2026-01-30/README.md
+- docs/archive/2026-01-30/development-plan.md
+- docs/archive/2026-01-30/monorepo-migration.md
+- docs/archive/2026-01-30/platform_refactor_plan.md
+- docs/archive/2026-01-30/product-requirements.md
+- docs/archive/2026-01-30/stage-template.md
+- docs/archive/2026-01-30/todo_list.md
+- docs/archive/2026-01-30/重构操作步骤.md
+- docs/archive/2026-01-30/项目文件结构.md
+- docs/innovation-platform.md
+- docs/planning/action_plan.md
+- docs/planning/file_inventory.md
+- docs/planning/refactor_file_plan.md
+- docs/planning/workspace_inception_plan.md
+
+## content
+- content/materials: Raw teaching materials (slides/docs/etc.).
+
+Files:
+- content/materials/common/Git协同开发指南.md
+- content/materials/common/project_templates/1-kickoff-report-template.md
+- content/materials/common/project_templates/2-midterm-report-template.md
+- content/materials/common/project_templates/3-final-report-template.md
+- content/materials/common/工具清单和资源.md
+- content/materials/common/教学实施指南.md
+- content/materials/common/能力素养培养体系.md
+- content/materials/common/课程总体设计.md
+- content/materials/common/项目管理与关键节点指南.md
+- content/materials/common/📋文档体系梳理.md
+- content/materials/platform/README-PLATFORM.md
+- content/materials/platform/使用说明.md
+- content/materials/platform/部署成功！.md
+- content/materials/platform/部署检查清单.md
+- content/materials/project1/TEACHING_MANUAL.md
+- content/materials/project1/lessons/lesson1.json
+- content/materials/project1/lessons/lesson2.json
+- content/materials/project1/lessons/lesson3.json
+- content/materials/project1/lessons/lesson4.json
+- content/materials/project1/ycaistartup2025.ppt
+- content/materials/project1/课程设计-AICoding入门到实战.md
+- content/materials/project1/项目1-VibeCoding.md
+- content/materials/project1/项目1-体感互动游戏-趣味版.md
+- content/materials/project2/1_core_knowledge_cards.md
+- content/materials/project2/2_practical_cases_worksheets.md
+- content/materials/project2/5_professional_handbook.md
+- content/materials/project2/6_final_capstone_project.md
+- content/materials/project2/TEACHING_MANUAL.md
+- content/materials/project2/capstone_guide_slides.html
+- content/materials/project2/course_intro_slides.html
+- content/materials/project2/curriculum.md
+- content/materials/project2/interview_slides.html
+- content/materials/project2/lessons/lesson1.json
+- content/materials/project2/lessons/lesson2.json
+- content/materials/project2/lessons/lesson3.json
+- content/materials/project2/lessons/lesson4.json
+- content/materials/project2/student_handbook/5_professional_handbook.md
+- content/materials/project2/student_handbook/6_final_capstone_project.md
+- content/materials/project2/student_handbook/capstone_guide_slides.html
+- content/materials/project2/teacher_guide_logic.md
+- content/materials/project2/teaching_materials/1_core_knowledge_cards.md
+- content/materials/project2/teaching_materials/2_practical_cases_worksheets.md
+- content/materials/project2/teaching_materials/course_intro_slides.html
+- content/materials/project2/teaching_materials/interview_slides.html
+- content/materials/project2/teaching_materials/teacher_guide_logic.md
+- content/materials/project2/项目2-产品经理与项目经理-趣味版.md
+- content/materials/project2/项目2-产品经理与项目经理.md
+- content/materials/project3/TEACHING_MANUAL.md
+- content/materials/project3/lessons/lesson1.json
+- content/materials/project3/lessons/lesson2.json
+- content/materials/project3/lessons/lesson3.json
+- content/materials/project3/lessons/lesson4.json
+- content/materials/project3/project3/850X850.PNG
+- content/materials/project3/project3/_teacher_solution/main.py
+- content/materials/project3/project3/frontend_backend_detailed.html
+- content/materials/project3/project3/full_stack_course_ppt_outline.md
+- content/materials/project3/project3/full_stack_course_presentation.html
+- content/materials/project3/project3/handbooks/01_project_manager.md
+- content/materials/project3/project3/handbooks/02_product_manager.md
+- content/materials/project3/project3/handbooks/03_ui_designer.md
+- content/materials/project3/project3/handbooks/04_frontend_developer.md
+- content/materials/project3/project3/handbooks/05_backend_developer.md
+- content/materials/project3/project3/handbooks/06_qa_engineer.md
+- content/materials/project3/project3/handbooks/07_sales.md
+- content/materials/project3/project3/handbooks/08_operations.md
+- content/materials/project3/project3/handbooks/comic_gallery.html
+- content/materials/project3/project3/kimiccapi.md
+- content/materials/project3/project3/mistake_killer_code_lab/main.py
+- content/materials/project3/project3/mistake_killer_code_lab/static/index.html
+- content/materials/project3/project3/mistake_killer_code_lab/static/theme.css
+- content/materials/project3/project3/mistake_killer_starter/00_任务书.md
+- content/materials/project3/project3/mistake_killer_starter/01_项目指挥部/需求立项单.md
+- content/materials/project3/project3/mistake_killer_starter/01_项目指挥部/项目作战地图.md
+- content/materials/project3/project3/mistake_killer_starter/02_设计部/视觉规范.css
+- content/materials/project3/project3/mistake_killer_starter/03_开发部/main.py
+- content/materials/project3/project3/mistake_killer_starter/03_开发部/static/index.html
+- content/materials/project3/project3/mistake_killer_starter/04_测试部/找茬清单.md
+- content/materials/project3/project3/mistake_killer_starter/05_市场部/商业计划书.md
+- content/materials/project3/项目3-全栈工程师.md
+- content/materials/project4/TEACHING_MANUAL.md
+- content/materials/project4/blog.md
+- content/materials/project4/lessons/lesson1.json
+- content/materials/project4/lessons/lesson2.json
+- content/materials/project4/lessons/lesson3.json
+- content/materials/project4/lessons/lesson4.json
+- content/materials/project4/何凯明.md
+- content/materials/project4/何恺明MIT第一课：深度学习卷积神经网络 Deep Learning Bootcamp_ Kaiming He.mp4
+- content/materials/project4/项目4-算法工程师-趣味版.md
+- content/materials/project4/项目4-算法工程师.md
+- content/materials/project5/TEACHING_MANUAL.md
+- content/materials/project5/lessons/lesson1.json
+- content/materials/project5/lessons/lesson2.json
+- content/materials/project5/lessons/lesson3.json
+- content/materials/project5/lessons/lesson4.json
+- content/materials/project5/学生版Git提交指南.md
+- content/materials/project5/项目5-嵌入式工程师-趣味版.md
+- content/materials/project5/项目5-嵌入式工程师.md
+- content/materials/project6/Git协同开发指南.md
+- content/materials/project6/project_kickoff_slides.html
+- content/materials/project6/项目6-综合实践周-趣味版.md
+- content/materials/project6/项目6-综合实践周.md

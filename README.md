@@ -37,24 +37,15 @@ npm start
 
 ### 账号与权限
 
-- 登录入口：`apps/web/login.html`（或首页「登录 / 注册」）
+- 登录入口：访问 `http://localhost:8090/login`（或首页「登录 / 注册」）
 - API 前缀：`/api/v1`
 - 建议设置环境变量：
   - `AUTH_SECRET`：JWT 签名密钥
   - `TEACHER_INVITE_CODE`：老师邀请码（首次创建老师账号可不设置，之后会校验邀请码）
 
-### 旧版平台（静态）
+### 旧版平台（静态，已归档）
 
-- Windows：运行 `scripts/run.bat`
-- 其他系统：
-
-```bash
-cd apps/legacy
-npm install
-node server.js
-```
-
-访问地址：`http://localhost:8080`
+旧版静态站点已归档到：`docs/archive/legacy-2026-01-31`，当前默认仅使用 Vue 前端。
 
 ### Gitea
 

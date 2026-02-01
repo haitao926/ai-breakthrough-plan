@@ -211,6 +211,15 @@ function initSchema(db) {
       FOREIGN KEY(requester_id) REFERENCES users(id)
     );
 
+    CREATE TABLE IF NOT EXISTS project_blueprints (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_id INTEGER NOT NULL UNIQUE,
+      data TEXT NOT NULL, -- JSON: { strategy: {...}, wbs: [...] }
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY(project_id) REFERENCES projects(id)
+    );
+
     CREATE TABLE IF NOT EXISTS project_milestones (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       project_id INTEGER NOT NULL,
@@ -218,6 +227,9 @@ function initSchema(db) {
       description TEXT,
       parent_id INTEGER,
       sort_order INTEGER,
+      assignee TEXT,
+      start_date TEXT,
+      end_date TEXT,
       deadline TEXT,
       status TEXT NOT NULL, -- 'pending', 'submitted', 'approved', 'rejected'
       deliverables TEXT, -- JSON: { code_url, images: [], video_url, doc_url }
@@ -228,6 +240,17 @@ function initSchema(db) {
       updated_at TEXT NOT NULL,
       FOREIGN KEY(project_id) REFERENCES projects(id),
       FOREIGN KEY(parent_id) REFERENCES project_milestones(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS assessment_files (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT,
+      original_name TEXT NOT NULL,
+      file_path TEXT NOT NULL,
+      file_size INTEGER NOT NULL,
+      uploaded_by INTEGER,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY(uploaded_by) REFERENCES users(id)
     );
   `);
 
@@ -241,6 +264,11 @@ function initSchema(db) {
   ensureColumn(db, 'submissions', 'details', 'details TEXT');
   ensureColumn(db, 'project_milestones', 'parent_id', 'parent_id INTEGER');
   ensureColumn(db, 'project_milestones', 'sort_order', 'sort_order INTEGER');
+  ensureColumn(db, 'project_milestones', 'assignee', 'assignee TEXT');
+  ensureColumn(db, 'project_milestones', 'start_date', 'start_date TEXT');
+  ensureColumn(db, 'project_milestones', 'end_date', 'end_date TEXT');
+  ensureColumn(db, 'assessment_files', 'title', 'title TEXT');
+  ensureColumn(db, 'assessment_files', 'uploaded_by', 'uploaded_by INTEGER');
 }
 
 async function createDatabase(dbPath = DEFAULT_DB_PATH) {

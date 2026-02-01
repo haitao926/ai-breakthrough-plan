@@ -14,6 +14,12 @@ const HOST = process.env.HOST || '0.0.0.0';
 const DB_PATH = process.env.DB_PATH || DEFAULT_DB_PATH;
 const UPLOAD_DIR = path.join(__dirname, '../../storage/uploads');
 const LOG_DIR = path.join(__dirname, '../../storage/logs');
+const ASSESSMENT_DIR = path.join(__dirname, '../../storage/assessments');
+const DEFAULT_WEB_ROOT = path.join(__dirname, '../web-vue/dist');
+const WEB_ROOT = process.env.WEB_ROOT
+  ? path.resolve(process.env.WEB_ROOT)
+  : DEFAULT_WEB_ROOT;
+const WEB_SPA = String(process.env.WEB_SPA || '').trim() === 'true';
 const AUDIT_LOG_PATH = path.join(LOG_DIR, 'audit.log');
 const UPLOAD_MAX_MB = Number.parseInt(process.env.UPLOAD_MAX_FILE_SIZE_MB || '200', 10);
 const UPLOAD_MAX_BYTES = Math.max(1, UPLOAD_MAX_MB) * 1024 * 1024;
@@ -26,6 +32,9 @@ const GITEA_BASE_URL = String(process.env.GITEA_BASE_URL || '').trim();
 const GITEA_ADMIN_TOKEN = String(process.env.GITEA_ADMIN_TOKEN || '').trim();
 const GITEA_DEFAULT_OWNER = String(process.env.GITEA_DEFAULT_OWNER || '').trim();
 const GITEA_PRIVATE_REPO = String(process.env.GITEA_PRIVATE_REPO || 'true').trim() === 'true';
+const AI_API_BASE = String(process.env.AI_API_BASE || '').trim();
+const AI_MODEL = String(process.env.AI_MODEL || '').trim();
+const AI_TIMEOUT_MS = Number.parseInt(process.env.AI_TIMEOUT_MS || '20000', 10);
 
 const ALLOWED_EXTENSIONS = new Set([
   '.pdf',
@@ -128,11 +137,11 @@ const STATUS_TRANSITIONS = {
 };
 const SUBMISSION_FIELD_SCHEMA = {
   proposal: ['problem', 'goals', 'scope', 'approach', 'plan', 'teamMembers'],
-  milestone_1: ['researchConclusion', 'feasibility', 'riskList', 'featureScope'],
-  milestone_2: ['designPlan', 'prototype', 'keyPath'],
-  midterm: ['progressCompare', 'demoLink', 'issuesAdjust'],
+  milestone_1: ['progressSummary', 'coreContribution', 'codeRepo', 'codeCommit'],
+  milestone_2: ['featureSummary', 'validation', 'coreContribution', 'codeRepo', 'codeCommit'],
+  midterm: ['progressCompare', 'issuesAdjust', 'codeRepo', 'codeCommit'],
   milestone_3: ['integration', 'testingFeedback', 'mvpValidation'],
-  final: ['deliverables', 'demo', 'techSummary', 'reflection'],
+  final: ['deliverables', 'demo', 'techSummary', 'reflection', 'codeRepo', 'codeCommit'],
   showcase: ['showcaseSummary'],
   legacy: []
 };
@@ -143,13 +152,13 @@ const SUBMISSION_FIELD_LABELS = {
   approach: '技术路线',
   plan: '计划',
   teamMembers: '成员列表',
-  researchConclusion: '需求调研结论',
-  feasibility: '可行性分析',
-  riskList: '风险清单',
-  featureScope: '功能范围说明',
-  designPlan: '方案设计说明',
-  prototype: '原型/架构图',
-  keyPath: '关键路径与技术难点',
+  progressSummary: '本次完成内容',
+  coreContribution: '核心贡献（你做了什么）',
+  evidence: '证据链接/图片/视频（可选）',
+  diagram: '流程图/架构图（可选）',
+  nextPlan: '下一步计划（可选）',
+  featureSummary: '功能完成情况',
+  validation: '实验/测试验证与结果',
   progressCompare: '进度对比',
   demoLink: '演示链接',
   issuesAdjust: '问题与调整',
@@ -160,6 +169,8 @@ const SUBMISSION_FIELD_LABELS = {
   demo: '演示说明',
   techSummary: '技术总结',
   reflection: '反思与展望',
+  codeRepo: '代码仓库链接（Gitea）',
+  codeCommit: '本次提交说明 / Commit ID',
   showcaseSummary: '展示说明'
 };
 let db;
@@ -455,6 +466,7 @@ function appendFileSafe(archive, absolutePath, archivePath, missing) {
 
 ensureDir(UPLOAD_DIR);
 ensureDir(LOG_DIR);
+ensureDir(ASSESSMENT_DIR);
 if (AUTH_SECRET === 'change-me-in-production') {
   fastify.log.warn('AUTH_SECRET 未设置，建议在生产环境中设置安全密钥。');
 }
@@ -463,9 +475,55 @@ fastify.register(require('@fastify/cors'), { origin: true });
 fastify.register(require('@fastify/multipart'), {
   limits: { fileSize: UPLOAD_MAX_BYTES }
 });
+const effectiveWebRoot = fs.existsSync(WEB_ROOT) ? WEB_ROOT : DEFAULT_WEB_ROOT;
+if (WEB_SPA) {
+  const legacyRedirects = {
+    '/workspace.html': '/workspace',
+    '/smart_workspace.html': '/workspace',
+    '/projects.html': '/projects',
+    '/downloads.html': '/downloads',
+    '/knowledge.html': '/knowledge',
+    '/competencies.html': '/competencies',
+    '/study.html': '/study',
+    '/tools.html': '/tools',
+    '/showcase.html': '/showcase',
+    '/teacher.html': '/teacher',
+    '/login.html': '/login',
+    '/register.html': '/register',
+    '/charter.html': '/tools/charter',
+    '/pre_research.html': '/tools/pre_research',
+    '/literature.html': '/tools/literature',
+    '/innovation.html': '/tools/innovation',
+    '/wbs.html': '/tools/wbs',
+    '/kanban.html': '/tools/kanban',
+    '/architect.html': '/tools/architect',
+    '/architect_guide.html': '/tools/architect-guide',
+    '/tools/charter.html': '/tools/charter',
+    '/tools/pre_research.html': '/tools/pre_research',
+    '/tools/literature.html': '/tools/literature',
+    '/tools/innovation.html': '/tools/innovation',
+    '/tools/wbs.html': '/tools/wbs',
+    '/tools/kanban.html': '/tools/kanban',
+    '/tools/architect_guide.html': '/tools/architect-guide',
+    '/tools/architect.html': '/tools/architect',
+    '/tools/navigator.html': '/tools'
+  };
+  Object.entries(legacyRedirects).forEach(([from, to]) => {
+    fastify.get(from, (request, reply) => {
+      const base = `http://${request.headers.host || 'localhost'}`;
+      const { search } = new URL(request.raw.url || from, base);
+      reply.redirect(`${to}${search || ''}`);
+    });
+  });
+}
 fastify.register(require('@fastify/static'), {
-  root: path.join(__dirname, '../web'),
+  root: effectiveWebRoot,
   prefix: '/',
+  decorateReply: false
+});
+fastify.register(require('@fastify/static'), {
+  root: path.join(__dirname, '../assessment-data-manager'),
+  prefix: '/assessment/',
   decorateReply: false
 });
 fastify.register(require('@fastify/static'), {
@@ -473,6 +531,22 @@ fastify.register(require('@fastify/static'), {
   prefix: '/uploads/',
   decorateReply: false
 });
+
+if (WEB_SPA) {
+  fastify.setNotFoundHandler((request, reply) => {
+    const url = request.raw?.url || '';
+    if (url.startsWith(API_PREFIX) || url.startsWith('/uploads/') || url.startsWith('/assessment/')) {
+      reply.code(404).send({ error: 'Not Found' });
+      return;
+    }
+    const indexPath = path.join(effectiveWebRoot, 'index.html');
+    if (!fs.existsSync(indexPath)) {
+      reply.code(404).send({ error: 'Not Found' });
+      return;
+    }
+    reply.type('text/html').send(fs.createReadStream(indexPath));
+  });
+}
 
 fastify.addHook('preHandler', (request, reply, done) => {
   if (!request.url.startsWith(API_PREFIX)) return done();
@@ -705,6 +779,47 @@ async function requestGitea(pathname, options = {}) {
   return { ok: res.ok, status: res.status, data };
 }
 
+async function requestAiChat(messages, apiKey) {
+  if (!AI_API_BASE) {
+    throw new Error('AI_API_BASE 未配置');
+  }
+  if (!apiKey) {
+    throw new Error('AI API Key 未配置');
+  }
+  if (typeof fetch !== 'function') {
+    throw new Error('当前 Node 版本不支持 fetch');
+  }
+  const base = AI_API_BASE.replace(/\/$/, '');
+  const url = `${base}/chat/completions`;
+  const payload = {
+    model: AI_MODEL || 'gpt-4o-mini',
+    messages: Array.isArray(messages) ? messages : [],
+    temperature: 0.7
+  };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), Math.max(1000, AI_TIMEOUT_MS));
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const message = data?.error?.message || data?.message || 'AI 请求失败';
+      throw new Error(message);
+    }
+    const content = data?.choices?.[0]?.message?.content || '';
+    return { content, raw: data };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function ensureGiteaRepo(project, request) {
   if (!project || project.gitea_repo_url) return project?.gitea_repo_url || null;
   if (!GITEA_BASE_URL || !GITEA_ADMIN_TOKEN || !GITEA_DEFAULT_OWNER) return null;
@@ -829,6 +944,36 @@ fastify.post(`${API_PREFIX}/auth/login`, async (request, reply) => {
 fastify.get(`${API_PREFIX}/auth/me`, async (request, reply) => {
   if (!requireAuth(request, reply)) return;
   return { user: request.user };
+});
+
+fastify.post(`${API_PREFIX}/ai/chat`, async (request, reply) => {
+  if (!requireAuth(request, reply)) return;
+  const payload = request.body || {};
+  let messages = payload.messages;
+  if (!Array.isArray(messages) || !messages.length) {
+    const prompt = String(payload.prompt || payload.message || '').trim();
+    if (prompt) {
+      messages = [{ role: 'user', content: prompt }];
+    }
+  }
+  if (!Array.isArray(messages) || !messages.length) {
+    reply.code(400);
+    return { error: '缺少消息内容' };
+  }
+  const headerKey = request.headers['x-model-key'];
+  const apiKey = String(headerKey || process.env.AI_API_KEY || '').trim();
+  if (!apiKey) {
+    reply.code(400);
+    return { error: 'AI Key 未配置' };
+  }
+  try {
+    const result = await requestAiChat(messages, apiKey);
+    logAudit('ai.chat', request, { messageCount: messages.length });
+    return { reply: result.content };
+  } catch (err) {
+    reply.code(502);
+    return { error: err.message || 'AI 服务不可用' };
+  }
 });
 
 fastify.patch(`${API_PREFIX}/users/me`, async (request, reply) => {
@@ -1518,6 +1663,12 @@ fastify.post(`${API_PREFIX}/projects/:id/milestones`, async (request, reply) => 
   const title = String(payload.title || '').trim();
   const rawPhase = payload.phase ?? payload.description ?? 'm1';
   const description = String(rawPhase || 'm1').trim() || 'm1'; // reusing description field for phase/tag
+  const deadline = payload.deadline ? String(payload.deadline).trim() : null;
+  const assignee = payload.assignee ? String(payload.assignee).trim() : null;
+  const startDate = payload.start_date ?? payload.startDate ?? payload.start ?? null;
+  const endDate = payload.end_date ?? payload.endDate ?? payload.end ?? null;
+  const output = payload.output;
+  const deliverablesPayload = payload.deliverables;
   const rawParentId = payload.parent_id ?? payload.parentId ?? null;
   let parentId = rawParentId === '' ? null : rawParentId;
   if (parentId !== null && parentId !== undefined) {
@@ -1549,10 +1700,34 @@ fastify.post(`${API_PREFIX}/projects/:id/milestones`, async (request, reply) => 
     sortOrder = Number.isFinite(maxOrder) ? maxOrder + 1 : 0;
   }
 
+  let deliverables = null;
+  if (deliverablesPayload !== undefined) {
+    if (typeof deliverablesPayload === 'string') {
+      deliverables = deliverablesPayload;
+    } else {
+      deliverables = JSON.stringify(deliverablesPayload);
+    }
+  } else if (output !== undefined) {
+    deliverables = JSON.stringify({ output: String(output || '').trim() });
+  }
+
   const info = db.run(
-    `INSERT INTO project_milestones (project_id, title, description, parent_id, sort_order, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)`,
-    [projectId, title, description, parentId, sortOrder, now(), now()]
+    `INSERT INTO project_milestones (project_id, title, description, parent_id, sort_order, assignee, start_date, end_date, deadline, deliverables, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
+    [
+      projectId,
+      title,
+      description,
+      parentId,
+      sortOrder,
+      assignee,
+      startDate ? String(startDate).trim() : null,
+      endDate ? String(endDate).trim() : null,
+      deadline,
+      deliverables,
+      now(),
+      now()
+    ]
   );
   return { success: true, id: info.lastInsertRowid };
 });
@@ -1563,15 +1738,53 @@ fastify.patch(`${API_PREFIX}/milestones/:id`, async (request, reply) => {
   const payload = request.body || {};
   const status = payload.status; // e.g. move to another phase or mark done
   const description = payload.phase ?? payload.description; // update phase
+  const deadline = payload.deadline;
+  const assignee = payload.assignee;
+  const title = payload.title;
+  const startDate = payload.start_date ?? payload.startDate ?? payload.start;
+  const endDate = payload.end_date ?? payload.endDate ?? payload.end;
+  const output = payload.output;
+  const deliverablesPayload = payload.deliverables;
   const hasParent = Object.prototype.hasOwnProperty.call(payload, 'parent_id') || Object.prototype.hasOwnProperty.call(payload, 'parentId');
   const hasSort = Object.prototype.hasOwnProperty.call(payload, 'sort_order') || Object.prototype.hasOwnProperty.call(payload, 'sortOrder');
 
   // Construct update
+  if (title !== undefined) {
+      db.run('UPDATE project_milestones SET title = ?, updated_at = ? WHERE id = ?', [String(title || '').trim(), now(), id]);
+  }
   if (status) {
       db.run('UPDATE project_milestones SET status = ?, updated_at = ? WHERE id = ?', [status, now(), id]);
   }
   if (description !== undefined) {
       db.run('UPDATE project_milestones SET description = ?, updated_at = ? WHERE id = ?', [description, now(), id]);
+  }
+  if (deadline !== undefined) {
+      db.run('UPDATE project_milestones SET deadline = ?, updated_at = ? WHERE id = ?', [deadline ? String(deadline).trim() : null, now(), id]);
+  }
+  if (assignee !== undefined) {
+      db.run('UPDATE project_milestones SET assignee = ?, updated_at = ? WHERE id = ?', [assignee ? String(assignee).trim() : null, now(), id]);
+  }
+  if (startDate !== undefined) {
+      db.run('UPDATE project_milestones SET start_date = ?, updated_at = ? WHERE id = ?', [startDate ? String(startDate).trim() : null, now(), id]);
+  }
+  if (endDate !== undefined) {
+      db.run('UPDATE project_milestones SET end_date = ?, updated_at = ? WHERE id = ?', [endDate ? String(endDate).trim() : null, now(), id]);
+  }
+  if (deliverablesPayload !== undefined || output !== undefined) {
+      const row = db.get('SELECT deliverables FROM project_milestones WHERE id = ?', [id]);
+      let current = safeParseJson(row?.deliverables) || {};
+      if (deliverablesPayload !== undefined) {
+        if (typeof deliverablesPayload === 'string') {
+          const parsed = safeParseJson(deliverablesPayload);
+          current = parsed ? { ...current, ...parsed } : current;
+        } else if (typeof deliverablesPayload === 'object' && deliverablesPayload !== null) {
+          current = { ...current, ...deliverablesPayload };
+        }
+      }
+      if (output !== undefined) {
+        current = { ...current, output: String(output || '').trim() };
+      }
+      db.run('UPDATE project_milestones SET deliverables = ?, updated_at = ? WHERE id = ?', [JSON.stringify(current), now(), id]);
   }
   if (hasParent) {
       const rawParentId = payload.parent_id ?? payload.parentId ?? null;
@@ -1595,6 +1808,51 @@ fastify.patch(`${API_PREFIX}/milestones/:id`, async (request, reply) => {
       }
       db.run('UPDATE project_milestones SET sort_order = ?, updated_at = ? WHERE id = ?', [sortOrder, now(), id]);
   }
+  return { success: true };
+});
+
+fastify.delete(`${API_PREFIX}/milestones/:id`, async (request, reply) => {
+  if (!requireRole(request, reply, ['student', 'teacher'])) return;
+  const id = parseProjectId(request.params.id);
+  db.run('DELETE FROM project_milestones WHERE id = ?', [id]);
+  return { success: true };
+});
+
+// --- Project Blueprint API ---
+fastify.get(`${API_PREFIX}/projects/:id/blueprint`, async (request, reply) => {
+  if (!requireAuth(request, reply)) return;
+  const projectId = parseProjectId(request.params.id);
+  const row = db.get('SELECT data FROM project_blueprints WHERE project_id = ?', [projectId]);
+  return { data: row ? safeParseJson(row.data) : null };
+});
+
+fastify.post(`${API_PREFIX}/projects/:id/blueprint`, async (request, reply) => {
+  if (!requireRole(request, reply, ['student', 'teacher'])) return;
+  const projectId = parseProjectId(request.params.id);
+  const payload = request.body || {};
+  
+  // Validate basic structure
+  if (!payload.strategy || !Array.isArray(payload.wbs)) {
+    reply.code(400);
+    return { error: 'Invalid blueprint format' };
+  }
+
+  const dataJson = JSON.stringify(payload);
+  const existing = db.get('SELECT id FROM project_blueprints WHERE project_id = ?', [projectId]);
+  const nowAt = now();
+  
+  if (existing) {
+    db.run(
+      'UPDATE project_blueprints SET data = ?, updated_at = ? WHERE id = ?',
+      [dataJson, nowAt, existing.id]
+    );
+  } else {
+    db.run(
+      'INSERT INTO project_blueprints (project_id, data, created_at, updated_at) VALUES (?, ?, ?, ?)',
+      [projectId, dataJson, nowAt, nowAt]
+    );
+  }
+  
   return { success: true };
 });
 
@@ -2123,6 +2381,119 @@ fastify.get(`${API_PREFIX}/stats`, async (request, reply) => {
   );
   logAudit('stats.view', request, { filters: request.query || {} });
   return { total: totalRow ? totalRow.count : 0, byStatus };
+});
+
+// --- Assessment Data Manager ---
+fastify.get(`${API_PREFIX}/assessments`, async (request, reply) => {
+  if (!requireRole(request, reply, ['teacher'])) return;
+  const files = db.all(
+    'SELECT id, title, original_name, file_path, file_size, uploaded_by, created_at FROM assessment_files ORDER BY created_at DESC'
+  );
+  return { files };
+});
+
+fastify.post(`${API_PREFIX}/assessments`, async (request, reply) => {
+  if (!requireRole(request, reply, ['teacher'])) return;
+  let fields;
+  let tempFiles;
+  try {
+    const collected = await collectMultipart(request);
+    fields = collected.fields;
+    tempFiles = collected.tempFiles;
+  } catch (err) {
+    cleanupTempFiles(tempFiles || []);
+    reply.code(400);
+    return { error: err.message || '上传失败' };
+  }
+  if (!tempFiles || tempFiles.length !== 1) {
+    cleanupTempFiles(tempFiles || []);
+    reply.code(400);
+    return { error: '请上传单个 CSV 文件' };
+  }
+  const file = tempFiles[0];
+  const safeName = sanitizeName(file.originalName) || 'assessment.csv';
+  const finalName = `${Date.now()}_${safeName}`;
+  const finalPath = path.join(ASSESSMENT_DIR, finalName);
+  try {
+    fs.renameSync(file.tmpPath, finalPath);
+  } catch (err) {
+    cleanupTempFiles(tempFiles || []);
+    reply.code(500);
+    return { error: '保存文件失败' };
+  }
+  const stats = fs.statSync(finalPath);
+  const title = String(fields?.title || '').trim();
+  const createdAt = now();
+  const info = db.run(
+    'INSERT INTO assessment_files (title, original_name, file_path, file_size, uploaded_by, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+    [title, safeName, finalName, stats.size, request.user?.id || null, createdAt]
+  );
+  logAudit('assessment.upload', request, { fileId: info.lastInsertRowid, fileName: safeName });
+  return {
+    success: true,
+    file: {
+      id: info.lastInsertRowid,
+      title,
+      original_name: safeName,
+      file_path: finalName,
+      file_size: stats.size,
+      created_at: createdAt
+    }
+  };
+});
+
+fastify.get(`${API_PREFIX}/assessments/:id/download`, async (request, reply) => {
+  if (!requireRole(request, reply, ['teacher'])) return;
+  const fileId = parseProjectId(request.params.id);
+  if (!fileId) {
+    reply.code(400);
+    return { error: '文件ID无效' };
+  }
+  const row = db.get('SELECT * FROM assessment_files WHERE id = ?', [fileId]);
+  if (!row) {
+    reply.code(404);
+    return { error: '文件不存在' };
+  }
+  const absolutePath = path.join(ASSESSMENT_DIR, row.file_path);
+  if (!absolutePath.startsWith(ASSESSMENT_DIR)) {
+    reply.code(403);
+    return { error: 'Access denied' };
+  }
+  if (!fs.existsSync(absolutePath)) {
+    reply.code(404);
+    return { error: '文件已丢失' };
+  }
+  const ext = path.extname(row.original_name || '').toLowerCase();
+  const mimeType = (EXTENSION_MIME_MAP[ext] && EXTENSION_MIME_MAP[ext][0]) || 'text/csv';
+  reply.header('Content-Type', mimeType);
+  reply.header('Content-Disposition', `attachment; filename="${encodeURIComponent(row.original_name)}"`);
+  logAudit('assessment.download', request, { fileId });
+  return reply.send(fs.createReadStream(absolutePath));
+});
+
+fastify.delete(`${API_PREFIX}/assessments/:id`, async (request, reply) => {
+  if (!requireRole(request, reply, ['teacher'])) return;
+  const fileId = parseProjectId(request.params.id);
+  if (!fileId) {
+    reply.code(400);
+    return { error: '文件ID无效' };
+  }
+  const row = db.get('SELECT * FROM assessment_files WHERE id = ?', [fileId]);
+  if (!row) {
+    reply.code(404);
+    return { error: '文件不存在' };
+  }
+  const absolutePath = path.join(ASSESSMENT_DIR, row.file_path);
+  try {
+    if (absolutePath.startsWith(ASSESSMENT_DIR) && fs.existsSync(absolutePath)) {
+      fs.unlinkSync(absolutePath);
+    }
+  } catch (err) {
+    fastify.log.error(err);
+  }
+  db.run('DELETE FROM assessment_files WHERE id = ?', [fileId]);
+  logAudit('assessment.delete', request, { fileId });
+  return { success: true };
 });
 
 // --- Resources API ---

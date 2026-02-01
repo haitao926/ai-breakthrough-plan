@@ -1,0 +1,335 @@
+<template>
+  <div class="competencies-page bg-gray-50 text-gray-800 scroll-smooth">
+    <!-- 导航栏 -->
+    <nav class="fixed w-full z-50 bg-white/90 backdrop-blur-md border-b border-gray-200/50 transition-all duration-300">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16 items-center">
+          <div class="flex items-center gap-3 shrink-0">
+            <RouterLink to="/" class="flex items-center gap-2 group">
+              <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold shadow-md group-hover:bg-indigo-700 transition">AI</div>
+              <span class="font-bold text-xl tracking-tight text-gray-900 group-hover:text-indigo-600 transition">破壁计划</span>
+            </RouterLink>
+          </div>
+
+          <div class="hidden md:flex items-center space-x-1">
+            <RouterLink to="/knowledge" class="px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 transition-all flex items-center">
+              <i class="fas fa-book-reader mr-2 text-xs"></i>创新知识库
+            </RouterLink>
+            <RouterLink to="/competencies" class="px-3 py-2 rounded-md text-sm font-medium bg-indigo-50 text-indigo-700 transition-all flex items-center">
+              <i class="fas fa-graduation-cap mr-2 text-xs"></i>学术指导
+            </RouterLink>
+            <RouterLink to="/projects" class="px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 transition-all flex items-center">
+              <i class="fas fa-layer-group mr-2 text-xs"></i>项目库
+            </RouterLink>
+            <RouterLink to="/downloads" class="px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 transition-all flex items-center">
+              <i class="fas fa-folder-open mr-2 text-xs"></i>课程资料库
+            </RouterLink>
+          </div>
+
+          <div class="flex gap-3 items-center shrink-0">
+            <RouterLink to="/workspace" class="inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all transform hover:-translate-y-0.5">
+              <i class="fas fa-rocket mr-2"></i> 进入工作台
+            </RouterLink>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Header -->
+    <header class="bg-white pt-32 pb-16 border-b border-gray-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-6">
+          核心能力<span class="text-indigo-600">学术指导</span>
+        </h1>
+        <p class="text-lg text-gray-500 max-w-3xl mx-auto leading-relaxed">
+          在这里建立你的“项目底层逻辑”。<br>
+          先选定赛道方向，再掌握通识技能，为后续的学科探索打下坚实基础。
+        </p>
+      </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-24">
+      <!-- PART 1 -->
+      <section>
+        <div class="flex items-center gap-3 mb-8">
+          <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl">
+            <i class="fas fa-compass"></i>
+          </div>
+          <div>
+            <h2 class="text-2xl font-bold text-gray-900">第一步：选择你的创新赛道</h2>
+            <p class="text-sm text-gray-500">你是谁？你想解决什么问题？</p>
+          </div>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-8 mb-12">
+          <div class="bg-blue-50 rounded-2xl p-8 border border-blue-100 relative overflow-hidden group hover:shadow-lg transition">
+            <div class="relative z-10">
+              <div class="w-12 h-12 bg-white text-blue-600 rounded-xl flex items-center justify-center text-2xl mb-6 shadow-sm"><i class="fas fa-book-open"></i></div>
+              <h3 class="text-xl font-bold text-gray-900 mb-1">研究项目</h3>
+              <p class="text-xs font-bold text-blue-600 mb-4 uppercase tracking-wide">Research Project</p>
+              <p class="text-gray-600 text-sm mb-6 min-h-[60px]">聚焦提出学术问题，通过严谨的研究方法寻找证据，形成有逻辑支持的结论。</p>
+              <div class="flex gap-2">
+                <span class="px-2 py-1 bg-white rounded-md text-xs font-bold text-blue-500 border border-blue-100">学术论文</span>
+                <span class="px-2 py-1 bg-white rounded-md text-xs font-bold text-blue-500 border border-blue-100">数据分析</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-green-50 rounded-2xl p-8 border border-green-100 relative overflow-hidden group hover:shadow-lg transition">
+            <div class="relative z-10">
+              <div class="w-12 h-12 bg-white text-green-600 rounded-xl flex items-center justify-center text-2xl mb-6 shadow-sm"><i class="fas fa-lightbulb"></i></div>
+              <h3 class="text-xl font-bold text-gray-900 mb-1">创新项目</h3>
+              <p class="text-xs font-bold text-green-600 mb-4 uppercase tracking-wide">Innovation Project</p>
+              <p class="text-gray-600 text-sm mb-6 min-h-[60px]">从现实问题出发，结合设计思维，提出新颖可行的解决方案（产品/服务）。</p>
+              <div class="flex gap-2">
+                <span class="px-2 py-1 bg-white rounded-md text-xs font-bold text-green-500 border border-green-100">产品原型</span>
+                <span class="px-2 py-1 bg-white rounded-md text-xs font-bold text-green-500 border border-green-100">设计思维</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-red-50 rounded-2xl p-8 border border-red-100 relative overflow-hidden group hover:shadow-lg transition">
+            <div class="relative z-10">
+              <div class="w-12 h-12 bg-white text-red-600 rounded-xl flex items-center justify-center text-2xl mb-6 shadow-sm"><i class="fas fa-hands-helping"></i></div>
+              <h3 class="text-xl font-bold text-gray-900 mb-1">公益项目</h3>
+              <p class="text-xs font-bold text-red-600 mb-4 uppercase tracking-wide">Community Impact</p>
+              <p class="text-gray-600 text-sm mb-6 min-h-[60px]">关注社会议题，通过实地行动推动改变，强调行动的发生和社会影响。</p>
+              <div class="flex gap-2">
+                <span class="px-2 py-1 bg-white rounded-md text-xs font-bold text-red-500 border border-red-100">社会行动</span>
+                <span class="px-2 py-1 bg-white rounded-md text-xs font-bold text-red-500 border border-red-100">公众倡导</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid lg:grid-cols-2 gap-8">
+          <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <h4 class="font-bold text-gray-900 mb-4 flex items-center"><i class="fas fa-random text-gray-400 mr-2"></i> 同一话题，不同切入点 (Example)</h4>
+            <div class="space-y-4 text-sm">
+              <p class="text-gray-500 text-xs">以“保护方言”为例：</p>
+              <div class="flex items-start gap-3">
+                <span class="shrink-0 w-16 font-bold text-blue-600">研究类</span>
+                <span class="text-gray-600">调查青少年方言使用频率，分析语音演变。</span>
+              </div>
+              <div class="flex items-start gap-3">
+                <span class="shrink-0 w-16 font-bold text-green-600">创新类</span>
+                <span class="text-gray-600">开发方言学习App，设计互动桌游。</span>
+              </div>
+              <div class="flex items-start gap-3">
+                <span class="shrink-0 w-16 font-bold text-red-600">公益类</span>
+                <span class="text-gray-600">发起方言故事征集，举办演讲比赛。</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <h4 class="font-bold text-gray-900 mb-4 flex items-center"><i class="fas fa-exchange-alt text-gray-400 mr-2"></i> 校内项目转化表</h4>
+            <table class="w-full text-sm text-left">
+              <tbody class="divide-y divide-gray-100">
+                <tr><td class="py-2 text-gray-500">IB: EE / IA</td><td class="py-2 text-right font-bold text-blue-600">→ 研究项目</td></tr>
+                <tr><td class="py-2 text-gray-500">科创/发明</td><td class="py-2 text-right font-bold text-green-600">→ 创新项目</td></tr>
+                <tr><td class="py-2 text-gray-500">社团/志愿服务</td><td class="py-2 text-right font-bold text-red-600">→ 公益项目</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- PART 2 -->
+      <section>
+        <div class="flex items-center gap-3 mb-8">
+          <div class="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xl">
+            <i class="fas fa-layer-group"></i>
+          </div>
+          <div>
+            <h2 class="text-2xl font-bold text-gray-900">第二步：掌握核心能力</h2>
+            <p class="text-sm text-gray-500">完成项目所需的“通识能力”与“专业技能”。</p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap gap-4 mb-8">
+          <button
+            class="tab-btn px-5 py-2.5 rounded-lg font-bold text-sm border transition shadow-sm"
+            :class="tabClass('general')"
+            @click="showModule('general')"
+          >通识模块 (必修)</button>
+          <button
+            class="tab-btn px-5 py-2.5 rounded-lg font-bold text-sm border transition shadow-sm"
+            :class="tabClass('research')"
+            @click="showModule('research')"
+          >学术研究模块</button>
+          <button
+            class="tab-btn px-5 py-2.5 rounded-lg font-bold text-sm border transition shadow-sm"
+            :class="tabClass('innovation')"
+            @click="showModule('innovation')"
+          >创新行动模块</button>
+          <button
+            class="tab-btn px-5 py-2.5 rounded-lg font-bold text-sm border transition shadow-sm"
+            :class="tabClass('public')"
+            @click="showModule('public')"
+          >公益活动模块</button>
+        </div>
+
+        <div v-show="activeModule === 'general'" class="module-content grid md:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div class="module-card bg-white p-5 rounded-xl border border-gray-100">
+            <div class="text-blue-600 text-2xl mb-3"><i class="fas fa-users"></i></div>
+            <h3 class="font-bold text-gray-900 mb-1">组队指南</h3>
+            <p class="text-xs text-gray-500">如何邀请和吸引队员、凝聚团队。</p>
+          </div>
+          <div class="module-card bg-white p-5 rounded-xl border border-gray-100">
+            <div class="text-blue-600 text-2xl mb-3"><i class="fas fa-clock"></i></div>
+            <h3 class="font-bold text-gray-900 mb-1">时间管理</h3>
+            <p class="text-xs text-gray-500">合理安排分工和计划、巧用甘特图。</p>
+          </div>
+          <div class="module-card bg-white p-5 rounded-xl border border-gray-100">
+            <div class="text-blue-600 text-2xl mb-3"><i class="fas fa-sync-alt"></i></div>
+            <h3 class="font-bold text-gray-900 mb-1">高效团队协作</h3>
+            <p class="text-xs text-gray-500">管理项目和团队以及进行有效协作。</p>
+          </div>
+          <div class="module-card bg-white p-5 rounded-xl border border-gray-100">
+            <div class="text-blue-600 text-2xl mb-3"><i class="fas fa-code-branch"></i></div>
+            <h3 class="font-bold text-gray-900 mb-1">代码管理</h3>
+            <p class="text-xs text-gray-500">学习使用 Git 和 Gitea 进行版本控制与代码提交。</p>
+          </div>
+          <div class="module-card bg-white p-5 rounded-xl border border-gray-100">
+            <div class="text-blue-600 text-2xl mb-3"><i class="fas fa-search"></i></div>
+            <h3 class="font-bold text-gray-900 mb-1">选题指南</h3>
+            <p class="text-xs text-gray-500">在现实生活中找到有趣、影响较大的课题。</p>
+          </div>
+          <div class="module-card bg-white p-5 rounded-xl border border-gray-100">
+            <div class="text-blue-600 text-2xl mb-3"><i class="fas fa-coins"></i></div>
+            <h3 class="font-bold text-gray-900 mb-1">财务管理</h3>
+            <p class="text-xs text-gray-500">制定预算、记录账目和进行融资。</p>
+          </div>
+          <div class="module-card bg-white p-5 rounded-xl border border-gray-100">
+            <div class="text-blue-600 text-2xl mb-3"><i class="fas fa-paint-brush"></i></div>
+            <h3 class="font-bold text-gray-900 mb-1">可视化设计</h3>
+            <p class="text-xs text-gray-500">PPT/网站/视频的有效视觉表达。</p>
+          </div>
+          <div class="module-card bg-white p-5 rounded-xl border border-gray-100">
+            <div class="text-blue-600 text-2xl mb-3"><i class="fas fa-microphone-alt"></i></div>
+            <h3 class="font-bold text-gray-900 mb-1">演讲与表达</h3>
+            <p class="text-xs text-gray-500">现场展示备战宝典，脱颖而出。</p>
+          </div>
+        </div>
+
+        <div v-show="activeModule === 'research'" class="module-content grid md:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div class="module-card bg-white p-5 rounded-xl border border-gray-100">
+            <div class="text-indigo-600 text-2xl mb-3"><i class="fas fa-book-open"></i></div>
+            <h3 class="font-bold text-gray-900 mb-1">文献阅读</h3>
+            <p class="text-xs text-gray-500">找到可靠文献并高效阅读，建立理论框架。</p>
+          </div>
+          <div class="module-card bg-white p-5 rounded-xl border border-gray-100">
+            <div class="text-indigo-600 text-2xl mb-3"><i class="fas fa-chart-bar"></i></div>
+            <h3 class="font-bold text-gray-900 mb-1">定量研究</h3>
+            <p class="text-xs text-gray-500">通过数据分析进行系统性量化考察。</p>
+          </div>
+          <div class="module-card bg-white p-5 rounded-xl border border-gray-100">
+            <div class="text-indigo-600 text-2xl mb-3"><i class="fas fa-comments"></i></div>
+            <h3 class="font-bold text-gray-900 mb-1">定性研究</h3>
+            <p class="text-xs text-gray-500">通过观测、访谈分析行为和观点。</p>
+          </div>
+          <div class="module-card bg-white p-5 rounded-xl border border-gray-100">
+            <div class="text-indigo-600 text-2xl mb-3"><i class="fas fa-pen-fancy"></i></div>
+            <h3 class="font-bold text-gray-900 mb-1">论文写作指南</h3>
+            <p class="text-xs text-gray-500">掌握学术论文的结构与写作要求。</p>
+          </div>
+        </div>
+
+        <div v-show="activeModule === 'innovation'" class="module-content grid md:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div class="module-card bg-white p-5 rounded-xl border border-gray-100">
+            <div class="text-green-600 text-2xl mb-3"><i class="fas fa-search-location"></i></div>
+            <h3 class="font-bold text-gray-900 mb-1">前期调研</h3>
+            <p class="text-xs text-gray-500">精准把握现象成因、剖析受众需求。</p>
+          </div>
+          <div class="module-card bg-white p-5 rounded-xl border border-gray-100">
+            <div class="text-green-600 text-2xl mb-3"><i class="fas fa-drafting-compass"></i></div>
+            <h3 class="font-bold text-gray-900 mb-1">设计思维</h3>
+            <p class="text-xs text-gray-500">拆解创新流程，从0到1构建理念。</p>
+          </div>
+          <div class="module-card bg-white p-5 rounded-xl border border-gray-100">
+            <div class="text-green-600 text-2xl mb-3"><i class="fas fa-bullhorn"></i></div>
+            <h3 class="font-bold text-gray-900 mb-1">市场宣传</h3>
+            <p class="text-xs text-gray-500">制定Go-to-Market策略，提高影响力。</p>
+          </div>
+          <div class="module-card bg-white p-5 rounded-xl border border-gray-100">
+            <div class="text-green-600 text-2xl mb-3"><i class="fas fa-file-alt"></i></div>
+            <h3 class="font-bold text-gray-900 mb-1">创新报告写作</h3>
+            <p class="text-xs text-gray-500">商业计划书/产品报告的写作要求。</p>
+          </div>
+        </div>
+
+        <div v-show="activeModule === 'public'" class="module-content grid md:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div class="module-card bg-white p-5 rounded-xl border border-gray-100">
+            <div class="text-red-600 text-2xl mb-3"><i class="fas fa-search-plus"></i></div>
+            <h3 class="font-bold text-gray-900 mb-1">前期调研</h3>
+            <p class="text-xs text-gray-500">把握社会问题成因、剖析受助群体需求。</p>
+          </div>
+          <div class="module-card bg-white p-5 rounded-xl border border-gray-100">
+            <div class="text-red-600 text-2xl mb-3"><i class="fas fa-hand-holding-heart"></i></div>
+            <h3 class="font-bold text-gray-900 mb-1">行动实践</h3>
+            <p class="text-xs text-gray-500">产出可行解决方案，验证行动效果。</p>
+          </div>
+          <div class="module-card bg-white p-5 rounded-xl border border-gray-100">
+            <div class="text-red-600 text-2xl mb-3"><i class="fas fa-share-alt"></i></div>
+            <h3 class="font-bold text-gray-900 mb-1">市场宣传</h3>
+            <p class="text-xs text-gray-500">利用新媒体提高公益项目传播度。</p>
+          </div>
+          <div class="module-card bg-white p-5 rounded-xl border border-gray-100">
+            <div class="text-red-600 text-2xl mb-3"><i class="fas fa-edit"></i></div>
+            <h3 class="font-bold text-gray-900 mb-1">公益报告写作</h3>
+            <p class="text-xs text-gray-500">社会影响力报告的写作逻辑。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="mt-20 bg-gray-900 rounded-2xl p-8 text-center text-white relative overflow-hidden">
+        <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3N2Zz4=')] opacity-20"></div>
+        <div class="relative z-10">
+          <h2 class="text-2xl font-bold mb-4">掌握了核心能力？</h2>
+          <p class="text-gray-400 mb-8 max-w-lg mx-auto">现在，去资源库寻找你的专业工具，或者去项目库开始你的实战。</p>
+          <div class="flex gap-4 justify-center">
+            <RouterLink to="/downloads" class="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-bold transition flex items-center">
+              <i class="fas fa-folder-open mr-2"></i> 课程资源库
+            </RouterLink>
+            <RouterLink to="/projects" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold shadow-lg transition flex items-center">
+              <i class="fas fa-rocket mr-2"></i> 前往项目库
+            </RouterLink>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="bg-white border-t border-gray-200 py-12 mt-12">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm text-gray-500">
+        <p>© 2025 HAI Tech Lab | 核心素养体系</p>
+      </div>
+    </footer>
+  </div>
+</template>
+
+<script setup>
+import { ref } from 'vue';
+
+const activeModule = ref('general');
+
+function showModule(moduleId) {
+  activeModule.value = moduleId;
+}
+
+function tabClass(id) {
+  if (activeModule.value === id) {
+    return 'active bg-indigo-600 text-white border-transparent';
+  }
+  return 'bg-white text-gray-600 border-gray-200 hover:border-indigo-500';
+}
+</script>
+
+<style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+body { font-family: 'Inter', sans-serif; }
+.glass { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255, 255, 255, 0.3); }
+.module-card { transition: all 0.3s ease; }
+.module-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.1); }
+.tab-btn.active { background-color: #4f46e5; color: white; border-color: #4f46e5; }
+</style>

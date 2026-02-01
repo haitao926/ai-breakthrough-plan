@@ -11,6 +11,8 @@ INNOVATION_DIR="$BASE_DIR/apps/api"
 INNOVATION_PORT=8090
 GITEA_PORT=3000
 LOG_DIR="$BASE_DIR/storage/logs"
+WEB_VUE_DIR="$BASE_DIR/apps/web-vue"
+WEB_VUE_DIST="$WEB_VUE_DIR/dist"
 
 # --- 清理函数 ---
 cleanup() {
@@ -64,6 +66,26 @@ if ! command -v node &> /dev/null; then
     echo "❌ 错误: 未找到 Node.js，请先安装。"
     cleanup
     exit 1
+fi
+
+# 3.1 构建 Vue 前端（如存在）
+if [ -d "$WEB_VUE_DIR" ]; then
+    echo "🧩 检查 Vue 前端..."
+    if [ ! -d "$WEB_VUE_DIR/node_modules" ]; then
+        echo "📦 正在安装 Vue 前端依赖..."
+        (cd "$WEB_VUE_DIR" && npm install --silent)
+    fi
+    if [ ! -d "$WEB_VUE_DIST" ] || [ "$FORCE_WEB_BUILD" = "1" ]; then
+        echo "🏗️  正在构建 Vue 前端..."
+        (cd "$WEB_VUE_DIR" && npm run build --silent)
+    fi
+    if [ -d "$WEB_VUE_DIST" ]; then
+        export WEB_ROOT="$WEB_VUE_DIST"
+        export WEB_SPA="true"
+        echo "✅ Vue 前端构建完成，将由 API 进行静态托管"
+    else
+        echo "⚠️ Vue 前端未构建成功，将尝试使用已有静态资源"
+    fi
 fi
 
 # 4. 进入平台目录
