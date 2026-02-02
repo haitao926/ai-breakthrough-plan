@@ -188,6 +188,58 @@ const dataKey = computed(() => {
   return 'ai_course_kanban';
 });
 
+function normalizeTitle(title) {
+  return String(title || '').trim().toLowerCase();
+}
+
+function getWbsCache() {
+  if (!projectId.value) return { tasks: [] };
+  try {
+    const raw = window.localStorage.getItem(`ai_course_wbs_${projectId.value}`) || '{}';
+    const parsed = JSON.parse(raw);
+    return parsed && Array.isArray(parsed.tasks) ? parsed : { tasks: [] };
+  } catch (e) {
+    return { tasks: [] };
+  }
+}
+
+function parseDeliverables(raw) {
+  if (!raw) return {};
+  if (typeof raw === 'object') return raw;
+  try {
+    return JSON.parse(raw) || {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function syncWbsCacheFromMilestones(milestones) {
+  if (!projectId.value) return;
+  const cache = getWbsCache();
+  const cacheMap = new Map(cache.tasks.map(item => [normalizeTitle(item.title), item.output || '']));
+  const tasks = (milestones || []).map(item => {
+    const deliverables = parseDeliverables(item.deliverables);
+    return {
+      title: item.title,
+      phase: item.description || 'm1',
+      output: deliverables.output || cacheMap.get(normalizeTitle(item.title)) || ''
+    };
+  });
+  window.localStorage.setItem(`ai_course_wbs_${projectId.value}`, JSON.stringify({ tasks }));
+}
+
+function syncWbsCacheFromTasks(taskList) {
+  if (!projectId.value) return;
+  const cache = getWbsCache();
+  const cacheMap = new Map(cache.tasks.map(item => [normalizeTitle(item.title), item.output || '']));
+  const tasks = taskList.map(task => ({
+    title: task.title,
+    phase: task.phase || 'm1',
+    output: cacheMap.get(normalizeTitle(task.title)) || ''
+  }));
+  window.localStorage.setItem(`ai_course_wbs_${projectId.value}`, JSON.stringify({ tasks }));
+}
+
 function normalizeStatus(raw) {
   if (!raw) return 'todo';
   if (['todo', 'doing', 'review', 'done'].includes(raw)) return raw;
@@ -263,9 +315,10 @@ async function loadMilestones() {
       title: item.title,
       status: normalizeStatus(item.status),
       phase: item.description || 'm1',
-      deadline: item.deadline || '',
+      deadline: item.end_date || item.deadline || '',
       assignee: item.assignee || ''
     }));
+    syncWbsCacheFromMilestones(data.milestones || []);
   } catch (err) {
     console.error(err);
     loadLocal();
@@ -310,11 +363,18 @@ async function createTask(title, phase, deadline, assignee) {
     const res = await apiFetch(`/projects/${projectId.value}/milestones`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, phase, deadline, assignee })
+      body: JSON.stringify({
+        title,
+        phase,
+        assignee,
+        end_date: deadline || null,
+        deadline: deadline || null
+      })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '创建失败');
     state.tasks.push({ id: String(data.id), title, status: 'todo', phase, deadline, assignee });
+    syncWbsCacheFromTasks(state.tasks);
     return true;
   } catch (err) {
     addError.value = `创建失败：${err.message}`;
@@ -353,6 +413,7 @@ async function removeTask(id) {
       const data = await res.json();
       throw new Error(data.error || '删除失败');
     }
+    syncWbsCacheFromTasks(state.tasks);
   } catch (err) {
     state.tasks = previous;
   }

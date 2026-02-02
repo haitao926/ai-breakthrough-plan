@@ -721,23 +721,20 @@ function applyToolActions(result) {
     pre_research: `/tools/pre_research?project=${id}`,
     literature: `/tools/literature?project=${id}`,
     innovation: `/tools/innovation?project=${id}`,
-    wbs: `javascript:void(0)`, // WBS is now integrated into the Plan view
+    wbs: `/tools/wbs?project=${id}`,
     projects: `/projects`
   };
-  // We handle navigation internally for our Vue tools
-  if (result?.items) {
-    return {
-      ...result,
-      items: result.items.map(item => {
-        if (item.action === 'wbs') {
-           // Override action for WBS to switch to our new view
-           return { ...item, action: '', onClick: () => setToolView('gantt') };
-        }
-        return { ...item, action: map[item.action] || '' };
-      })
-    };
-  }
-  return result;
+  return {
+    ...result,
+    items: result.items.map(item => {
+      const key = item.action;
+      return {
+        ...item,
+        actionKey: item.actionKey || key,
+        action: map[key] || ''
+      };
+    })
+  };
 }
 
 function indexSubmissions(submissions = []) {
@@ -808,6 +805,7 @@ async function fetchMilestones() {
         };
       });
       localStorage.setItem(cacheKey, JSON.stringify({ tasks: wbsTasks }));
+      refreshStatus();
     }
   } catch (err) {
     console.error(err);
@@ -1031,6 +1029,16 @@ function handleFocus() {
   refreshImplementationData();
 }
 
+function handleMessage(event) {
+  if (event.origin !== window.location.origin) return;
+  const data = event.data || {};
+  if (data.type === 'wbs-updated') {
+    if (!data.projectId || String(data.projectId) === String(projectId.value || '')) {
+      refreshStatus();
+    }
+  }
+}
+
 function logout() {
   doLogout();
   router.replace('/login');
@@ -1049,10 +1057,12 @@ onMounted(async () => {
   await fetchProjectDetail();
   refreshStatus();
   window.addEventListener('focus', handleFocus);
+  window.addEventListener('message', handleMessage);
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener('focus', handleFocus);
+  window.removeEventListener('message', handleMessage);
   if (draftTimer.value) clearTimeout(draftTimer.value);
 });
 

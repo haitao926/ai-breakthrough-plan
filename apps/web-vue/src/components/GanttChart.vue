@@ -238,6 +238,56 @@ const PHASE_COLORS = {
   m3: '#10b981'
 };
 
+const getWbsCache = () => {
+  if (!props.projectId) return { tasks: [] };
+  try {
+    const raw = window.localStorage.getItem(`ai_course_wbs_${props.projectId}`) || '{}';
+    const parsed = JSON.parse(raw);
+    return parsed && Array.isArray(parsed.tasks) ? parsed : { tasks: [] };
+  } catch (e) {
+    return { tasks: [] };
+  }
+};
+
+const normalizeTitle = (title) => String(title || '').trim().toLowerCase();
+
+const parseDeliverables = (raw) => {
+  if (!raw) return {};
+  if (typeof raw === 'object') return raw;
+  try {
+    return JSON.parse(raw) || {};
+  } catch (e) {
+    return {};
+  }
+};
+
+const syncWbsCacheFromMilestones = (milestones = []) => {
+  if (!props.projectId) return;
+  const cache = getWbsCache();
+  const cacheMap = new Map(cache.tasks.map(item => [normalizeTitle(item.title), item.output || '']));
+  const tasks = milestones.map(item => {
+    const deliverables = parseDeliverables(item.deliverables);
+    return {
+      title: item.title,
+      phase: item.description || 'm1',
+      output: deliverables.output || cacheMap.get(normalizeTitle(item.title)) || ''
+    };
+  });
+  window.localStorage.setItem(`ai_course_wbs_${props.projectId}`, JSON.stringify({ tasks }));
+};
+
+const syncWbsCacheFromTasks = (taskList = []) => {
+  if (!props.projectId) return;
+  const cache = getWbsCache();
+  const cacheMap = new Map(cache.tasks.map(item => [normalizeTitle(item.title), item.output || '']));
+  const tasks = taskList.map(task => ({
+    title: task.name,
+    phase: task.phase || 'm1',
+    output: cacheMap.get(normalizeTitle(task.name)) || ''
+  }));
+  window.localStorage.setItem(`ai_course_wbs_${props.projectId}`, JSON.stringify({ tasks }));
+};
+
 const loadData = async () => {
   loading.value = true;
   try {
@@ -245,6 +295,7 @@ const loadData = async () => {
     const res = await apiFetch(`/projects/${props.projectId}/milestones`);
     const data = await res.json();
     const apiMilestones = data.milestones || [];
+    syncWbsCacheFromMilestones(apiMilestones);
 
     // Local Config (Colors only)
     const savedKey = STORAGE_KEY_PREFIX + props.projectId;
@@ -421,6 +472,7 @@ const applyEdit = async () => {
     task.color = editForm.value.color || task.color;
     saveData();
     await persistTaskDates(task);
+    syncWbsCacheFromTasks(tasks.value);
     closeEdit();
 };
 

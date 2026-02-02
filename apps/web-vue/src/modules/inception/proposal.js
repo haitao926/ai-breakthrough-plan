@@ -52,11 +52,11 @@ export function getProposalSources(projectId, projectDetail) {
 export function buildWbsTasks(sources) {
   const tasks = [];
   const seen = new Set();
-  const add = (title, phase) => {
+  const add = (title, phase, output = '') => {
     const clean = String(title || '').trim();
     if (!clean || seen.has(clean)) return;
     seen.add(clean);
-    tasks.push({ title: clean, phase });
+    tasks.push({ title: clean, phase, output: String(output || '').trim() });
   };
 
   const charter = sources.charter || {};
@@ -68,7 +68,8 @@ export function buildWbsTasks(sources) {
   if (hasManualWbs) {
     wbsData.tasks.forEach(item => {
       if (!item) return;
-      add(item.title, item.phase || 'm1');
+      const deliverables = item.deliverables || {};
+      add(item.title, item.phase || 'm1', item.output || deliverables.output || '');
     });
   } else {
     if (charter.projPain || charter.projValue || pre.question) {

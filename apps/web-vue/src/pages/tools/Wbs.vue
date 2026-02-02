@@ -297,6 +297,7 @@ function saveLocalData() {
     }))
   }));
   touchSaved();
+  notifyParent();
 }
 
 function syncLocalCache(silent = true) {
@@ -309,6 +310,7 @@ function syncLocalCache(silent = true) {
     }))
   }));
   if (!silent) touchSaved();
+  if (!silent) notifyParent();
 }
 
 async function loadData() {
@@ -400,6 +402,7 @@ async function createTask(title, phase, output = '') {
     }));
     syncLocalCache();
     touchSaved();
+    notifyParent();
   } catch (err) {
     window.alert(err.message || '创建失败');
   }
@@ -423,6 +426,7 @@ async function persistTask(task) {
     });
     syncLocalCache();
     touchSaved();
+    notifyParent();
   } catch (err) {
     console.error(err);
   }
@@ -444,6 +448,7 @@ async function removeTask(task) {
     tasks.value = tasks.value.filter(item => item.id !== task.id);
     syncLocalCache();
     touchSaved();
+    notifyParent();
   } catch (err) {
     window.alert(err.message || '删除失败');
   }
@@ -542,6 +547,7 @@ async function fillSuggestions() {
   for (const task of suggestions) {
     await createTask(task.title, task.phase, task.output);
   }
+  notifyParent();
 }
 
 async function appendSuggestions() {
@@ -550,6 +556,7 @@ async function appendSuggestions() {
     if (hasTaskTitle(item.title)) continue;
     await createTask(item.title, item.phase, item.output);
   }
+  notifyParent();
 }
 
 async function clearTasks() {
@@ -562,6 +569,20 @@ async function clearTasks() {
   }
   for (const task of [...tasks.value]) {
     await removeTask(task);
+  }
+  notifyParent();
+}
+
+function notifyParent() {
+  try {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage(
+        { type: 'wbs-updated', projectId: projectId.value || '' },
+        window.location.origin
+      );
+    }
+  } catch (e) {
+    // ignore
   }
 }
 

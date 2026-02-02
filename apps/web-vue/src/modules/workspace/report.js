@@ -30,9 +30,16 @@ export function buildProposalMarkdown(details = {}, wbsTasks = []) {
   addSection('任务二 / 实验二', formatTask(details, 2));
 
   if (wbsTasks.length) {
-    lines.push('## WBS 任务清单', wbsTasks.map(task => `- [${task.phase}] ${task.title}`).join('\n'));
+    lines.push(
+      '## WBS 任务清单',
+      wbsTasks
+        .map(task => {
+          const output = task.output ? `（产出：${task.output}）` : '';
+          return `- [${task.phase}] ${task.title}${output}`;
+        })
+        .join('\n')
+    );
   }
 
   return lines.join('\n\n');
 }
-
