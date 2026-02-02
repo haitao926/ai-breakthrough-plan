@@ -15,9 +15,15 @@
     </nav>
 
     <main class="flex-1 max-w-5xl mx-auto w-full p-8 space-y-6">
-      <section class="text-center">
-        <h2 class="text-3xl font-bold text-gray-900 mb-2">在 Draw.io 里画清楚你的系统</h2>
+      <section class="text-center space-y-3">
+        <h2 class="text-3xl font-bold text-gray-900">在 Draw.io 里画清楚你的系统</h2>
         <p class="text-gray-500 text-sm">本页面只告诉你“画什么、怎么画”，具体绘图请使用 drawio.reopeninnolab.com。</p>
+        <button
+          class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition"
+          @click="openDrawio"
+        >
+          <i class="fas fa-pen-ruler"></i> 立即开画
+        </button>
       </section>
 
       <section class="grid gap-4 md:grid-cols-3">
@@ -85,28 +91,6 @@
               <li>记录方式/频次</li>
             </ul>
           </div>
-        </div>
-      </section>
-
-      <section class="grid gap-4 md:grid-cols-2">
-        <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-          <h3 class="text-lg font-bold text-gray-900">Draw.io 快速操作</h3>
-          <ol class="text-sm text-gray-600 mt-3 space-y-2 list-decimal list-inside">
-            <li>打开网站后选择“空白画布”</li>
-            <li>左侧拖拽“矩形/箭头”到画布</li>
-            <li>双击图形输入文字</li>
-            <li>用“连接线”指明流程方向</li>
-            <li>完成后：文件 → 导出 → PNG/SVG</li>
-          </ol>
-        </div>
-        <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-          <h3 class="text-lg font-bold text-gray-900">检查清单</h3>
-          <ul class="text-sm text-gray-600 mt-3 space-y-2 list-disc list-inside">
-            <li>图中要出现“你自己做的核心模块”</li>
-            <li>箭头方向能看懂“谁调用谁”</li>
-            <li>每张图控制在 1 个屏幕可读</li>
-            <li>图名写清楚，例如“系统架构图”</li>
-          </ul>
         </div>
       </section>
     </main>
