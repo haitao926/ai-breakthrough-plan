@@ -1,57 +1,102 @@
 <template>
-  <div class="page">
-    <SiteNav active="knowledge" />
+  <div class="knowledge-page text-gray-800">
+    <nav class="fixed w-full z-50 bg-white/90 backdrop-blur-md border-b border-gray-200/50 transition-all duration-300">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16 items-center">
+          <div class="flex items-center gap-3 shrink-0">
+            <RouterLink to="/" class="flex items-center gap-2 group">
+              <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold shadow-md group-hover:bg-indigo-700 transition">AI</div>
+              <span class="font-bold text-xl tracking-tight text-gray-900 group-hover:text-indigo-600 transition">破壁计划</span>
+            </RouterLink>
+          </div>
 
-    <header class="hero">
-      <div class="hero__inner">
-        <h1>探索学术前沿，<span>点亮创新火花</span></h1>
-        <p>这里汇集了 20+ 核心学科领域知识，帮助学生找到研究方向与创新灵感。</p>
+          <div class="hidden md:flex items-center space-x-1">
+            <RouterLink to="/knowledge" :class="navLinkClass('knowledge')">
+              <i class="fas fa-book-reader mr-2 text-xs"></i>创新知识库
+            </RouterLink>
+            <RouterLink to="/competencies" :class="navLinkClass('competencies')">
+              <i class="fas fa-graduation-cap mr-2 text-xs"></i>学术指导
+            </RouterLink>
+            <RouterLink to="/projects" :class="navLinkClass('projects')">
+              <i class="fas fa-layer-group mr-2 text-xs"></i>项目库
+            </RouterLink>
+            <RouterLink to="/downloads" :class="navLinkClass('downloads')">
+              <i class="fas fa-folder-open mr-2 text-xs"></i>课程资料库
+            </RouterLink>
+          </div>
+
+          <div class="flex gap-3 items-center shrink-0">
+            <RouterLink
+              to="/workspace"
+              class="inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all transform hover:-translate-y-0.5"
+            >
+              <i class="fas fa-rocket mr-2"></i> 进入工作台
+            </RouterLink>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <header class="pt-32 pb-12 bg-white border-b border-gray-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4 tracking-tight">
+          探索学术前沿，<span class="text-indigo-600">点亮创新火花</span>
+        </h1>
+        <p class="text-lg text-gray-500 max-w-3xl">
+          这里汇集了 20+ 核心学科领域知识，帮助学生找到研究方向与创新灵感。
+        </p>
       </div>
     </header>
 
-    <main class="main">
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 min-h-screen">
       <section>
-        <div class="section-header">
+        <div class="flex flex-wrap items-end justify-between gap-4 mb-8">
           <div>
-            <h2>学科知识百科</h2>
-            <p>20 大核心学科领域的入门指引与项目启发</p>
+            <h2 class="text-2xl font-bold text-gray-900">学科知识百科</h2>
+            <p class="text-sm text-gray-500 mt-2">20 大核心学科领域的入门指引与项目启发</p>
           </div>
-          <div class="filters">
-            <button :class="{ active: filter === 'all' }" @click="filter = 'all'">全部</button>
-            <button :class="{ active: filter === 'stem' }" @click="filter = 'stem'">理工科 (STEM)</button>
-            <button :class="{ active: filter === 'social' }" @click="filter = 'social'">社科 (Social)</button>
-            <button :class="{ active: filter === 'humanities' }" @click="filter = 'humanities'">人文 (Humanities)</button>
+          <div class="flex flex-wrap gap-2">
+            <button :class="filterClass('all')" @click="filter = 'all'">全部</button>
+            <button :class="filterClass('stem')" @click="filter = 'stem'">理工科 (STEM)</button>
+            <button :class="filterClass('social')" @click="filter = 'social'">社科 (Social)</button>
+            <button :class="filterClass('humanities')" @click="filter = 'humanities'">人文 (Humanities)</button>
           </div>
         </div>
 
-        <div class="grid">
-          <div v-for="field in filteredFields" :key="field.id" class="card" @click="openField(field)">
-            <div class="icon" :style="{ backgroundColor: field.colorBg, color: field.colorText }">
+        <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div
+            v-for="field in filteredFields"
+            :key="field.id"
+            class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition cursor-pointer"
+            @click="openField(field)"
+          >
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center text-lg" :style="{ backgroundColor: field.colorBg, color: field.colorText }">
               <i class="fas" :class="field.icon"></i>
             </div>
-            <h3>{{ field.name }}</h3>
-            <p class="muted">{{ field.en }}</p>
-            <span class="hint">点击查看详情</span>
+            <h3 class="font-bold text-gray-900 mt-4">{{ field.name }}</h3>
+            <p class="text-xs text-gray-500">{{ field.en }}</p>
+            <p class="text-xs text-gray-500 mt-3 leading-relaxed">{{ field.desc }}</p>
+            <span class="inline-flex items-center text-xs font-bold text-indigo-600 mt-4">
+              查看详情 <i class="fas fa-arrow-right ml-2 text-[10px]"></i>
+            </span>
           </div>
         </div>
       </section>
     </main>
 
-    <SiteFooter />
-
-    <div v-if="activeField" class="modal">
-      <div class="backdrop" @click="closeField"></div>
-      <div class="modal-panel">
-        <button class="close" @click="closeField">×</button>
-        <div class="modal-content">
-          <div class="tag">{{ activeField.cat.toUpperCase() }}</div>
-          <h3>{{ activeField.name }}</h3>
-          <p class="muted">{{ activeField.en }}</p>
-          <p class="desc">{{ activeField.desc }}</p>
-          <div class="inspiration">
-            <div class="title">项目启发</div>
-            <p>{{ activeField.inspiration }}</p>
-          </div>
+    <div v-if="activeField" class="fixed inset-0 z-50 flex items-center justify-center">
+      <div class="absolute inset-0 bg-black/40" @click="closeField"></div>
+      <div class="relative bg-white w-full max-w-lg mx-4 rounded-2xl p-6 shadow-xl">
+        <button class="absolute top-4 right-4 text-gray-400 hover:text-gray-600" @click="closeField">×</button>
+        <div class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full inline-flex">
+          {{ activeField.cat.toUpperCase() }}
+        </div>
+        <h3 class="text-xl font-bold text-gray-900 mt-3">{{ activeField.name }}</h3>
+        <p class="text-sm text-gray-500">{{ activeField.en }}</p>
+        <p class="text-sm text-gray-600 mt-4 leading-relaxed">{{ activeField.desc }}</p>
+        <div class="mt-4 bg-gray-50 rounded-xl p-4">
+          <div class="text-xs font-bold text-gray-700 mb-2">项目启发</div>
+          <p class="text-sm text-gray-600">{{ activeField.inspiration }}</p>
         </div>
       </div>
     </div>
@@ -60,8 +105,6 @@
 
 <script setup>
 import { computed, ref } from 'vue';
-import SiteNav from '@/components/SiteNav.vue';
-import SiteFooter from '@/components/SiteFooter.vue';
 
 const filter = ref('all');
 const activeField = ref(null);
@@ -140,152 +183,20 @@ function openField(field) {
 function closeField() {
   activeField.value = null;
 }
-</script>
 
-<style scoped>
-.page {
-  background: #f8fafc;
-  min-height: 100vh;
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+function navLinkClass(key) {
+  const base = 'px-3 py-2 rounded-md text-sm font-medium transition-all flex items-center';
+  if (key === 'knowledge') {
+    return `${base} bg-indigo-50 text-indigo-700`;
+  }
+  return `${base} text-gray-500 hover:text-gray-900 hover:bg-gray-50`;
 }
-.hero {
-  padding: 120px 16px 60px;
-  background: #fff;
-  border-bottom: 1px solid #e5e7eb;
+
+function filterClass(key) {
+  const base = 'px-3 py-1.5 rounded-lg text-xs font-bold transition';
+  if (filter.value === key) {
+    return `${base} bg-gray-900 text-white`;
+  }
+  return `${base} bg-white border border-gray-200 text-gray-600 hover:bg-gray-50`;
 }
-.hero__inner {
-  max-width: 1100px;
-  margin: 0 auto;
-  text-align: center;
-}
-.hero h1 {
-  font-size: 36px;
-  margin-bottom: 12px;
-}
-.hero h1 span {
-  color: #6366f1;
-}
-.hero p {
-  color: #6b7280;
-  max-width: 640px;
-  margin: 0 auto;
-}
-.main {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 60px 16px;
-}
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-bottom: 24px;
-}
-.filters {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.filters button {
-  border: 1px solid #e5e7eb;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: #fff;
-  font-size: 12px;
-  cursor: pointer;
-}
-.filters button.active {
-  background: #4f46e5;
-  color: #fff;
-  border-color: #4f46e5;
-}
-.grid {
-  display: grid;
-  gap: 16px;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-}
-.card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
-  padding: 18px;
-  display: grid;
-  gap: 8px;
-  text-align: center;
-  cursor: pointer;
-}
-.icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 999px;
-  display: grid;
-  place-items: center;
-  margin: 0 auto;
-  font-size: 22px;
-}
-.muted {
-  font-size: 12px;
-  color: #9ca3af;
-}
-.hint {
-  font-size: 12px;
-  color: #4f46e5;
-  opacity: 0.7;
-}
-.modal {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-}
-.backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-}
-.modal-panel {
-  position: absolute;
-  right: 0;
-  top: 0;
-  height: 100%;
-  width: min(520px, 92vw);
-  background: #fff;
-  padding: 24px;
-  overflow-y: auto;
-}
-.close {
-  position: absolute;
-  right: 16px;
-  top: 16px;
-  border: none;
-  background: transparent;
-  font-size: 24px;
-  cursor: pointer;
-}
-.modal-content {
-  margin-top: 40px;
-  display: grid;
-  gap: 12px;
-}
-.tag {
-  font-size: 12px;
-  background: #eef2ff;
-  color: #4338ca;
-  padding: 4px 8px;
-  border-radius: 999px;
-  width: fit-content;
-}
-.desc {
-  font-size: 14px;
-  color: #374151;
-}
-.inspiration {
-  border-top: 1px solid #e5e7eb;
-  padding-top: 12px;
-}
-.inspiration .title {
-  font-weight: 600;
-  margin-bottom: 6px;
-}
-</style>
+</script>
