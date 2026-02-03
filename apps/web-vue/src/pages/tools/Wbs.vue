@@ -74,11 +74,18 @@
           <div class="task-list">
             <!-- Draft Input -->
             <div class="task-card draft">
-              <input 
-                v-model.trim="drafts[phase.key].title" 
-                :placeholder="phase.placeholder"
-                @keyup.enter="submitDraft(phase.key)"
-              />
+              <div class="draft-fields">
+                <input 
+                  v-model.trim="drafts[phase.key].title" 
+                  :placeholder="phase.placeholder"
+                  @keyup.enter="submitDraft(phase.key)"
+                />
+                <input
+                  v-model.trim="drafts[phase.key].output"
+                  class="draft-output"
+                  placeholder="最小完成标准 / 产出（可选）"
+                />
+              </div>
               <button @click="submitDraft(phase.key)" :disabled="!drafts[phase.key].title">
                 <i class="fas fa-arrow-right"></i>
               </button>
@@ -88,6 +95,10 @@
             <div v-for="task in phaseTasks(phase.key)" :key="task.id || task.title" class="task-card">
               <div class="task-body">
                 <input v-model.trim="task.title" class="task-input" @blur="persistTask(task)" />
+                <input v-model.trim="task.output" class="task-output" placeholder="最小完成标准 / 产出" @blur="persistTask(task)" />
+                <div class="task-hint">
+                  <span>下一步建议：</span>{{ resolveAction(task).hint }}
+                </div>
                 <div class="task-actions">
                   <button class="action-link" @click="goNext(task)">
                     {{ resolveAction(task).label }} <i class="fas fa-chevron-right ml-1"></i>
@@ -167,14 +178,14 @@ const phaseCounts = computed(() => ({
 }));
 
 const ACTIONS = {
-  charter: { label: '去立项', type: 'tool' },
-  pre_research: { label: '去调研', type: 'tool' },
-  literature: { label: '去阅读', type: 'tool' },
-  innovation: { label: '去创新', type: 'tool' },
-  architect: { label: '去架构', type: 'tool' },
-  wbs: { label: 'WBS', type: 'tool' },
-  kanban: { label: '看板', type: 'tool' },
-  devlog: { label: '日志', type: 'tool' }
+  charter: { label: '去立项', type: 'tool', hint: '完善问题与目标' },
+  pre_research: { label: '去调研', type: 'tool', hint: '完成问卷/访谈' },
+  literature: { label: '去阅读', type: 'tool', hint: '补充阅读笔记' },
+  innovation: { label: '去创新', type: 'tool', hint: '写清差异与验证' },
+  architect: { label: '去架构', type: 'tool', hint: '画出系统结构' },
+  wbs: { label: 'WBS', type: 'tool', hint: '补齐任务清单' },
+  kanban: { label: '看板', type: 'tool', hint: '更新任务进度' },
+  devlog: { label: '日志', type: 'tool', hint: '记录今日进展' }
 };
 
 const STAGE_LABELS = {
@@ -410,23 +421,32 @@ function submitDraft(phase) {
 
 function buildGuidedTasks() {
   const list = [];
-  const add = (title, phase, action) => list.push({ title, phase, action });
-  
-  add('明确问题与目标', 'm1', 'charter');
-  add('前期调研', 'm1', 'pre_research');
-  add('文献阅读', 'm1', 'literature');
-  
+  const add = (title, phase, action, output = '', hint = '') => list.push({ title, phase, action, output, hint });
+  const idea = brief.idea.trim();
+  const target = brief.target.trim();
+  const prefix = idea ? `围绕「${idea}」` : '';
+  const targetHint = target ? `关注对象：${target}` : '';
+
+  add(`${prefix}明确问题与目标`, 'm1', 'charter', '问题与目标清单', targetHint || '先写清楚问题与目标');
+  add('前期调研（问卷/访谈/观察）', 'm1', 'pre_research', '调研记录', '至少 1 份调研记录');
+  add('文献阅读或案例阅读', 'm1', 'literature', '阅读笔记', '至少 1 篇/1 个案例');
+  add('创新点梳理与对比', 'm1', 'innovation', '创新点说明', '写清差异与验证方式');
+
   if (deliverableType.value === 'research') {
-    add('实验设计', 'm2', 'pre_research');
-    add('数据收集', 'm2', 'devlog');
-    add('结果分析', 'm3', 'devlog');
-    add('研究报告', 'm3', 'submission:final');
+    add('研究方法与实验设计', 'm2', 'pre_research', '实验设计方案', '明确变量与流程');
+    add('实验执行与数据收集', 'm2', 'devlog', '实验记录', '记录每次实验');
+    add('数据分析与结果结论', 'm3', 'devlog', '分析结果', '用图表呈现结果');
+    add('研究报告撰写', 'm3', 'submission:final', '研究报告', '形成完整研究报告');
+  } else if (deliverableType.value === 'impact') {
+    add('行动方案与资源准备', 'm2', 'pre_research', '行动清单', '列出资源与步骤');
+    add('行动执行与过程记录', 'm2', 'devlog', '过程记录', '拍照/记录执行过程');
+    add('影响评估与传播', 'm3', 'submission:final', '传播材料', '总结影响与成果');
   } else {
-    add('架构/原型设计', 'm2', 'architect');
-    add('核心功能开发', 'm2', 'devlog');
-    add('测试与优化', 'm2', 'devlog');
-    add('演示视频', 'm3', 'submission:milestone_2');
-    add('结题展示', 'm3', 'submission:final');
+    add('方案与原型设计', 'm2', 'architect', '流程图或原型', '画出系统结构');
+    add('核心功能实现', 'm2', 'devlog', '代码提交', '完成一次代码提交');
+    add('测试与优化', 'm2', 'devlog', '测试记录', '记录问题与改进');
+    add('演示视频录制', 'm3', 'submission:milestone_2', '演示视频', '录制 1~3 分钟');
+    add('成果整理与报告', 'm3', 'submission:final', '结题材料', '提交最终成果');
   }
   return list;
 }
@@ -442,17 +462,25 @@ async function generateTasks(replace) {
 
   for (const item of suggestions) {
     if (!hasTaskTitle(item.title)) {
-      await createTask(item.title, item.phase, '', { action: item.action });
+      await createTask(item.title, item.phase, item.output || '', { action: item.action, hint: item.hint });
     }
   }
 }
 
 function inferActionFromTitle(title, phase) {
   const text = String(title || '');
-  if (/调研/.test(text)) return 'pre_research';
-  if (/架构|设计/.test(text)) return 'architect';
-  if (/代码|开发/.test(text)) return 'devlog';
-  if (/视频/.test(text)) return 'submission:milestone_2';
+  if (/调研|问卷|访谈|观察/.test(text)) return 'pre_research';
+  if (/文献|阅读|论文|案例/.test(text)) return 'literature';
+  if (/创新|对比|差异/.test(text)) return 'innovation';
+  if (/架构|流程图|原型|设计/.test(text)) return 'architect';
+  if (/开题/.test(text)) return 'submission:proposal';
+  if (/中期/.test(text)) return 'submission:midterm';
+  if (/演示|视频/.test(text)) return 'submission:milestone_2';
+  if (/结题|报告|答辩|总结/.test(text)) return 'submission:final';
+  if (/代码|开发|实现/.test(text)) return 'devlog';
+  if (phase === 'm1') return 'charter';
+  if (phase === 'm2') return 'kanban';
+  if (phase === 'm3') return 'submission:final';
   return 'kanban';
 }
 
@@ -460,10 +488,20 @@ function resolveAction(task) {
   const rawKey = task.action || inferActionFromTitle(task.title, task.phase);
   if (rawKey && rawKey.startsWith('submission:')) {
     const stage = rawKey.split(':')[1] || 'final';
-    return { type: 'stage', key: stage, label: '去提交' };
+    return {
+      type: 'stage',
+      key: stage,
+      label: STAGE_LABELS[stage] || '去提交',
+      hint: task.hint || '完成阶段提交'
+    };
   }
   const config = ACTIONS[rawKey] || ACTIONS.kanban;
-  return { type: 'tool', key: rawKey, label: config.label };
+  return {
+    type: 'tool',
+    key: rawKey,
+    label: config.label,
+    hint: task.hint || config.hint || '前往下一步'
+  };
 }
 
 function goNext(task) {
@@ -658,12 +696,22 @@ watch(() => projectId.value, () => {
   gap: 0.5rem;
   align-items: center;
 }
+.draft-fields {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
 .task-card.draft input {
   flex: 1;
   background: transparent;
   border: none;
   font-size: 0.875rem;
   outline: none;
+}
+.draft-output {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
 }
 .task-card.draft button {
   color: var(--primary-600);
@@ -684,6 +732,23 @@ watch(() => projectId.value, () => {
   font-weight: 500;
   padding: 0;
   outline: none;
+}
+.task-output {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  outline: none;
+}
+.task-hint {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+.task-hint span {
+  color: var(--text-secondary);
+  font-weight: 600;
+  margin-right: 0.25rem;
 }
 
 .task-actions {
