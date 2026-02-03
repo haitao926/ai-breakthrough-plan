@@ -1,23 +1,23 @@
 <template>
-  <div class="flex flex-col h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+  <div class="flex flex-col h-full bg-white rounded-xl border border-slate-200 shadow-[0_1px_2px_rgba(0,0,0,0.04)] overflow-hidden">
     <!-- Top Bar -->
-    <div class="flex justify-between items-center p-4 border-b border-gray-200 bg-white z-20">
-      <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+    <div class="flex justify-between items-center p-3 px-4 border-b border-slate-100 bg-white z-20">
+      <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
         <i class="fas fa-stream text-indigo-500"></i> 项目进度
       </h2>
-      <div class="text-xs text-gray-400">提示：拖动任务条可平移时间，点击任务可编辑日期</div>
+      <div class="text-xs text-slate-400">提示：拖动任务条可平移时间，点击任务可编辑日期</div>
       <div class="flex gap-2">
-        <button @click="refreshData" class="px-3 py-1.5 text-xs bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded text-gray-600 transition-colors">
+        <button @click="refreshData" class="px-3 py-1.5 text-xs bg-white hover:bg-slate-50 border border-slate-200 rounded text-slate-600 transition-colors">
           <i class="fas fa-sync-alt mr-1"></i> 同步
         </button>
-        <div class="h-6 w-px bg-gray-200 mx-1"></div>
-        <button @click="shiftView(-7)" class="px-2 py-1.5 text-xs bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded text-gray-600">
+        <div class="h-6 w-px bg-slate-200 mx-1"></div>
+        <button @click="shiftView(-7)" class="px-2 py-1.5 text-xs bg-white hover:bg-slate-50 border border-slate-200 rounded text-slate-600">
           <i class="fas fa-chevron-left"></i>
         </button>
-        <button @click="goToToday" class="px-3 py-1.5 text-xs bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded text-gray-600">
+        <button @click="goToToday" class="px-3 py-1.5 text-xs bg-white hover:bg-slate-50 border border-slate-200 rounded text-slate-600">
           今天
         </button>
-        <button @click="shiftView(7)" class="px-2 py-1.5 text-xs bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded text-gray-600">
+        <button @click="shiftView(7)" class="px-2 py-1.5 text-xs bg-white hover:bg-slate-50 border border-slate-200 rounded text-slate-600">
           <i class="fas fa-chevron-right"></i>
         </button>
       </div>
@@ -30,17 +30,17 @@
       <div class="flex-1 flex flex-col min-w-0 bg-white relative">
         
         <!-- Empty State -->
-        <div v-if="!loading && tasks.length === 0" class="absolute inset-0 flex flex-col items-center justify-center bg-gray-50/50 z-10">
-          <div class="text-4xl mb-4 text-gray-300">📊</div>
-          <p class="text-gray-500 text-sm mb-6">暂无任务</p>
+        <div v-if="!loading && tasks.length === 0" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-50/50 z-10">
+          <div class="text-4xl mb-4 text-slate-300">📊</div>
+          <p class="text-slate-500 text-sm mb-6">暂无任务</p>
           <button @click="createDefaultPlan" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm text-sm font-medium transition-colors">
             创建默认计划
           </button>
         </div>
 
         <!-- Gantt Header (Dates) -->
-        <div class="flex border-b border-gray-200 bg-gray-50 select-none">
-          <div class="w-48 flex-shrink-0 border-r border-gray-200 p-2 text-xs font-bold text-gray-500 flex items-center pl-4 bg-white sticky left-0 z-10">
+        <div class="flex border-b border-slate-200 bg-slate-50/80 select-none">
+          <div class="w-48 flex-shrink-0 border-r border-slate-200 p-2 text-xs font-bold text-slate-500 flex items-center pl-4 bg-white/50 backdrop-blur-sm sticky left-0 z-10">
             任务名称
           </div>
           <div class="flex-1 overflow-hidden" ref="headerScrollContainer">
@@ -48,11 +48,11 @@
               <div 
                 v-for="day in dateHeaders" 
                 :key="day.date" 
-                class="flex-shrink-0 border-r border-gray-100 flex flex-col items-center justify-center text-xs h-10"
-                :class="{'bg-blue-50/50': day.isWeekend, 'bg-indigo-50 text-indigo-600 font-bold': day.isToday}"
+                class="flex-shrink-0 border-r border-slate-100 flex flex-col items-center justify-center text-xs h-10"
+                :class="{'bg-slate-100/50': day.isWeekend, 'bg-indigo-50 text-indigo-600 font-bold': day.isToday}"
                 :style="{ width: cellWidth + 'px' }"
               >
-                <span class="text-[10px] text-gray-400 scale-90">{{ day.dayName }}</span>
+                <span class="text-[10px] text-slate-400 scale-90">{{ day.dayName }}</span>
                 <span>{{ day.dateNum }}</span>
               </div>
             </div>
@@ -66,25 +66,25 @@
              <div 
                 v-for="day in dateHeaders" 
                 :key="'grid-' + day.date" 
-                class="flex-shrink-0 border-r border-gray-100 h-full"
-                :class="{'bg-gray-50/30': day.isWeekend, 'bg-indigo-50/10': day.isToday}"
+                class="flex-shrink-0 border-r border-slate-50 h-full"
+                :class="{'bg-slate-50/50': day.isWeekend, 'bg-indigo-50/20': day.isToday}"
                 :style="{ width: cellWidth + 'px' }"
               ></div>
           </div>
 
           <!-- Rows -->
-          <div v-for="(task, idx) in tasks" :key="task.id" class="flex relative z-0 hover:bg-gray-50 transition-colors h-12 group">
-            <div class="w-48 flex-shrink-0 border-r border-gray-200 p-2 text-sm text-gray-700 flex items-center pl-4 bg-white sticky left-0 z-10 border-b border-gray-50 group-hover:border-gray-100">
-              <span class="truncate" :title="task.name">{{ task.name }}</span>
-              <button class="ml-auto text-gray-300 hover:text-indigo-500 opacity-0 group-hover:opacity-100 transition" @click="openEdit(task)">
-                <i class="fas fa-pen"></i>
+          <div v-for="(task, idx) in tasks" :key="task.id" class="flex relative z-0 hover:bg-slate-50 transition-colors h-12 group">
+            <div class="w-48 flex-shrink-0 border-r border-slate-200 p-2 text-sm text-slate-700 flex items-center pl-4 bg-white sticky left-0 z-10 border-b border-slate-50 group-hover:border-slate-100">
+              <span class="truncate font-medium" :title="task.name">{{ task.name }}</span>
+              <button class="ml-auto text-slate-300 hover:text-indigo-500 opacity-0 group-hover:opacity-100 transition" @click="openEdit(task)">
+                <i class="fas fa-pen text-xs"></i>
               </button>
             </div>
-            <div class="flex-1 relative border-b border-gray-50 group-hover:border-gray-100">
+            <div class="flex-1 relative border-b border-slate-50 group-hover:border-slate-100">
               <!-- Task Bar -->
               <div 
                 v-if="isTaskVisible(task)"
-                class="absolute h-7 top-2.5 rounded shadow-sm text-xs text-white flex items-center px-2 cursor-pointer hover:brightness-110 transition-all select-none whitespace-nowrap overflow-hidden"
+                class="absolute h-7 top-2.5 rounded shadow-sm text-xs text-white flex items-center px-2 cursor-pointer hover:brightness-105 transition-all select-none whitespace-nowrap overflow-hidden border border-white/20"
                 :style="getTaskStyle(task)"
                 @mousedown.stop="startDrag(task, $event)"
                 @click.stop="openEdit(task)"
@@ -96,44 +96,44 @@
         </div>
         
         <!-- Horizontal Scrollbar for Timeline -->
-        <div class="h-3 bg-gray-100 border-t border-gray-200 overflow-x-auto overflow-y-hidden" ref="bottomScrollContainer" @scroll="onBottomScroll">
+        <div class="h-3 bg-slate-50 border-t border-slate-200 overflow-x-auto overflow-y-hidden" ref="bottomScrollContainer" @scroll="onBottomScroll">
            <div :style="{ width: totalWidth + 'px', height: '1px' }"></div>
         </div>
 
       </div>
 
       <!-- Right: AI Copilot -->
-      <div class="w-80 bg-white border-l border-gray-200 flex flex-col shadow-xl z-30">
-        <div class="p-3 border-b border-gray-100 bg-gray-50/80">
-          <h3 class="font-bold text-sm text-gray-700 flex items-center gap-2">
+      <div class="w-80 bg-white border-l border-slate-200 flex flex-col shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.05)] z-30">
+        <div class="p-3 border-b border-slate-100 bg-slate-50/50">
+          <h3 class="font-bold text-sm text-slate-700 flex items-center gap-2">
             <i class="fas fa-robot text-indigo-500"></i> AI 助手
           </h3>
         </div>
 
         <div class="flex-1 overflow-y-auto p-4 space-y-4" ref="msgContainer">
           <div v-for="(msg, idx) in chatMessages" :key="idx" class="flex flex-col gap-1" :class="msg.role === 'user' ? 'items-end' : 'items-start'">
-            <div class="text-[10px] text-gray-400 px-1">{{ msg.role === 'user' ? '我' : 'AI' }}</div>
+            <div class="text-[10px] text-slate-400 px-1">{{ msg.role === 'user' ? '我' : 'AI' }}</div>
             <div 
               class="px-3 py-2 rounded-2xl text-xs max-w-[90%] shadow-sm leading-relaxed"
-              :class="msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-sm' : 'bg-white text-gray-700 border border-gray-100 rounded-tl-sm'"
+              :class="msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-sm' : 'bg-white text-slate-700 border border-slate-100 rounded-tl-sm'"
             >
               {{ msg.text }}
             </div>
           </div>
           <div v-if="aiProcessing" class="flex items-start gap-1">
-             <div class="px-3 py-2 bg-white rounded-2xl rounded-tl-sm border border-gray-100 shadow-sm">
+             <div class="px-3 py-2 bg-white rounded-2xl rounded-tl-sm border border-slate-100 shadow-sm">
                <i class="fas fa-circle-notch fa-spin text-indigo-500 text-xs"></i>
              </div>
           </div>
         </div>
 
-        <div class="p-3 border-t border-gray-100 bg-white">
+        <div class="p-3 border-t border-slate-100 bg-white">
           <div class="flex gap-2 mb-2 overflow-x-auto pb-1 no-scrollbar">
             <button 
               v-for="action in quickActions" 
               :key="action"
               @click="sendQuickAction(action)"
-              class="whitespace-nowrap px-2 py-1 text-[10px] bg-gray-50 hover:bg-gray-100 text-gray-600 rounded border border-gray-200 transition-colors"
+              class="whitespace-nowrap px-2 py-1 text-[10px] bg-white hover:bg-slate-50 text-slate-600 rounded border border-slate-200 transition-colors"
             >
               {{ action }}
             </button>
@@ -143,12 +143,12 @@
               v-model="userPrompt" 
               @keydown.enter.prevent="sendMessage"
               placeholder="输入指令，如'延后两天'..." 
-              class="w-full pl-3 pr-8 py-2 text-xs border border-gray-200 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 resize-none h-16 bg-gray-50 focus:bg-white transition-colors"
+              class="w-full pl-3 pr-8 py-2 text-xs border border-slate-200 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 resize-none h-16 bg-slate-50 focus:bg-white transition-colors"
             ></textarea>
             <button 
               @click="sendMessage"
               :disabled="!userPrompt.trim() || aiProcessing"
-              class="absolute bottom-2 right-2 text-indigo-500 hover:text-indigo-600 disabled:text-gray-300 transition-colors"
+              class="absolute bottom-2 right-2 text-indigo-500 hover:text-indigo-600 disabled:text-slate-300 transition-colors"
             >
               <i class="fas fa-paper-plane text-xs"></i>
             </button>
@@ -159,33 +159,33 @@
     </div>
 
     <!-- Edit Modal -->
-    <div v-if="showEdit" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div class="bg-white w-full max-w-md rounded-xl p-6 shadow-xl">
-        <h3 class="text-lg font-bold text-gray-900 mb-4">编辑任务时间</h3>
+    <div v-if="showEdit" class="fixed inset-0 bg-slate-900/20 backdrop-blur-sm flex items-center justify-center z-50">
+      <div class="bg-white w-full max-w-md rounded-xl p-6 shadow-xl border border-slate-200">
+        <h3 class="text-lg font-bold text-slate-900 mb-4">编辑任务时间</h3>
         <div class="space-y-3">
           <div>
-            <label class="text-xs text-gray-500">任务名称</label>
-            <input v-model="editForm.name" class="w-full mt-1 px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+            <label class="text-xs text-slate-500">任务名称</label>
+            <input v-model="editForm.name" class="w-full mt-1 px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="text-xs text-gray-500">开始日期</label>
-              <input type="date" v-model="editForm.start" class="w-full mt-1 px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+              <label class="text-xs text-slate-500">开始日期</label>
+              <input type="date" v-model="editForm.start" class="w-full mt-1 px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
             <div>
-              <label class="text-xs text-gray-500">结束日期</label>
-              <input type="date" v-model="editForm.end" class="w-full mt-1 px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+              <label class="text-xs text-slate-500">结束日期</label>
+              <input type="date" v-model="editForm.end" class="w-full mt-1 px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
           </div>
           <div>
-            <label class="text-xs text-gray-500">颜色</label>
-            <input type="color" v-model="editForm.color" class="w-full mt-1 h-9 px-2 py-1 border border-gray-200 rounded-lg" />
+            <label class="text-xs text-slate-500">颜色</label>
+            <input type="color" v-model="editForm.color" class="w-full mt-1 h-9 px-2 py-1 border border-slate-200 rounded-lg" />
           </div>
           <p v-if="editError" class="text-xs text-red-500">{{ editError }}</p>
         </div>
         <div class="mt-6 flex justify-end gap-2">
-          <button class="px-3 py-2 text-sm text-gray-600 hover:text-gray-800" @click="closeEdit">取消</button>
-          <button class="px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="applyEdit">保存</button>
+          <button class="px-3 py-2 text-sm text-slate-600 hover:text-slate-800" @click="closeEdit">取消</button>
+          <button class="px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-sm" @click="applyEdit">保存</button>
         </div>
       </div>
     </div>

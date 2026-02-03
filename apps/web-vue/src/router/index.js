@@ -22,36 +22,56 @@ import KanbanTool from '@/pages/tools/Kanban.vue';
 import DevLogTool from '@/pages/tools/DevLog.vue';
 import ArchitectGuideTool from '@/pages/tools/ArchitectGuide.vue';
 import ArchitectTool from '@/pages/tools/Architect.vue';
+import { getCurrentUser } from '@/api/authApi';
 
 const routes = [
-  { path: '/', component: HomePage },
-  { path: '/workspace', component: WorkspacePage },
-  { path: '/projects', component: ProjectsPage },
-  { path: '/tools', component: ToolsPage },
-  { path: '/tools/charter', component: CharterTool },
-  { path: '/tools/pre_research', component: PreResearchTool },
-  { path: '/tools/literature', component: LiteratureTool },
-  { path: '/tools/innovation', component: InnovationTool },
-  { path: '/tools/wbs', component: WbsTool },
-  { path: '/tools/kanban', component: KanbanTool },
-  { path: '/tools/devlog', component: DevLogTool },
-  { path: '/tools/architect-guide', component: ArchitectGuideTool },
-  { path: '/tools/architect', component: ArchitectTool },
-  { path: '/teacher', component: TeacherPage },
-  { path: '/mission-control', component: MissionControlPage },
-  { path: '/showcase', component: ShowcasePage },
-  { path: '/knowledge', component: KnowledgePage },
-  { path: '/competencies', component: CompetenciesPage },
-  { path: '/downloads', component: DownloadsPage },
-  { path: '/study', component: StudyPage },
-  { path: '/smart-workspace', component: SmartWorkspacePage },
-  { path: '/login', component: LoginPage },
-  { path: '/register', component: RegisterPage }
+  { path: '/', component: HomePage, meta: { public: true } },
+  { path: '/workspace', component: WorkspacePage, meta: { requiresAuth: true } },
+  { path: '/projects', component: ProjectsPage, meta: { public: true } },
+  { path: '/tools', component: ToolsPage, meta: { requiresAuth: true } },
+  { path: '/tools/charter', component: CharterTool, meta: { requiresAuth: true } },
+  { path: '/tools/pre_research', component: PreResearchTool, meta: { requiresAuth: true } },
+  { path: '/tools/literature', component: LiteratureTool, meta: { requiresAuth: true } },
+  { path: '/tools/innovation', component: InnovationTool, meta: { requiresAuth: true } },
+  { path: '/tools/wbs', component: WbsTool, meta: { requiresAuth: true } },
+  { path: '/tools/kanban', component: KanbanTool, meta: { requiresAuth: true } },
+  { path: '/tools/devlog', component: DevLogTool, meta: { requiresAuth: true } },
+  { path: '/tools/architect-guide', component: ArchitectGuideTool, meta: { requiresAuth: true } },
+  { path: '/tools/architect', component: ArchitectTool, meta: { requiresAuth: true } },
+  { path: '/teacher', component: TeacherPage, meta: { requiresAuth: true, roles: ['teacher', 'judge'] } },
+  { path: '/mission-control', component: MissionControlPage, meta: { requiresAuth: true, roles: ['teacher', 'judge'] } },
+  { path: '/showcase', component: ShowcasePage, meta: { public: true } },
+  { path: '/knowledge', component: KnowledgePage, meta: { public: true } },
+  { path: '/competencies', component: CompetenciesPage, meta: { public: true } },
+  { path: '/downloads', component: DownloadsPage, meta: { public: true } },
+  { path: '/study', component: StudyPage, meta: { public: true } },
+  { path: '/smart-workspace', component: SmartWorkspacePage, meta: { requiresAuth: true } },
+  { path: '/login', component: LoginPage, meta: { public: true } },
+  { path: '/register', component: RegisterPage, meta: { public: true } }
 ];
 
 const router = createRouter({
   history: createWebHistory(),
   routes
+});
+
+router.beforeEach((to, from, next) => {
+  const requiresAuth = to.meta?.requiresAuth;
+  if (!requiresAuth) {
+    next();
+    return;
+  }
+  const user = getCurrentUser();
+  if (!user) {
+    window.sessionStorage.setItem('auth_redirect', to.fullPath);
+    next('/login');
+    return;
+  }
+  if (to.meta?.roles && !to.meta.roles.includes(user.role)) {
+    next(user.role === 'teacher' || user.role === 'judge' ? '/teacher' : '/workspace');
+    return;
+  }
+  next();
 });
 
 export default router;

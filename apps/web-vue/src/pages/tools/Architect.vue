@@ -1,98 +1,50 @@
 <template>
-  <div class="min-h-screen flex flex-col bg-[#f8fafc] text-gray-800">
-    <nav class="bg-white border-b border-gray-200 px-6 py-3 flex justify-between items-center sticky top-0 z-50">
-      <div class="flex items-center gap-3">
-        <RouterLink to="/tools" class="text-gray-400 hover:text-gray-600 transition"><i class="fas fa-arrow-left"></i></RouterLink>
-        <h1 class="font-bold text-gray-800 text-lg flex items-center">
+  <div class="tool-root">
+    <nav class="tool-nav">
+      <div class="nav-left">
+        <RouterLink to="/tools" class="nav-back"><i class="fas fa-arrow-left"></i></RouterLink>
+        <h1 class="nav-title">
           <i class="fas fa-project-diagram text-emerald-600 mr-2"></i> 架构设计
         </h1>
       </div>
-      <div class="flex items-center gap-2">
-        <button @click="openDrawio" class="px-3 py-2 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700 transition">
+      <div class="nav-right">
+        <button @click="openDrawio" class="btn-primary small">
           <i class="fas fa-external-link-alt mr-1"></i> 打开 Draw.io
         </button>
       </div>
     </nav>
 
-    <main class="flex-1 max-w-5xl mx-auto w-full p-8 space-y-6">
-      <section class="text-center space-y-3">
-        <h2 class="text-3xl font-bold text-gray-900">在 Draw.io 里画清楚你的系统</h2>
-        <p class="text-gray-500 text-sm">本页面只告诉你“画什么、怎么画”，具体绘图请使用 drawio.reopeninnolab.com。</p>
-        <button
-          class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition"
-          @click="openDrawio"
-        >
-          <i class="fas fa-pen-ruler"></i> 立即开画
-        </button>
-      </section>
-
-      <section class="grid gap-4 md:grid-cols-3">
-        <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-          <div class="text-xs text-gray-400">目标</div>
-          <div class="text-lg font-bold text-gray-900 mt-1">让别人一眼看懂你的系统</div>
-          <div class="text-xs text-gray-400 mt-2">建议输出 1~2 张核心架构图</div>
+    <main class="tool-main">
+      <div class="hero-card">
+        <div class="hero-icon">
+          <i class="fas fa-pen-ruler"></i>
         </div>
-        <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-          <div class="text-xs text-gray-400">核心问题</div>
-          <div class="text-lg font-bold text-gray-900 mt-1">数据怎么流？功能怎么协作？</div>
-          <div class="text-xs text-gray-400 mt-2">用箭头说明“谁调用谁”</div>
-        </div>
-        <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-          <div class="text-xs text-gray-400">交付形式</div>
-          <div class="text-lg font-bold text-gray-900 mt-1">PNG / SVG</div>
-          <div class="text-xs text-gray-400 mt-2">导出后在里程碑提交中上传</div>
-        </div>
-      </section>
-
-      <section class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-        <div class="flex items-center justify-between">
-          <div>
-            <h3 class="text-lg font-bold text-gray-900">建议画 4 张图（优先级从上到下）</h3>
-            <p class="text-xs text-gray-400">根据项目类型挑 1~2 张即可，不必全部完成。</p>
-          </div>
-          <button class="px-3 py-2 text-xs bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200" @click="openDrawio">
-            立即开画
+        <div class="hero-content">
+          <h2>系统架构设计</h2>
+          <p>使用 Draw.io 绘制系统流程图或架构图，帮助团队理解技术实现。</p>
+          <button class="btn-primary mt-4" @click="openDrawio">
+            立即开始绘图
           </button>
         </div>
-        <div class="grid gap-3 md:grid-cols-2">
-          <div class="border border-gray-200 rounded-xl p-4">
-            <div class="font-semibold text-gray-900">1) 系统架构图</div>
-            <p class="text-xs text-gray-500 mt-1">展示模块与模块之间的关系（前端/后端/数据库/外部服务）。</p>
-            <ul class="text-xs text-gray-500 mt-2 list-disc list-inside">
-              <li>每个模块用矩形表示</li>
-              <li>箭头标注“调用方向”</li>
-              <li>标明关键接口或数据</li>
-            </ul>
-          </div>
-          <div class="border border-gray-200 rounded-xl p-4">
-            <div class="font-semibold text-gray-900">2) 数据流图（或流程图）</div>
-            <p class="text-xs text-gray-500 mt-1">展示用户操作与系统响应的关键路径。</p>
-            <ul class="text-xs text-gray-500 mt-2 list-disc list-inside">
-              <li>从用户行为开始</li>
-              <li>步骤尽量 6~10 个</li>
-              <li>每步写动词：上传/分析/展示</li>
-            </ul>
-          </div>
-          <div class="border border-gray-200 rounded-xl p-4">
-            <div class="font-semibold text-gray-900">3) 功能模块图</div>
-            <p class="text-xs text-gray-500 mt-1">展示产品功能是如何分块的（适合工程类项目）。</p>
-            <ul class="text-xs text-gray-500 mt-2 list-disc list-inside">
-              <li>模块可以按“用户-系统-数据”拆</li>
-              <li>每块写 1~3 个关键词</li>
-              <li>突出你的创新模块</li>
-            </ul>
-          </div>
-          <div class="border border-gray-200 rounded-xl p-4">
-            <div class="font-semibold text-gray-900">4) 实验设计图</div>
-            <p class="text-xs text-gray-500 mt-1">课题探究类可画实验流程与变量控制。</p>
-            <ul class="text-xs text-gray-500 mt-2 list-disc list-inside">
-              <li>标明自变量/因变量</li>
-              <li>对照组与实验组</li>
-              <li>记录方式/频次</li>
-            </ul>
-          </div>
+      </div>
+
+      <div class="grid-cards">
+        <div class="card-base">
+          <div class="card-icon bg-emerald-50 text-emerald-600"><i class="fas fa-sitemap"></i></div>
+          <h3>系统架构图</h3>
+          <p>展示模块关系 (前端/后端/数据库)</p>
         </div>
-      </section>
+        <div class="card-base">
+          <div class="card-icon bg-blue-50 text-blue-600"><i class="fas fa-exchange-alt"></i></div>
+          <h3>数据流图</h3>
+          <p>展示用户操作与数据流向</p>
+        </div>
+        <div class="card-base">
+          <div class="card-icon bg-purple-50 text-purple-600"><i class="fas fa-cubes"></i></div>
+          <h3>功能模块图</h3>
+          <p>按功能拆分系统结构</p>
+        </div>
+      </div>
     </main>
   </div>
 </template>
@@ -104,6 +56,143 @@ function openDrawio() {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
-body { font-family: 'Inter', sans-serif; background: #f8fafc; }
+.tool-root {
+  min-height: 100vh;
+  background: var(--bg-app);
+  display: flex;
+  flex-direction: column;
+}
+
+.tool-nav {
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-main);
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.nav-back {
+  color: var(--text-secondary);
+  transition: color 0.2s;
+}
+.nav-back:hover {
+  color: var(--text-main);
+}
+
+.nav-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+}
+
+.tool-main {
+  flex: 1;
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.hero-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-main);
+  border-radius: var(--radius-main);
+  padding: 3rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  box-shadow: var(--shadow-card);
+}
+
+.hero-icon {
+  width: 64px;
+  height: 64px;
+  background: var(--primary-50);
+  color: var(--primary-600);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+}
+
+.hero-content h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-main);
+  margin-bottom: 0.5rem;
+}
+
+.hero-content p {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.grid-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+}
+
+.card-base {
+  background: var(--bg-card);
+  border: 1px solid var(--border-main);
+  border-radius: var(--radius-main);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card-base:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+  border-color: var(--primary-100);
+}
+
+.card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+}
+
+.card-base h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.card-base p {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.btn-primary.small {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+}
 </style>

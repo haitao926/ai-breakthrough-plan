@@ -16,7 +16,7 @@
               <div class="switcher-label">当前项目</div>
               <div class="switcher-name">{{ projectTitle }}</div>
             </div>
-            <i class="fas fa-chevron-down"></i>
+            <i class="fas fa-sort" style="opacity: 0.4; font-size: 12px;"></i>
           </button>
           <div v-if="showProjectMenu" class="switcher-menu">
             <div class="switcher-list">
@@ -27,8 +27,10 @@
                 class="switcher-item"
                 @click="switchProject(project.id)"
               >
-                <span class="dot" :class="{ active: project.id === projectId }"></span>
-                <span class="truncate">{{ project.title }}</span>
+                <div style="width: 16px; display: flex; justify-content: center;">
+                  <i v-if="project.id === projectId" class="fas fa-check" style="color: var(--primary); font-size: 12px;"></i>
+                </div>
+                <span class="truncate" :style="{ fontWeight: project.id === projectId ? '600' : '400' }">{{ project.title }}</span>
               </button>
             </div>
             <div class="switcher-footer">
@@ -38,75 +40,24 @@
         </div>
 
         <nav class="sidebar-nav">
-          <div class="nav-group-title">0. 项目概览 (Overview)</div>
-          <div :class="['nav-item', currentTool === 'kanban' ? 'active' : '']" @click="setToolView('kanban')">
-            <i class="fas fa-columns"></i> 敏捷看板 (Kanban)
-          </div>
-          <div :class="['nav-item', currentTool === 'gantt' ? 'active' : '']" @click="setToolView('gantt')">
-            <i class="fas fa-stream"></i> 进度甘特 (Gantt)
-          </div>
-
-          <div class="nav-group-title">1. 立项阶段 (Inception)</div>
-          <div :class="['nav-item', currentTool === 'inception' ? 'active' : '']" @click="setToolView('inception')">
-            <i class="fas fa-compass"></i> 立项导航
-          </div>
-          <div :class="['nav-item', currentTool === 'charter' ? 'active' : '']" @click="setToolView('charter')">
-            <i class="fas fa-file-signature"></i> 项目立项书 (Charter)
-          </div>
-          <div :class="['nav-item', currentTool === 'pre_research' ? 'active' : '']" @click="setToolView('pre_research')">
-            <i class="fas fa-search"></i> 前期调研
-          </div>
-          <div :class="['nav-item', currentTool === 'literature' ? 'active' : '']" @click="setToolView('literature')">
-            <i class="fas fa-book-reader"></i> 文献阅读
-          </div>
-          <div :class="['nav-item', currentTool === 'innovation' ? 'active' : '']" @click="setToolView('innovation')">
-            <i class="fas fa-lightbulb"></i> 创新点梳理
-          </div>
-          <div :class="['nav-item', currentTool === 'wbs' ? 'active' : '']" @click="setToolView('wbs')">
-            <i class="fas fa-project-diagram"></i> WBS 拆解
-          </div>
-          <div :class="['nav-item', currentTool === 'architect' ? 'active' : '']" @click="setToolView('architect')">
-            <i class="fas fa-sitemap"></i> 架构设计 (Architecture)
-          </div>
-          <div :class="['nav-item', activeStage === 'proposal' ? 'active' : '']" @click="setSubmissionView('proposal')">
-            <i class="fas fa-clipboard-list"></i> 提交：开题报告
-            <span v-if="stageBadges.proposal" class="stage-badge" :class="stageBadges.proposal.tone">
-              {{ stageBadges.proposal.label }}
-            </span>
-          </div>
-
-          <div class="nav-group-title">2. 实施阶段 (Implementation)</div>
-          <div :class="['nav-item', currentTool === 'implementation' ? 'active' : '']" @click="setToolView('implementation')">
-            <i class="fas fa-route"></i> 实施导航
-          </div>
-          <div :class="['nav-item', currentTool === 'devlog' ? 'active' : '']" @click="setToolView('devlog')">
-            <i class="fas fa-pen-nib"></i> 实施日志
-          </div>
-          <div :class="['nav-item', activeStage === 'milestone_1' ? 'active' : '']" @click="setSubmissionView('milestone_1')">
-            <i class="fas fa-flag"></i> 提交：里程碑 1
-            <span v-if="stageBadges.milestone_1" class="stage-badge" :class="stageBadges.milestone_1.tone">
-              {{ stageBadges.milestone_1.label }}
-            </span>
-          </div>
-          <div :class="['nav-item', activeStage === 'midterm' ? 'active' : '']" @click="setSubmissionView('midterm')">
-            <i class="fas fa-clipboard-check"></i> 提交：中期检查
-            <span v-if="stageBadges.midterm" class="stage-badge" :class="stageBadges.midterm.tone">
-              {{ stageBadges.midterm.label }}
-            </span>
-          </div>
-          <div :class="['nav-item', activeStage === 'milestone_2' ? 'active' : '']" @click="setSubmissionView('milestone_2')">
-            <i class="fas fa-flag"></i> 提交：里程碑 2
-            <span v-if="stageBadges.milestone_2" class="stage-badge" :class="stageBadges.milestone_2.tone">
-              {{ stageBadges.milestone_2.label }}
-            </span>
-          </div>
-
-          <div class="nav-group-title">3. 结题阶段 (Conclusion)</div>
-          <div :class="['nav-item', activeStage === 'final' ? 'active' : '']" @click="setSubmissionView('final')">
-            <i class="fas fa-trophy"></i> 结题答辩 (Final)
-            <span v-if="stageBadges.final" class="stage-badge" :class="stageBadges.final.tone">
-              {{ stageBadges.final.label }}
-            </span>
+          <div v-for="group in navStructure" :key="group.id" class="nav-group">
+            <div class="nav-group-header" @click="toggleGroup(group.id)">
+              <span class="group-title">{{ group.title }}</span>
+              <i class="fas fa-chevron-down group-arrow" :class="{ rotated: collapsedGroups[group.id] }"></i>
+            </div>
+            <div v-show="!collapsedGroups[group.id]" class="nav-group-items">
+              <div 
+                v-for="item in group.items" 
+                :key="item.key"
+                class="nav-item"
+                :class="{ active: isItemActive(item) }"
+                @click="handleNavClick(item)"
+              >
+                <i :class="item.icon"></i>
+                <span class="flex-1">{{ item.label }}</span>
+                <span v-if="item.badge" class="stage-badge" :class="item.badge.tone">{{ item.badge.label }}</span>
+              </div>
+            </div>
           </div>
         </nav>
 
@@ -115,12 +66,35 @@
             <img class="avatar" :src="currentUser?.avatar_url || ''" alt="avatar" />
             <div class="name">{{ currentUser?.name || '学生' }}</div>
           </div>
-          <button class="logout" @click="logout"><i class="fas fa-sign-out-alt"></i></button>
+          <button class="logout" @click="logout" title="退出登录"><i class="fas fa-sign-out-alt"></i></button>
         </div>
       </aside>
 
       <header class="header">
-        <h1 class="header-title">{{ viewTitle }}</h1>
+        <div class="header-left">
+           <h1 class="header-title">{{ viewTitle }}</h1>
+        </div>
+        
+        <!-- Phase Stepper -->
+        <div class="phase-stepper">
+           <div 
+             v-for="(phase, idx) in ['立项', '实施', '结题']" 
+             :key="idx"
+             class="step-item"
+             :class="{ 
+               active: currentPhaseIndex === idx, 
+               completed: currentPhaseIndex > idx 
+             }"
+           >
+             <div class="step-dot">
+               <i v-if="currentPhaseIndex > idx" class="fas fa-check text-[10px]"></i>
+               <span v-else>{{ idx + 1 }}</span>
+             </div>
+             <span class="step-label">{{ phase }}</span>
+             <div v-if="idx < 2" class="step-line"></div>
+           </div>
+        </div>
+
         <div class="header-actions">
           <button v-if="viewMode === 'tool' && currentTool === 'inception'" class="btn-primary" @click="setSubmissionView('proposal')">
             <i class="fas fa-clipboard-list"></i>
@@ -141,16 +115,13 @@
           <div v-if="currentTool === 'inception'" class="inception-canvas">
             <section class="inception-hero">
               <div>
-                <div class="hero-kicker">立项阶段</div>
-                <h2>把想法拆成可执行的项目路线</h2>
-                <p>按清单完成后，将自动生成开题报告并同步到任务看板。</p>
+                <div class="hero-kicker">Phase 1: Inception</div>
+                <h2>立项导航</h2>
+                <p>完成以下任务以生成开题报告。</p>
               </div>
               <div class="hero-actions">
                 <button class="btn-primary" @click="openFirstMissing">
-                  <i class="fas fa-play"></i> {{ proposalStatus.ready ? '查看开题报告' : '继续完善' }}
-                </button>
-                <button class="btn-ghost" @click="setSubmissionView('proposal')">
-                  <i class="fas fa-clipboard-list"></i> 开题进度
+                  <i class="fas fa-play"></i> {{ proposalStatus.ready ? '查看开题报告' : '继续下一步' }}
                 </button>
               </div>
             </section>
@@ -158,39 +129,30 @@
             <section class="inception-grid">
               <div class="inception-card">
                 <div class="card-header">
-                  <div>
-                    <h3>立项完成度</h3>
-                    <div class="muted">完成清单即可提交开题</div>
-                  </div>
+                  <h3>总体进度</h3>
                   <div class="percent">{{ inceptionPercent }}%</div>
                 </div>
                 <div class="progress-bar">
                   <div class="progress-fill" :style="{ width: inceptionPercent + '%' }"></div>
                 </div>
-                <div class="muted">已完成 {{ inceptionDoneCount }}/{{ inceptionTotalCount }} 项 · {{ proposalStatus.ready ? '可提交开题' : '继续补齐' }}</div>
+                <div class="muted">已完成 {{ inceptionDoneCount }}/{{ inceptionTotalCount }} 项</div>
               </div>
 
               <div class="inception-card">
-                <div class="card-header">
-                  <h3>下一步建议</h3>
-                </div>
-                <div v-if="nextStep" class="next-step">
-                  <div class="next-title">{{ nextStep.label }}</div>
-                  <div class="muted">{{ nextStep.desc }}</div>
-                  <div v-if="nextStep.detail" class="warn">{{ nextStep.detail }}</div>
-                  <div v-if="inceptionTips[nextStep.actionKey]" class="tip">{{ inceptionTips[nextStep.actionKey] }}</div>
-                  <button class="btn-primary small" @click="openInceptionItem(nextStep)">开始梳理</button>
-                </div>
-                <div v-else class="muted">已完成全部立项任务，直接提交开题即可。</div>
+                 <div class="card-header"><h3>当前任务</h3></div>
+                 <div v-if="nextStep" class="next-step">
+                    <div class="font-bold text-slate-800">{{ nextStep.label }}</div>
+                    <div class="muted">{{ nextStep.desc }}</div>
+                    <button class="btn-primary small mt-2" @click="openInceptionItem(nextStep)">立即开始</button>
+                 </div>
+                 <div v-else class="muted">立项任务已全部完成！</div>
               </div>
             </section>
 
             <section class="inception-body">
               <div class="inception-col">
                 <div class="inception-card">
-                  <div class="card-header">
-                    <h3>立项任务清单</h3>
-                  </div>
+                  <div class="card-header"><h3>任务清单</h3></div>
                   <div class="task-list">
                     <div v-for="(item, idx) in inceptionItems" :key="item.key" class="task-item" :class="{ done: item.done }">
                       <div class="task-left">
@@ -198,56 +160,33 @@
                         <div>
                           <div class="task-title">{{ item.label }}</div>
                           <div class="muted">{{ item.desc }}</div>
-                          <div v-if="item.detail" class="task-detail" :class="item.done ? 'muted' : 'warn'">{{ item.detail }}</div>
-                          <div v-if="inceptionTips[item.actionKey]" class="task-tip">{{ inceptionTips[item.actionKey] }}</div>
                         </div>
                       </div>
                       <div class="task-actions">
-                        <span class="task-status" :class="item.done ? 'status-done' : 'status-pending'">
-                          {{ item.done ? '已完成' : '待完成' }}
-                        </span>
-                        <button v-if="item.actionKey" class="btn-ghost small" @click="openInceptionItem(item)">去梳理</button>
+                        <i v-if="item.done" class="fas fa-check-circle text-green-500 text-lg"></i>
+                        <button v-else class="btn-ghost small" @click="openInceptionItem(item)">去完成</button>
                       </div>
                     </div>
                   </div>
-                  <div v-if="proposalStatus.missing.length" class="missing">尚需完成：{{ proposalStatus.missing.join('、') }}</div>
                 </div>
               </div>
 
               <div class="inception-col">
                 <div class="inception-card">
-                  <div class="card-header">
-                    <h3>WBS 快览</h3>
-                    <span class="muted">已拆解 {{ wbsTotal }} 条</span>
-                  </div>
-                  <div v-if="!wbsPreview.length" class="muted">尚未拆解任务，先完成 WBS。</div>
+                  <div class="card-header"><h3>WBS 预览</h3></div>
+                  <div v-if="!wbsPreview.length" class="muted">暂无数据</div>
                   <div v-else class="wbs-preview">
                     <div v-for="(task, idx) in wbsPreview" :key="idx" class="wbs-item">
                       <span class="pill" :class="`pill--${task.phase}`">{{ phaseLabel(task.phase) }}</span>
-                      <span>{{ task.title }}</span>
+                      <span class="truncate">{{ task.title }}</span>
                     </div>
-                    <div v-if="wbsTotal > wbsPreview.length" class="muted">……共 {{ wbsTotal }} 条任务</div>
                   </div>
-                  <button class="btn-ghost small" @click="setToolView('wbs')">去拆解任务</button>
+                  <button class="btn-ghost small mt-2" @click="setToolView('wbs')">管理 WBS</button>
                 </div>
-
                 <div class="inception-card">
-                  <div class="card-header">
-                    <h3>交付物建议</h3>
-                  </div>
-                  <ul class="deliver-list">
-                    <li v-for="(item, idx) in deliverableTips" :key="idx">{{ item }}</li>
-                  </ul>
-                </div>
-
-                <div class="inception-card">
-                  <div class="card-header">
-                    <h3>提交提示</h3>
-                  </div>
-                  <div class="muted" :class="proposalStatus.ready ? 'success' : ''">
-                    {{ proposalStatus.ready ? '已满足开题条件，可提交开题报告。' : '完成清单后即可提交开题。' }}
-                  </div>
-                  <button class="btn-primary small" :disabled="!proposalStatus.ready" @click="setSubmissionView('proposal')">提交开题报告</button>
+                   <div class="card-header"><h3>提交状态</h3></div>
+                   <div class="muted mb-2">{{ proposalStatus.ready ? '已就绪' : '未就绪' }}</div>
+                   <button class="btn-primary small" :disabled="!proposalStatus.ready" @click="setSubmissionView('proposal')">提交开题</button>
                 </div>
               </div>
             </section>
@@ -256,98 +195,57 @@
           <div v-else-if="currentTool === 'implementation'" class="implementation-canvas">
             <section class="implementation-hero">
               <div>
-                <div class="hero-kicker">实施阶段</div>
-                <h2>任务推进 + 过程记录 = 最好的成长证据</h2>
-                <p>保持轻量记录，持续更新看板，阶段提交时自然就有内容。</p>
+                <div class="hero-kicker">Phase 2: Implementation</div>
+                <h2>实施导航</h2>
+                <p>记录开发过程，管理任务进度。</p>
               </div>
               <div class="hero-actions">
                 <button class="btn-primary" @click="setToolView('devlog')">
-                  <i class="fas fa-pen-nib"></i> 写实施日志
+                  <i class="fas fa-pen-nib"></i> 写日志
                 </button>
                 <button class="btn-ghost" @click="setToolView('kanban')">
-                  <i class="fas fa-columns"></i> 打开看板
+                  <i class="fas fa-columns"></i> 看板
                 </button>
               </div>
             </section>
 
             <section class="implementation-grid">
-              <div class="impl-card">
-                <div class="card-header">
-                  <div>
-                    <h3>任务推进</h3>
-                    <div class="muted">看板任务完成度</div>
-                  </div>
-                  <div class="percent">{{ milestonePercent }}%</div>
-                </div>
-                <div class="progress-bar">
-                  <div class="progress-fill" :style="{ width: milestonePercent + '%' }"></div>
-                </div>
-                <div v-if="milestoneLoading" class="muted">加载中...</div>
-                <div v-else class="muted">已完成 {{ milestoneCounts.done }}/{{ milestoneCounts.total }} 项</div>
-                <button class="btn-ghost small" @click="setToolView('kanban')">去更新看板</button>
-              </div>
-
-              <div class="impl-card">
-                <div class="card-header">
-                  <h3>代码仓库</h3>
-                </div>
-                <div v-if="repoUrl" class="repo-box">{{ repoUrl }}</div>
-                <div v-else class="muted">尚未绑定仓库，建议在 Gitea 创建并填入项目。</div>
-                <div class="muted">每个里程碑提交需包含仓库链接与 commit 说明。</div>
-                <button class="btn-ghost small" @click="setSubmissionView('milestone_1')">提交里程碑</button>
-              </div>
-
-              <div class="impl-card">
-                <div class="card-header">
-                  <h3>过程记录</h3>
-                  <button class="btn-ghost small" @click="setToolView('devlog')">写记录</button>
-                </div>
-                <div v-if="logLoading" class="muted">记录加载中...</div>
-                <div v-else-if="!implementationLogs.length" class="muted">暂无记录，先写一条今日进展。</div>
-                <div v-else class="log-preview">
-                  <div v-for="log in implementationLogsPreview" :key="log.id" class="log-item">
-                    <div class="log-meta">{{ log.author_name || '学生' }} · {{ formatDateTime(log.created_at) }}</div>
-                    <div class="log-content">{{ previewText(log.content) }}</div>
-                  </div>
-                </div>
-              </div>
+               <div class="impl-card">
+                  <div class="card-header"><h3>任务进度</h3> <div class="percent">{{ milestonePercent }}%</div></div>
+                  <div class="progress-bar"><div class="progress-fill" :style="{ width: milestonePercent + '%' }"></div></div>
+                  <div class="muted">已完成 {{ milestoneCounts.done }}/{{ milestoneCounts.total }}</div>
+               </div>
+               <div class="impl-card">
+                  <div class="card-header"><h3>代码仓库</h3></div>
+                  <div v-if="repoUrl" class="repo-box">{{ repoUrl }}</div>
+                  <div v-else class="muted">未绑定仓库</div>
+               </div>
             </section>
-
+            
             <section class="implementation-body">
-              <div class="impl-card">
-                <div class="card-header">
-                  <h3>待办清单</h3>
-                  <span class="muted">来自任务看板</span>
-                </div>
-                <div v-if="!milestoneTodo.length" class="muted">暂无待办，继续维护看板。</div>
-                <div v-else class="impl-list">
-                  <div v-for="task in milestoneTodo" :key="task.id" class="impl-task">
-                    <div class="impl-task-left">
-                      <span class="pill" :class="`pill--${task.phase}`">{{ phaseLabel(task.phase) }}</span>
-                      <span>{{ task.title }}</span>
+               <div class="impl-card">
+                 <div class="card-header"><h3>待办任务</h3></div>
+                 <div v-if="!milestoneTodo.length" class="muted">暂无待办</div>
+                 <div v-else class="impl-list">
+                    <div v-for="task in milestoneTodo" :key="task.id" class="impl-task">
+                       <div class="impl-task-left">
+                          <span class="pill" :class="`pill--${task.phase}`">{{ phaseLabel(task.phase) }}</span>
+                          <span>{{ task.title }}</span>
+                       </div>
+                       <span class="task-status" :class="milestoneStatusTone(task.status)">{{ task.statusLabel }}</span>
                     </div>
-                    <span class="task-status" :class="milestoneStatusTone(task.status)">{{ task.statusLabel }}</span>
+                 </div>
+               </div>
+               <div class="impl-card">
+                  <div class="card-header"><h3>最近日志</h3></div>
+                  <div v-if="!implementationLogs.length" class="muted">暂无日志</div>
+                  <div v-else class="log-preview">
+                    <div v-for="log in implementationLogsPreview" :key="log.id" class="log-item">
+                      <div class="log-meta">{{ formatDateTime(log.created_at) }}</div>
+                      <div class="log-content">{{ previewText(log.content) }}</div>
+                    </div>
                   </div>
-                </div>
-                <button class="btn-ghost small" @click="setToolView('kanban')">打开看板</button>
-              </div>
-
-              <div class="impl-card">
-                <div class="card-header">
-                  <h3>过程证据</h3>
-                </div>
-                <ul class="deliver-list">
-                  <li>阶段性截图或实验记录</li>
-                  <li>演示视频或 demo 链接</li>
-                  <li>流程图 / 架构图 / 原型图</li>
-                  <li>代码仓库与提交记录</li>
-                </ul>
-                <div class="impl-actions">
-                  <button class="btn-ghost small" @click="setSubmissionView('milestone_1')">里程碑 1</button>
-                  <button class="btn-ghost small" @click="setSubmissionView('midterm')">中期检查</button>
-                  <button class="btn-ghost small" @click="setSubmissionView('milestone_2')">里程碑 2</button>
-                </div>
-              </div>
+               </div>
             </section>
           </div>
 
@@ -482,19 +380,115 @@ const formDetails = reactive({});
 const draftTimer = ref(null);
 const draftMap = ref({});
 
-const toolTitles = {
-  kanban: '任务看板',
-  inception: '立项导航',
-  implementation: '实施导航',
-  devlog: '实施日志',
-  charter: '项目立项书',
-  pre_research: '前期调研',
-  literature: '文献阅读',
-  innovation: '创新点梳理',
-  wbs: 'WBS 拆解',
-  architect: '架构设计',
-  gantt: '进度甘特'
-};
+// --- Nav Structure ---
+const navStructure = ref([
+  {
+    id: 'overview',
+    title: '项目概览',
+    items: [
+      { key: 'kanban', label: '任务看板', icon: 'fas fa-columns', action: 'tool', value: 'kanban' },
+      { key: 'gantt', label: '进度甘特', icon: 'fas fa-stream', action: 'tool', value: 'gantt' }
+    ]
+  },
+  {
+    id: 'inception',
+    title: '阶段一：立项',
+    items: [
+      { key: 'inception', label: '立项导航', icon: 'fas fa-compass', action: 'tool', value: 'inception' },
+      { key: 'charter', label: '项目立项书', icon: 'fas fa-file-signature', action: 'tool', value: 'charter' },
+      { key: 'pre_research', label: '前期调研', icon: 'fas fa-search', action: 'tool', value: 'pre_research' },
+      { key: 'literature', label: '文献阅读', icon: 'fas fa-book-reader', action: 'tool', value: 'literature' },
+      { key: 'innovation', label: '创新点梳理', icon: 'fas fa-lightbulb', action: 'tool', value: 'innovation' },
+      { key: 'wbs', label: 'WBS 拆解', icon: 'fas fa-project-diagram', action: 'tool', value: 'wbs' },
+      { key: 'architect', label: '架构设计', icon: 'fas fa-sitemap', action: 'tool', value: 'architect' },
+      { key: 'proposal_sub', label: '提交开题', icon: 'fas fa-clipboard-list', action: 'stage', value: 'proposal', isSubmission: true }
+    ]
+  },
+  {
+    id: 'implementation',
+    title: '阶段二：实施',
+    items: [
+      { key: 'implementation', label: '实施导航', icon: 'fas fa-route', action: 'tool', value: 'implementation' },
+      { key: 'devlog', label: '实施日志', icon: 'fas fa-pen-nib', action: 'tool', value: 'devlog' },
+      { key: 'm1_sub', label: '提交里程碑1', icon: 'fas fa-flag', action: 'stage', value: 'milestone_1', isSubmission: true },
+      { key: 'midterm_sub', label: '提交中期检查', icon: 'fas fa-clipboard-check', action: 'stage', value: 'midterm', isSubmission: true },
+      { key: 'm2_sub', label: '提交里程碑2', icon: 'fas fa-flag', action: 'stage', value: 'milestone_2', isSubmission: true }
+    ]
+  },
+  {
+    id: 'conclusion',
+    title: '阶段三：结题',
+    items: [
+      { key: 'final_sub', label: '结题答辩', icon: 'fas fa-trophy', action: 'stage', value: 'final', isSubmission: true }
+    ]
+  }
+]);
+
+const collapsedGroups = reactive({
+  overview: false,
+  inception: false,
+  implementation: false,
+  conclusion: false
+});
+
+function toggleGroup(id) {
+  collapsedGroups[id] = !collapsedGroups[id];
+}
+
+function handleNavClick(item) {
+  if (item.action === 'tool') {
+    setToolView(item.value);
+  } else if (item.action === 'stage') {
+    setSubmissionView(item.value);
+  }
+}
+
+function isItemActive(item) {
+  if (item.action === 'tool') {
+    return viewMode.value === 'tool' && currentTool.value === item.value;
+  }
+  if (item.action === 'stage') {
+    return viewMode.value === 'stage' && activeStage.value === item.value;
+  }
+  return false;
+}
+
+// Update nav badges based on state
+watch([submissionIndex, draftMap], () => {
+  navStructure.value.forEach(group => {
+    group.items.forEach(item => {
+      if (item.isSubmission) {
+        const key = item.value;
+        const badges = getBadges();
+        item.badge = badges[key] || null;
+      }
+    });
+  });
+}, { deep: true });
+
+function getBadges() {
+  const badges = {};
+  Object.keys(STAGE_CONFIG).forEach(key => {
+    const latest = submissionIndex.value[key];
+    const draft = draftMap.value[key];
+    if (latest) {
+      const statusKey = mapSubmissionStatus(latest.status);
+      if (statusKey === 'reviewed') {
+        badges[key] = { label: '已评审', tone: 'badge-success' };
+      } else if (statusKey === 'needs_changes') {
+        badges[key] = { label: '需修改', tone: 'badge-danger' };
+      } else {
+        badges[key] = { label: '已提交', tone: 'badge-info' };
+      }
+      return;
+    }
+    if (draft) {
+      badges[key] = { label: '草稿', tone: 'badge-warn' };
+    }
+  });
+  return badges;
+}
+// --- End Nav Structure ---
 
 const inceptionTips = {
   charter: '建议输出：一句话目标 + 用户画像 + 痛点 + 方案',
@@ -520,14 +514,7 @@ const inceptionTotalCount = computed(() => Math.max(inceptionItems.value.length,
 const inceptionPercent = computed(() => Math.round((inceptionDoneCount.value / inceptionTotalCount.value) * 100));
 const nextStep = computed(() => inceptionItems.value.find(item => !item.done) || null);
 const deliverableType = computed(() => proposalStatus.value?.details?.deliverableType || 'engineering');
-const deliverableTips = computed(() => {
-  if (deliverableType.value === 'research') {
-    return ['研究报告（含方法/数据/结论）', '过程图片或实验记录', '数据图表与分析说明', '讨论与展望'];
-  }
-  return ['可运行原型或核心功能', '演示视频或现场演示脚本', '代码仓库与提交记录', '过程记录与总结'];
-});
 const wbsPreview = computed(() => (proposalStatus.value?.wbsTasks || []).slice(0, 6));
-const wbsTotal = computed(() => (proposalStatus.value?.wbsTasks || []).length);
 const repoUrl = computed(() => projectDetail.value?.project?.gitea_repo_url || getLastRepo());
 const milestoneCounts = computed(() => {
   const counts = { total: 0, done: 0, doing: 0, review: 0, todo: 0 };
@@ -550,9 +537,28 @@ const projectTitle = computed(() => projectDetail.value?.project?.title || '未�
 
 const viewTitle = computed(() => {
   if (viewMode.value === 'tool') {
-    return toolTitles[currentTool.value] || '工作台';
+    const flat = navStructure.value.flatMap(g => g.items);
+    const item = flat.find(i => i.value === currentTool.value && i.action === 'tool');
+    return item ? item.label : '工作台';
   }
   return stageConfig.value.title || '提交评审';
+});
+
+const currentPhaseIndex = computed(() => {
+   // Determine phase based on current view/stage
+   if (viewMode.value === 'stage') {
+     if (activeStage.value === 'proposal') return 0;
+     if (['milestone_1', 'midterm', 'milestone_2'].includes(activeStage.value)) return 1;
+     if (activeStage.value === 'final') return 2;
+   }
+   if (currentTool.value === 'inception') return 0;
+   if (currentTool.value === 'implementation' || currentTool.value === 'kanban' || currentTool.value === 'devlog') return 1;
+   
+   // Check open group if tool not specific
+   if (!collapsedGroups.inception) return 0;
+   if (!collapsedGroups.implementation) return 1;
+   if (!collapsedGroups.conclusion) return 2;
+   return 0; 
 });
 
 const toolFrameSrc = computed(() => {
@@ -561,34 +567,10 @@ const toolFrameSrc = computed(() => {
   if (currentTool.value === 'architect') {
     return `/tools/architect?project=${id}`;
   }
-  // Gantt and Kanban are now Vue components
   if (currentTool.value === 'gantt' || currentTool.value === 'kanban') {
     return ''; 
   }
   return `/tools/${currentTool.value}?project=${id}`;
-});
-
-const stageBadges = computed(() => {
-  const badges = {};
-  Object.keys(STAGE_CONFIG).forEach(key => {
-    const latest = submissionIndex.value[key];
-    const draft = draftMap.value[key];
-    if (latest) {
-      const statusKey = mapSubmissionStatus(latest.status);
-      if (statusKey === 'reviewed') {
-        badges[key] = { label: '已评审', tone: 'badge-success' };
-      } else if (statusKey === 'needs_changes') {
-        badges[key] = { label: '需修改', tone: 'badge-danger' };
-      } else {
-        badges[key] = { label: '已提交', tone: 'badge-info' };
-      }
-      return;
-    }
-    if (draft) {
-      badges[key] = { label: '草稿', tone: 'badge-warn' };
-    }
-  });
-  return badges;
 });
 
 const statusStyle = computed(() => {
@@ -650,6 +632,18 @@ function setSubmissionView(stageKey) {
   activeStage.value = stageKey;
   viewMode.value = 'stage';
   resetForm(stageKey);
+}
+
+function applyRouteView() {
+  const stage = route.query.stage;
+  const tool = route.query.tool;
+  if (stage && STAGE_CONFIG[stage]) {
+    setSubmissionView(stage);
+    return;
+  }
+  if (tool) {
+    setToolView(tool);
+  }
 }
 
 function openInceptionItem(item) {
@@ -842,6 +836,15 @@ function applyDefaultTool() {
   if (toolPinned.value) return;
   const hasProposal = Boolean(submissionIndex.value?.proposal);
   currentTool.value = hasProposal ? 'kanban' : 'inception';
+  // Auto-expand relevant group
+  if (hasProposal) {
+    collapsedGroups.overview = false;
+    collapsedGroups.implementation = false;
+    collapsedGroups.inception = true;
+  } else {
+    collapsedGroups.inception = false;
+    collapsedGroups.implementation = true;
+  }
 }
 
 async function fetchProjectDetail() {
@@ -1056,6 +1059,7 @@ onMounted(async () => {
   await loadProjects();
   await fetchProjectDetail();
   refreshStatus();
+  applyRouteView();
   window.addEventListener('focus', handleFocus);
   window.addEventListener('message', handleMessage);
 });
@@ -1072,6 +1076,21 @@ watch(
     toolPinned.value = false;
     await fetchProjectDetail();
     refreshStatus();
+    applyRouteView();
+  }
+);
+
+watch(
+  () => route.query.stage,
+  () => {
+    applyRouteView();
+  }
+);
+
+watch(
+  () => route.query.tool,
+  () => {
+    applyRouteView();
   }
 );
 
@@ -1119,302 +1138,480 @@ const STATUS_STYLE = {
 
 <style scoped>
 .workspace-root {
-  --sidebar-w: 260px;
-  --header-h: 64px;
-  --primary: #4f46e5;
-  --bg-page: #f8fafc;
-  --bg-card: #ffffff;
-  --border-color: #e2e8f0;
-  --text-main: #1e293b;
-  --text-sub: #64748b;
   height: 100vh;
-  background: var(--bg-page);
+  background: var(--bg-app);
+  display: flex;
+  flex-direction: column;
 }
+
 .app-shell {
   display: grid;
   grid-template-columns: var(--sidebar-w) 1fr;
   grid-template-rows: var(--header-h) 1fr;
   height: 100%;
+  overflow: hidden;
 }
+
+/* Sidebar */
 .sidebar {
   grid-row: 1 / -1;
   background: var(--bg-card);
-  border-right: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-main);
   display: flex;
   flex-direction: column;
   z-index: 20;
 }
+
 .sidebar-header {
   height: var(--header-h);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 1.5rem;
-  border-bottom: 1px solid #f1f5f9;
+  padding: 0 1.25rem;
+  border-bottom: 1px solid var(--border-main);
 }
+
 .brand {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--text-main);
+  letter-spacing: -0.025em;
+  font-size: 1.1rem;
 }
+
 .brand-icon {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: var(--primary);
+  background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-500) 100%);
   color: #fff;
   display: grid;
   place-items: center;
   font-size: 14px;
 }
+
 .home-link {
-  color: #94a3b8;
+  color: var(--text-muted);
+  transition: color 0.2s;
+  padding: 8px;
 }
+.home-link:hover {
+  color: var(--primary-600);
+}
+
+/* Project Switcher */
 .project-switcher {
-  padding: 1rem;
+  padding: 1.25rem 1rem 0.5rem;
   position: relative;
 }
+
 .switcher-btn {
   width: 100%;
-  background: #eef2ff;
-  border: 1px solid #e0e7ff;
+  background: var(--bg-app);
+  border: 1px solid var(--border-main);
   border-radius: 12px;
-  padding: 0.75rem;
+  padding: 0.75rem 1rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.75rem;
   text-align: left;
   cursor: pointer;
+  transition: all 0.2s;
 }
+
+.switcher-btn:hover {
+  background: white;
+  border-color: var(--primary-100);
+  box-shadow: var(--shadow-card);
+}
+
+.switcher-meta {
+  flex: 1;
+  min-width: 0;
+}
+
 .switcher-label {
   font-size: 10px;
-  color: #94a3b8;
+  color: var(--text-muted);
   font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
 }
+
 .switcher-name {
-  font-weight: 700;
-  color: #1e293b;
+  font-weight: 600;
+  color: var(--text-main);
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+
 .switcher-menu {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 4px);
   left: 16px;
   right: 16px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: var(--bg-card);
+  border: 1px solid var(--border-main);
   border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
-  z-index: 40;
+  box-shadow: var(--shadow-hover);
+  z-index: 50;
+  animation: slideDown 0.1s ease-out;
 }
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .switcher-list {
-  max-height: 240px;
+  max-height: 280px;
   overflow-y: auto;
-  padding: 8px;
-  display: grid;
-  gap: 6px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
+
 .switcher-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   border: none;
   background: transparent;
-  padding: 8px;
+  padding: 10px 12px;
   border-radius: 8px;
   cursor: pointer;
   text-align: left;
+  transition: background 0.15s;
+  color: var(--text-secondary);
 }
+
 .switcher-item:hover {
-  background: #f8fafc;
+  background: var(--bg-app);
+  color: var(--text-main);
 }
+
 .switcher-footer {
-  border-top: 1px solid #f3f4f6;
+  border-top: 1px solid var(--border-subtle);
   padding: 8px;
 }
+
 .new-project {
-  display: block;
-  text-align: center;
-  border: 1px dashed #d1d5db;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px;
+  border: 1px dashed var(--text-muted);
   border-radius: 8px;
-  padding: 6px;
+  color: var(--text-secondary);
   font-size: 12px;
-  color: #6b7280;
+  font-weight: 500;
   text-decoration: none;
+  transition: all 0.2s;
 }
-.dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: #cbd5f5;
+.new-project:hover {
+  border-color: var(--primary-500);
+  color: var(--primary-600);
+  background: var(--primary-50);
 }
-.dot.active {
-  background: #22c55e;
-}
+
+/* Nav */
 .sidebar-nav {
   flex: 1;
   overflow-y: auto;
-  padding: 0 0.5rem 1rem;
+  padding: 0.5rem 1rem 1.5rem;
 }
-.nav-group-title {
-  font-size: 0.7rem;
+
+.nav-group {
+  margin-bottom: 4px;
+}
+
+.nav-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0.5rem;
+  font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
-  color: #94a3b8;
-  padding: 1rem 1rem 0.5rem;
+  color: var(--text-muted);
   letter-spacing: 0.05em;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.2s;
 }
+.nav-group-header:hover {
+  color: var(--text-main);
+}
+
+.group-arrow {
+  transition: transform 0.2s;
+  font-size: 0.7rem;
+}
+.group-arrow.rotated {
+  transform: rotate(-90deg);
+}
+
+.nav-group-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 8px;
+}
+
 .nav-item {
   display: flex;
   align-items: center;
-  padding: 0.6rem 1rem;
-  margin: 0.1rem 0.5rem;
-  border-radius: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
   font-size: 0.85rem;
   font-weight: 500;
-  color: var(--text-sub);
-  transition: all 0.2s;
+  color: var(--text-secondary);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
-  gap: 0.5rem;
+  gap: 0.75rem;
+  border: 1px solid transparent;
 }
+
 .nav-item:hover {
-  background-color: #f1f5f9;
+  background-color: var(--bg-app);
   color: var(--text-main);
 }
+
 .nav-item.active {
-  background-color: #eef2ff;
-  color: var(--primary);
+  background-color: var(--primary-50);
+  color: var(--primary-700);
+  font-weight: 600;
+  border-color: var(--primary-100);
 }
+
 .nav-item i {
   width: 1.25rem;
   text-align: center;
-  font-size: 0.9rem;
+  font-size: 1rem;
+  opacity: 0.7;
 }
+.nav-item.active i {
+  opacity: 1;
+}
+
 .stage-badge {
-  margin-left: auto;
   font-size: 10px;
-  padding: 2px 8px;
-  border-radius: 999px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
-.badge-success { background: #dcfce7; color: #15803d; }
-.badge-danger { background: #fee2e2; color: #b91c1c; }
-.badge-info { background: #e0e7ff; color: #4338ca; }
-.badge-warn { background: #fef3c7; color: #b45309; }
+
+.badge-success { background: #dcfce7; color: #166534; }
+.badge-danger { background: #fee2e2; color: #991b1b; }
+.badge-info { background: #e0e7ff; color: #3730a3; }
+.badge-warn { background: #fef3c7; color: #92400e; }
+
+/* Sidebar Footer */
 .sidebar-footer {
-  border-top: 1px solid #f3f4f6;
-  padding: 1rem;
+  border-top: 1px solid var(--border-main);
+  padding: 1.25rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  background: var(--bg-card);
 }
+
 .profile {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
+
 .avatar {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: #e2e8f0;
+  background: var(--bg-app);
   object-fit: cover;
+  border: 1px solid var(--border-main);
 }
+
 .name {
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-main);
 }
+
 .logout {
-  border: none;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
   background: transparent;
-  color: #94a3b8;
+  color: var(--text-muted);
   cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s;
 }
+.logout:hover {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
+/* Header */
 .header {
   grid-column: 2;
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-main);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 2rem;
   z-index: 10;
+  position: sticky;
+  top: 0;
+}
+
+.header-left {
+  flex: 1;
 }
 .header-title {
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 700;
+  color: var(--text-main);
 }
+
 .header-actions {
+  flex: 1;
   display: flex;
+  justify-content: flex-end;
   gap: 8px;
 }
-.btn-primary {
-  background: var(--primary);
-  color: #fff;
-  border: none;
-  padding: 8px 14px;
-  border-radius: 8px;
-  font-size: 12px;
-  cursor: pointer;
-  display: inline-flex;
+
+/* Phase Stepper */
+.phase-stepper {
+  display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
-.btn-ghost {
-  background: #f8fafc;
-  border: 1px solid #e5e7eb;
-  color: #64748b;
-  padding: 8px 14px;
-  border-radius: 8px;
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  opacity: 0.4;
+  transition: opacity 0.3s;
+}
+.step-item.active {
+  opacity: 1;
+}
+.step-item.completed {
+  opacity: 1;
+}
+.step-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--bg-app);
+  color: var(--text-muted);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid var(--border-main);
+}
+.step-item.active .step-dot {
+  background: var(--primary-600);
+  color: #fff;
+  border-color: var(--primary-600);
+  box-shadow: 0 0 0 3px var(--primary-100);
+}
+.step-item.completed .step-dot {
+  background: #10b981;
+  color: #fff;
+  border-color: #10b981;
+}
+.step-label {
   font-size: 12px;
-  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-main);
 }
+.step-line {
+  width: 40px;
+  height: 2px;
+  background: var(--border-main);
+  margin: 0 8px;
+  border-radius: 999px;
+}
+.step-item.completed .step-line {
+  background: #10b981;
+}
+
+/* Main Canvas */
 .main-canvas {
   grid-column: 2;
   grid-row: 2;
   position: relative;
   overflow: hidden;
-  background-color: #f1f5f9;
+  background-color: var(--bg-app);
   padding: 0;
 }
+
 .tool-frame {
   width: 100%;
   height: 100%;
   border: none;
   background: white;
 }
+
+/* Stage & Forms */
 .stage-container {
-  max-width: 960px;
+  max-width: 900px;
   margin: 0 auto;
-  padding: 2.5rem 2rem;
+  padding: 3rem 2rem;
   height: 100%;
   overflow-y: auto;
-  background: white;
+  background: var(--bg-card);
+  box-shadow: 0 0 40px rgba(0,0,0,0.02);
 }
+
 .stage-header {
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
+  text-align: center;
 }
 .stage-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 0.5rem;
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--text-main);
+  margin-bottom: 0.75rem;
+  letter-spacing: -0.025em;
 }
+
 .stage-desc {
-  color: #64748b;
-  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.6;
 }
+
+/* Status Banner */
 .status-banner {
   border-radius: 12px;
   border: 1px solid transparent;
   display: flex;
-  gap: 12px;
+  gap: 16px;
   align-items: center;
-  padding: 12px;
-  margin-bottom: 1.5rem;
+  padding: 16px;
+  margin-bottom: 2rem;
 }
 .status-icon {
   width: 40px;
@@ -1424,23 +1621,19 @@ const STATUS_STYLE = {
   place-items: center;
   font-size: 18px;
 }
-.status-title {
-  font-weight: 600;
-}
-.status-meta {
-  font-size: 12px;
-  color: #6b7280;
-}
-.status-pending { border-color: #e5e7eb; background: #f9fafb; }
+.status-title { font-weight: 600; }
+.status-meta { font-size: 12px; color: var(--text-secondary); }
+.status-pending { border-color: var(--border-main); background: var(--bg-app); }
 .status-draft { border-color: #fde68a; background: #fffbeb; }
-.status-submitted { border-color: #c7d2fe; background: #eef2ff; }
+.status-submitted { border-color: var(--primary-100); background: var(--primary-50); }
 .status-reviewed { border-color: #bbf7d0; background: #ecfdf3; }
 .status-needs { border-color: #fecdd3; background: #fff1f2; }
-.status-icon-pending { background: #e5e7eb; color: #6b7280; }
+.status-icon-pending { background: var(--border-main); color: var(--text-secondary); }
 .status-icon-draft { background: #fef3c7; color: #b45309; }
-.status-icon-submitted { background: #e0e7ff; color: #4338ca; }
+.status-icon-submitted { background: var(--primary-100); color: var(--primary-700); }
 .status-icon-reviewed { background: #dcfce7; color: #15803d; }
 .status-icon-needs { background: #fee2e2; color: #b91c1c; }
+
 .feedback-card {
   border: 1px solid #fde68a;
   background: #fffbeb;
@@ -1448,55 +1641,39 @@ const STATUS_STYLE = {
   padding: 12px;
   margin-bottom: 1.5rem;
 }
-.feedback-title {
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-.feedback-body {
-  font-size: 13px;
-  color: #7c2d12;
-  white-space: pre-wrap;
-}
-.proposal-wrapper {
-  display: grid;
-  gap: 16px;
-}
-.proposal-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-.stage-form {
-  display: grid;
-  gap: 16px;
-}
-.form-grid {
-  display: grid;
-  gap: 16px;
-}
+.feedback-title { font-weight: 600; margin-bottom: 4px; }
+.feedback-body { font-size: 13px; color: #7c2d12; white-space: pre-wrap; }
+
+.proposal-wrapper { display: grid; gap: 16px; }
+.proposal-actions { display: flex; justify-content: flex-end; }
+
+.stage-form { display: grid; gap: 16px; }
+.form-grid { display: grid; gap: 16px; }
 .form-input {
   width: 100%;
   padding: 0.6rem 0.8rem;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--border-main);
   border-radius: 0.5rem;
   font-size: 0.9rem;
+  transition: border-color 0.2s;
+}
+.form-input:focus {
+  outline: none;
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 3px var(--primary-50);
 }
 .form-label {
   display: block;
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--text-sub);
+  color: var(--text-secondary);
   margin-bottom: 0.4rem;
 }
-.textarea {
-  min-height: 120px;
-  resize: vertical;
-}
-.required {
-  color: #ef4444;
-  margin-left: 4px;
-}
+.textarea { min-height: 120px; resize: vertical; }
+.required { color: #ef4444; margin-left: 4px; }
+
 .attachments {
-  border: 1px dashed #e5e7eb;
+  border: 1px dashed var(--border-main);
   border-radius: 12px;
   padding: 12px;
   display: grid;
@@ -1506,359 +1683,270 @@ const STATUS_STYLE = {
   display: flex;
   justify-content: space-between;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--text-secondary);
 }
-.file-list {
-  display: grid;
-  gap: 6px;
-}
+.file-list { display: grid; gap: 6px; }
 .file-item {
   display: flex;
   justify-content: space-between;
   font-size: 12px;
-  color: #6b7280;
-  background: #f9fafb;
+  color: var(--text-secondary);
+  background: var(--bg-app);
   padding: 6px 8px;
   border-radius: 8px;
 }
-.file-name {
-  color: #111827;
-}
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-.inception-canvas {
+.file-name { color: var(--text-main); }
+.form-actions { display: flex; justify-content: flex-end; }
+
+/* Inception / Implementation Dashboards */
+.inception-canvas,
+.implementation-canvas {
   height: 100%;
   overflow-y: auto;
-  padding: 2rem;
-  background: #f8fafc;
+  padding: 2.5rem;
+  background: var(--bg-app);
 }
-.inception-hero {
+
+.inception-hero,
+.implementation-hero {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  gap: 1.5rem;
-  margin-bottom: 1.5rem;
+  gap: 2rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--border-main);
+  padding-bottom: 2rem;
 }
+
 .hero-kicker {
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 0.75rem;
+  font-weight: 800;
   text-transform: uppercase;
-  color: #6366f1;
-  letter-spacing: 0.06em;
-  margin-bottom: 0.4rem;
+  color: var(--primary-600);
+  letter-spacing: 0.1em;
+  margin-bottom: 0.5rem;
 }
-.inception-hero h2 {
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: #1f2937;
+
+.inception-hero h2,
+.implementation-hero h2 {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -0.03em;
+  line-height: 1.2;
 }
-.inception-hero p {
-  color: #6b7280;
-  font-size: 0.9rem;
-  margin-top: 0.3rem;
+
+.inception-hero p,
+.implementation-hero p {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  margin-top: 0.5rem;
+  max-width: 600px;
 }
-.hero-actions {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+
+.inception-grid,
+.implementation-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  margin-bottom: 24px;
 }
-.inception-grid {
+
+.inception-body,
+.implementation-body {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.inception-card,
+.impl-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-main);
+  border-radius: var(--radius-main);
+  padding: 20px;
   display: grid;
   gap: 16px;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  margin-bottom: 16px;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.2s, box-shadow 0.2s;
 }
-.inception-body {
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-  gap: 16px;
+
+.inception-card:hover,
+.impl-card:hover {
+  box-shadow: var(--shadow-hover);
+  border-color: var(--primary-100);
 }
-.inception-col {
-  display: grid;
-  gap: 16px;
-}
-.inception-card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
-  padding: 16px;
-  display: grid;
-  gap: 12px;
-}
+
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
 }
-.percent {
-  font-size: 1.4rem;
+.card-header h3 {
+  font-size: 1rem;
   font-weight: 700;
-  color: #4f46e5;
+  color: var(--text-main);
+  margin: 0;
 }
+
+.percent {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--primary-600);
+  font-variant-numeric: tabular-nums;
+}
+
 .progress-bar {
-  height: 6px;
-  background: #f1f5f9;
+  height: 8px;
+  background: var(--bg-app);
   border-radius: 999px;
   overflow: hidden;
 }
+
 .progress-fill {
   height: 100%;
-  background: #6366f1;
+  background: var(--primary-600);
+  border-radius: 999px;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.next-step {
+
+/* Tasks */
+.task-item,
+.log-item,
+.impl-task {
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  transition: border-color 0.2s;
+}
+.task-item:hover,
+.log-item:hover {
+  border-color: var(--border-main);
+}
+.task-item.done {
+  background: var(--bg-app);
+  opacity: 0.8;
+}
+
+.task-index {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: var(--primary-50);
+  color: var(--primary-700);
   display: grid;
-  gap: 6px;
+  place-items: center;
+  font-weight: 700;
+  font-size: 11px;
 }
-.next-title {
-  font-weight: 600;
-  color: #111827;
-}
+
 .task-list {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 .task-item {
-  border: 1px solid #f1f5f9;
-  border-radius: 12px;
-  padding: 12px;
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  background: #fafafa;
+  align-items: center;
 }
 .task-left {
   display: flex;
   gap: 12px;
-}
-.task-index {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: #eef2ff;
-  color: #4338ca;
-  display: grid;
-  place-items: center;
-  font-weight: 700;
-  font-size: 12px;
+  align-items: center;
 }
 .task-title {
+  font-size: 0.9rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--text-main);
 }
-.task-actions {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
-}
-.task-status {
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 999px;
-}
-.status-done {
-  background: #dcfce7;
-  color: #15803d;
-}
-.status-pending {
-  background: #fef3c7;
-  color: #b45309;
-}
-.status-doing {
-  background: #dbeafe;
-  color: #1d4ed8;
-}
-.status-review {
-  background: #fef3c7;
-  color: #b45309;
-}
-.task-detail {
-  font-size: 12px;
-  margin-top: 4px;
-}
-.task-tip {
-  font-size: 12px;
-  margin-top: 4px;
-  color: #6366f1;
-}
-.missing {
-  font-size: 12px;
-  color: #ef4444;
-}
-.wbs-preview {
-  display: grid;
-  gap: 6px;
-}
-.wbs-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-}
+
 .pill {
   font-size: 10px;
   padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.pill--m1 { background: var(--primary-50); color: var(--primary-700); }
+.pill--m2 { background: #fef3c7; color: #92400e; }
+.pill--m3 { background: #dcfce7; color: #166534; }
+
+/* Status Styles Refined */
+.status-pending { background: var(--bg-app); color: var(--text-secondary); border: 1px solid var(--border-main); }
+.status-done { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+.status-doing { background: var(--primary-50); color: var(--primary-600); border: 1px solid var(--primary-100); }
+.status-review { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+
+.task-status {
+  font-size: 10px;
+  padding: 2px 8px;
   border-radius: 999px;
+  font-weight: 600;
 }
-.pill--m1 {
-  background: #eef2ff;
-  color: #4338ca;
-}
-.pill--m2 {
-  background: #fef3c7;
-  color: #b45309;
-}
-.pill--m3 {
-  background: #dcfce7;
-  color: #15803d;
-}
-.deliver-list {
-  display: grid;
-  gap: 6px;
-  font-size: 13px;
-  color: #374151;
-  padding-left: 16px;
-}
-.warn {
-  font-size: 12px;
-  color: #dc2626;
-}
-.tip {
-  font-size: 12px;
-  color: #4f46e5;
-}
-.btn-primary.small,
-.btn-ghost.small {
-  font-size: 12px;
-  padding: 6px 10px;
-}
-.btn-primary.small[disabled] {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.success {
-  color: #059669;
-}
-@media (max-width: 1100px) {
-  .inception-body {
-    grid-template-columns: 1fr;
-  }
-  .inception-hero {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
-.implementation-canvas {
-  height: 100%;
-  overflow-y: auto;
-  padding: 2rem;
-  background: #f8fafc;
-}
-.implementation-hero {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 1.5rem;
-  margin-bottom: 1.5rem;
-}
-.implementation-grid {
-  display: grid;
-  gap: 16px;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  margin-bottom: 16px;
-}
-.implementation-body {
-  display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
-  gap: 16px;
-}
-.impl-card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
-  padding: 16px;
-  display: grid;
-  gap: 12px;
-}
+
+/* Utilities */
+.muted { color: var(--text-muted); font-size: 0.85rem; }
+.warn { color: #ef4444; font-size: 0.85rem; }
+.success { color: #059669; font-size: 0.85rem; }
+.tip { color: var(--primary-600); font-size: 0.85rem; font-weight: 500; }
+.empty { padding: 12px; text-align: center; color: var(--text-muted); font-size: 12px; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 .repo-box {
   font-size: 12px;
-  background: #f8fafc;
-  border: 1px dashed #e5e7eb;
+  background: var(--bg-app);
+  border: 1px dashed var(--border-main);
   padding: 8px;
   border-radius: 8px;
-  color: #475569;
+  color: var(--text-secondary);
   word-break: break-all;
 }
-.log-preview {
-  display: grid;
-  gap: 8px;
-}
-.log-item {
-  border: 1px solid #f1f5f9;
-  border-radius: 12px;
-  padding: 10px;
-  background: #fafafa;
-}
-.log-meta {
-  font-size: 11px;
-  color: #94a3b8;
-  margin-bottom: 4px;
-}
-.log-content {
-  font-size: 12px;
-  color: #334155;
-}
-.impl-list {
-  display: grid;
-  gap: 8px;
-}
+.log-preview { display: grid; gap: 8px; }
+.log-item { display: block; }
+.log-meta { font-size: 10px; color: var(--text-muted); margin-bottom: 2px; }
+.log-content { font-size: 0.85rem; color: var(--text-secondary); }
+.impl-list { display: grid; gap: 8px; }
 .impl-task {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border: 1px solid #f1f5f9;
-  border-radius: 10px;
-  background: #f9fafb;
+  padding: 8px 12px;
 }
 .impl-task-left {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
-  color: #374151;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 500;
 }
-.impl-actions {
+.wbs-preview { display: grid; gap: 8px; }
+.wbs-item {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
 }
-@media (max-width: 1100px) {
+
+.btn-primary.small,
+.btn-ghost.small {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  height: auto;
+}
+
+@media (max-width: 1024px) {
+  .inception-body,
   .implementation-body {
     grid-template-columns: 1fr;
   }
-  .implementation-hero {
-    flex-direction: column;
-    align-items: flex-start;
+  .phase-stepper {
+    display: none;
   }
-}
-.muted {
-  color: #94a3b8;
-  font-size: 12px;
-}
-.empty {
-  padding: 12px;
-  text-align: center;
-  font-size: 12px;
-  color: #94a3b8;
-}
-.truncate {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 </style>

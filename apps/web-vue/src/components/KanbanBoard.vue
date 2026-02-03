@@ -1,31 +1,31 @@
 <template>
-  <div class="h-full bg-gray-50 p-6">
+  <div class="h-full p-6">
     <!-- Global Empty State -->
-    <div v-if="tasks.length === 0" class="h-full flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-200 rounded-xl bg-white/50">
-        <div class="text-4xl mb-4 text-gray-300">📋</div>
-        <p>暂无看板任务</p>
-        <p class="text-xs text-gray-400 mt-1 mb-6">您可以手动创建任务，或一键生成默认计划</p>
-        <button @click="$emit('request-create-default')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm text-sm font-medium transition-colors flex items-center gap-2">
+    <div v-if="tasks.length === 0" class="h-full flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+        <div class="text-4xl mb-4 opacity-50">📋</div>
+        <p class="font-medium">暂无看板任务</p>
+        <p class="text-xs text-slate-400 mt-1 mb-6">您可以手动创建任务，或一键生成默认计划</p>
+        <button @click="$emit('request-create-default')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm text-sm font-medium transition-all flex items-center gap-2">
           <i class="fas fa-magic"></i> 创建默认计划
         </button>
     </div>
 
     <!-- Kanban Columns -->
-    <div v-else class="flex h-full overflow-x-auto gap-6">
+    <div v-else class="flex h-full overflow-x-auto gap-6 pb-2">
       <div 
         v-for="col in columns" 
         :key="col.id" 
-        class="flex-shrink-0 w-80 flex flex-col bg-gray-100 rounded-xl border border-gray-200"
+        class="flex-shrink-0 w-80 flex flex-col bg-slate-50/80 rounded-xl border border-slate-100"
         @dragover.prevent
         @drop="onDrop($event, col.id)"
       >
         <!-- Column Header -->
-        <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50 rounded-t-xl">
-          <h3 class="font-bold text-gray-700 flex items-center gap-2">
-            <div class="w-3 h-3 rounded-full" :class="col.color"></div>
+        <div class="p-3 px-4 flex justify-between items-center">
+          <h3 class="font-bold text-slate-700 flex items-center gap-2 text-sm">
+            <div class="w-2 h-2 rounded-full" :class="col.color"></div>
             {{ col.title }}
           </h3>
-          <span class="text-xs text-gray-400 bg-gray-200 px-2 py-0.5 rounded-full">{{ getTasksByStatus(col.id).length }}</span>
+          <span class="text-[10px] font-bold text-slate-400 bg-slate-200/50 px-2 py-0.5 rounded-full">{{ getTasksByStatus(col.id).length }}</span>
         </div>
 
         <!-- Task List -->
@@ -35,20 +35,20 @@
             :key="task.id" 
             draggable="true"
             @dragstart="onDragStart($event, task)"
-            class="bg-white p-3 rounded-lg shadow-sm border border-gray-200 cursor-move hover:shadow-md transition-all group"
+            class="bg-white p-3 rounded-lg border border-slate-200 shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:border-indigo-400 hover:shadow-md transition-all group cursor-move select-none"
           >
             <div class="flex justify-between items-start mb-2">
-              <span class="text-xs font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-600">{{ task.phase || '任务' }}</span>
-              <button @click="$emit('edit', task)" class="text-gray-300 hover:text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity">
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 tracking-wide">{{ task.phase || '任务' }}</span>
+              <button @click="$emit('edit', task)" class="text-slate-300 hover:text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity">
                 <i class="fas fa-pen text-xs"></i>
               </button>
             </div>
-            <h4 class="text-sm font-medium text-gray-800 mb-1 leading-snug">{{ task.title }}</h4>
-            <p v-if="task.description && task.description !== task.phase" class="text-xs text-gray-500 truncate">{{ task.description }}</p>
+            <h4 class="text-sm font-semibold text-slate-800 mb-1 leading-snug">{{ task.title }}</h4>
+            <p v-if="task.description && task.description !== task.phase" class="text-xs text-slate-500 truncate">{{ task.description }}</p>
           </div>
           
           <!-- Empty Column Placeholder -->
-          <div v-if="getTasksByStatus(col.id).length === 0" class="h-full flex items-center justify-center text-gray-300 text-xs italic border-2 border-dashed border-gray-200 rounded-lg m-2 bg-gray-50/50">
+          <div v-if="getTasksByStatus(col.id).length === 0" class="h-20 flex items-center justify-center text-slate-300 text-xs italic border border-dashed border-slate-200 rounded-lg bg-white/50">
             拖拽任务到这里
           </div>
         </div>

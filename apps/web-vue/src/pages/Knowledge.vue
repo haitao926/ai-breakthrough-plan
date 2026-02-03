@@ -1,12 +1,12 @@
 <template>
-  <div class="knowledge-page text-gray-800">
-    <nav class="fixed w-full z-50 bg-white/90 backdrop-blur-md border-b border-gray-200/50 transition-all duration-300">
+  <div class="knowledge-page text-slate-800">
+    <nav class="fixed w-full z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200/50 transition-all duration-300">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16 items-center">
           <div class="flex items-center gap-3 shrink-0">
             <RouterLink to="/" class="flex items-center gap-2 group">
-              <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold shadow-md group-hover:bg-indigo-700 transition">AI</div>
-              <span class="font-bold text-xl tracking-tight text-gray-900 group-hover:text-indigo-600 transition">破壁计划</span>
+              <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold shadow-sm group-hover:bg-indigo-700 transition">AI</div>
+              <span class="font-bold text-xl tracking-tight text-slate-900 group-hover:text-indigo-600 transition">破壁计划</span>
             </RouterLink>
           </div>
 
@@ -37,12 +37,12 @@
       </div>
     </nav>
 
-    <header class="pt-32 pb-12 bg-white border-b border-gray-200">
+    <header class="pt-32 pb-12 bg-white border-b border-slate-100">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4 tracking-tight">
+        <h1 class="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4 tracking-tight">
           探索学术前沿，<span class="text-indigo-600">点亮创新火花</span>
         </h1>
-        <p class="text-lg text-gray-500 max-w-3xl">
+        <p class="text-lg text-slate-500 max-w-3xl">
           这里汇集了 20+ 核心学科领域知识，帮助学生找到研究方向与创新灵感。
         </p>
       </div>
@@ -52,8 +52,8 @@
       <section>
         <div class="flex flex-wrap items-end justify-between gap-4 mb-8">
           <div>
-            <h2 class="text-2xl font-bold text-gray-900">学科知识百科</h2>
-            <p class="text-sm text-gray-500 mt-2">20 大核心学科领域的入门指引与项目启发</p>
+            <h2 class="text-2xl font-bold text-slate-900">学科知识百科</h2>
+            <p class="text-sm text-slate-500 mt-2">20 大核心学科领域的入门指引与项目启发</p>
           </div>
           <div class="flex flex-wrap gap-2">
             <button :class="filterClass('all')" @click="filter = 'all'">全部</button>
@@ -67,16 +67,16 @@
           <div
             v-for="field in filteredFields"
             :key="field.id"
-            class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition cursor-pointer"
+            class="bg-white rounded-2xl border border-slate-200 p-5 hover:border-indigo-400 hover:shadow-[0_4px_20px_-2px_rgba(0,0,0,0.05)] transition-all cursor-pointer group"
             @click="openField(field)"
           >
-            <div class="w-12 h-12 rounded-xl flex items-center justify-center text-lg" :style="{ backgroundColor: field.colorBg, color: field.colorText }">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center text-lg transition-transform group-hover:scale-110" :style="{ backgroundColor: field.colorBg, color: field.colorText }">
               <i class="fas" :class="field.icon"></i>
             </div>
-            <h3 class="font-bold text-gray-900 mt-4">{{ field.name }}</h3>
-            <p class="text-xs text-gray-500">{{ field.en }}</p>
-            <p class="text-xs text-gray-500 mt-3 leading-relaxed">{{ field.desc }}</p>
-            <span class="inline-flex items-center text-xs font-bold text-indigo-600 mt-4">
+            <h3 class="font-bold text-slate-900 mt-4 group-hover:text-indigo-600 transition-colors">{{ field.name }}</h3>
+            <p class="text-xs text-slate-400">{{ field.en }}</p>
+            <p class="text-xs text-slate-500 mt-3 leading-relaxed">{{ field.desc }}</p>
+            <span class="inline-flex items-center text-xs font-bold text-indigo-600 mt-4 opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0">
               查看详情 <i class="fas fa-arrow-right ml-2 text-[10px]"></i>
             </span>
           </div>
@@ -84,19 +84,23 @@
       </section>
     </main>
 
-    <div v-if="activeField" class="fixed inset-0 z-50 flex items-center justify-center">
-      <div class="absolute inset-0 bg-black/40" @click="closeField"></div>
-      <div class="relative bg-white w-full max-w-lg mx-4 rounded-2xl p-6 shadow-xl">
-        <button class="absolute top-4 right-4 text-gray-400 hover:text-gray-600" @click="closeField">×</button>
-        <div class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full inline-flex">
+    <div v-if="activeField" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" @click="closeField"></div>
+      <div class="relative bg-white w-full max-w-lg rounded-2xl p-8 shadow-2xl transform transition-all scale-100 opacity-100">
+        <button class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition" @click="closeField">
+          <i class="fas fa-times"></i>
+        </button>
+        <div class="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full inline-flex border border-indigo-100">
           {{ activeField.cat.toUpperCase() }}
         </div>
-        <h3 class="text-xl font-bold text-gray-900 mt-3">{{ activeField.name }}</h3>
-        <p class="text-sm text-gray-500">{{ activeField.en }}</p>
-        <p class="text-sm text-gray-600 mt-4 leading-relaxed">{{ activeField.desc }}</p>
-        <div class="mt-4 bg-gray-50 rounded-xl p-4">
-          <div class="text-xs font-bold text-gray-700 mb-2">项目启发</div>
-          <p class="text-sm text-gray-600">{{ activeField.inspiration }}</p>
+        <h3 class="text-2xl font-bold text-slate-900 mt-4">{{ activeField.name }}</h3>
+        <p class="text-sm text-slate-500 font-medium">{{ activeField.en }}</p>
+        <p class="text-base text-slate-600 mt-6 leading-relaxed">{{ activeField.desc }}</p>
+        <div class="mt-8 bg-slate-50 rounded-xl p-5 border border-slate-100">
+          <div class="flex items-center gap-2 text-sm font-bold text-slate-800 mb-2">
+            <i class="fas fa-lightbulb text-yellow-500"></i> 项目启发
+          </div>
+          <p class="text-sm text-slate-600 leading-relaxed">{{ activeField.inspiration }}</p>
         </div>
       </div>
     </div>
@@ -189,14 +193,14 @@ function navLinkClass(key) {
   if (key === 'knowledge') {
     return `${base} bg-indigo-50 text-indigo-700`;
   }
-  return `${base} text-gray-500 hover:text-gray-900 hover:bg-gray-50`;
+  return `${base} text-slate-500 hover:text-slate-900 hover:bg-slate-50`;
 }
 
 function filterClass(key) {
   const base = 'px-3 py-1.5 rounded-lg text-xs font-bold transition';
   if (filter.value === key) {
-    return `${base} bg-gray-900 text-white`;
+    return `${base} bg-slate-800 text-white`;
   }
-  return `${base} bg-white border border-gray-200 text-gray-600 hover:bg-gray-50`;
+  return `${base} bg-white border border-slate-200 text-slate-600 hover:bg-slate-50`;
 }
 </script>
