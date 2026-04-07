@@ -246,7 +246,7 @@ const navLinks = [
 
 const curriculum = [
   { id: '00', title: '学术规范与 PBL', to: '/competencies', description: '掌握项目式学习方法论，通过科学的立项流程重构你的创新思维。', icon: 'fas fa-graduation-cap', iconBg: 'bg-slate-100', iconColor: 'text-slate-600' },
-  { id: '01', title: 'Python 交互式编程', to: '/study', description: '用代码重塑物理交互。在 Vibe Coding 赛道体验“灵感触达”的乐趣。', icon: 'fas fa-code', iconBg: 'bg-blue-50', iconColor: 'text-blue-500' },
+  { id: '01', title: 'Python 交互式编程', to: { path: '/study', query: { project: 'project1' } }, description: '用代码重塑物理交互。在 Vibe Coding 赛道体验“灵感触达”的乐趣。', icon: 'fas fa-code', iconBg: 'bg-blue-50', iconColor: 'text-blue-500' },
   { id: '02', title: '产品思维与设计', to: { path: '/study', query: { project: 'project2' } }, description: '从痛点洞察到高保真交互。学习如何像产品经理一样定义未来。', icon: 'fas fa-pen-nib', iconBg: 'bg-indigo-50', iconColor: 'text-indigo-500' },
   { id: '03', title: '全栈 Web 应用实务', to: { path: '/study', query: { project: 'project3' } }, description: '构建你的数字基地。掌握现代 Web 开发全链路，实现你的网络构想。', icon: 'fas fa-laptop-code', iconBg: 'bg-emerald-50', iconColor: 'text-emerald-500' },
   { id: '04', title: 'AI 与深度学习入门', to: { path: '/study', query: { project: 'project4' } }, description: '为产品赋予智能。探索神经网络，训练你的第一个专属机器学习模型。', icon: 'fas fa-brain', iconBg: 'bg-rose-50', iconColor: 'text-rose-500' },

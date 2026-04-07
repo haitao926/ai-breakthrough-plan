@@ -229,7 +229,8 @@ import { apiFetch } from '@/api/client';
 import { getCurrentUser } from '@/api/authApi';
 
 const route = useRoute();
-const projectId = computed(() => route.query.project || 'project1');
+const projectId = computed(() => String(route.query.project || 'project1'));
+const lessonProjectId = computed(() => (projectId.value === 'common' ? 'project1' : projectId.value));
 const lessonId = computed(() => route.query.lesson || 'lesson1');
 
 const mode = ref('mission');
@@ -286,7 +287,7 @@ function nextStep() {
 async function loadLesson() {
   lessonError.value = '';
   try {
-    const res = await apiFetch(`/download/${projectId.value}/lessons/${lessonId.value}.json`);
+    const res = await apiFetch(`/download/${lessonProjectId.value}/lessons/${lessonId.value}.json`);
     if (!res.ok) throw new Error('Lesson file not found');
     lessonData.value = await res.json();
   } catch (err) { lessonError.value = err.message; }
@@ -295,7 +296,7 @@ async function loadLesson() {
 async function loadGuidebook() {
   if (guideLoaded.value) return;
   try {
-    const res = await fetch(`/api/v1/download/${projectId.value}/guide.md`);
+    const res = await fetch(`/api/v1/download/${lessonProjectId.value}/guide.md`);
     const text = await res.text();
     guideHtml.value = window.marked ? window.marked.parse(text) : `<pre>${text}</pre>`;
     guideLoaded.value = true;

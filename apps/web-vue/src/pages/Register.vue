@@ -45,7 +45,7 @@
 <script setup>
 import { computed, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { registerUser, loginUser } from '@/api/authApi';
+import { registerUser } from '@/api/authApi';
 
 const router = useRouter();
 const form = reactive({
@@ -62,16 +62,25 @@ const showInvite = computed(() => form.role === 'teacher' || form.role === 'judg
 
 async function handleSubmit() {
   status.value = '';
+  const email = String(form.email || '').trim();
+  const password = String(form.password || '');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    status.value = '注册失败：请输入有效邮箱';
+    return;
+  }
+  if (password.length < 6) {
+    status.value = '注册失败：密码至少 6 位';
+    return;
+  }
   loading.value = true;
   try {
     const user = await registerUser({
       name: form.name,
-      email: form.email,
-      password: form.password,
+      email,
+      password,
       role: form.role,
-      inviteCode: form.inviteCode
+      inviteCode: String(form.inviteCode || '').trim()
     });
-    await loginUser(form.email, form.password);
     status.value = '注册成功，正在跳转...';
     router.replace(user.role === 'teacher' || user.role === 'judge' ? '/teacher' : '/workspace');
   } catch (err) {

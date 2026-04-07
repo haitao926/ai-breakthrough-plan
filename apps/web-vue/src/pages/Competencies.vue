@@ -198,7 +198,7 @@ const currentSkills = computed(() => skillsData[activeModule.value] || []);
 
 function goToStudy(skill) {
   if (skill.target) {
-     router.push({ path: '/study', query: { project: 'common', lesson: skill.target } });
+     router.push({ path: '/study', query: { project: 'project1', lesson: skill.target } });
   }
 }
 </script>
