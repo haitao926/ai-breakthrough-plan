@@ -360,7 +360,9 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useRouter } from 'vue-router';
 import { apiFetch } from '@/api/client';
+import { useAuthStore } from '@/stores/auth';
 import { useNotificationStore } from '@/stores/notification';
+import { useProjectStore } from '@/stores/project';
 import { formatDate } from '@/utils/format';
 
 const router = useRouter();
