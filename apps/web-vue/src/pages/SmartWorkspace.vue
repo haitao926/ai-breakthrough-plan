@@ -1,9 +1,9 @@
 <template>
   <div class="smart">
-    <div class="card">
-      <h2>智能工作台已合并</h2>
-      <p>该入口已合并到新版工作台，正在为你跳转。</p>
-      <RouterLink :to="{ path: '/workspace', query: route.query }">如果没有自动跳转，点击这里</RouterLink>
+    <div class="card-base max-w-[420px] text-center">
+      <h2 class="typo-page-title">智能工作台已合并</h2>
+      <p class="typo-body text-slate-500 mt-2">该入口已合并到新版工作台，正在为你跳转。</p>
+      <RouterLink class="btn-ghost mt-4 inline-flex items-center justify-center" :to="{ path: '/workspace', query: route.query }">如果没有自动跳转，点击这里</RouterLink>
     </div>
   </div>
 </template>
@@ -26,17 +26,5 @@ onMounted(() => {
   display: grid;
   place-items: center;
   background: #f8fafc;
-}
-.card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  padding: 24px;
-  border-radius: 16px;
-  text-align: center;
-  max-width: 420px;
-}
-.card a {
-  color: #4f46e5;
-  text-decoration: none;
 }
 </style>

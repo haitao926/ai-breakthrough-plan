@@ -42,7 +42,7 @@
 
           <div class="progress-wrap">
             <div class="progress-label">
-              <span>WBS 完成度</span>
+              <span>任务完成度</span>
               <span>{{ progress }}%</span>
             </div>
             <div class="progress-track">

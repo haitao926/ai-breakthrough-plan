@@ -17,12 +17,13 @@ import CharterTool from '@/pages/tools/Charter.vue';
 import PreResearchTool from '@/pages/tools/PreResearch.vue';
 import LiteratureTool from '@/pages/tools/Literature.vue';
 import InnovationTool from '@/pages/tools/Innovation.vue';
-import WbsTool from '@/pages/tools/Wbs.vue';
+
 import KanbanTool from '@/pages/tools/Kanban.vue';
 import DevLogTool from '@/pages/tools/DevLog.vue';
 import ArchitectGuideTool from '@/pages/tools/ArchitectGuide.vue';
 import ArchitectTool from '@/pages/tools/Architect.vue';
-import { getCurrentUser } from '@/api/authApi';
+import pinia from '@/stores';
+import { useAuthStore } from '@/stores/auth';
 
 const routes = [
   { path: '/', component: HomePage, meta: { public: true } },
@@ -33,7 +34,8 @@ const routes = [
   { path: '/tools/pre_research', component: PreResearchTool, meta: { requiresAuth: true } },
   { path: '/tools/literature', component: LiteratureTool, meta: { requiresAuth: true } },
   { path: '/tools/innovation', component: InnovationTool, meta: { requiresAuth: true } },
-  { path: '/tools/wbs', component: WbsTool, meta: { requiresAuth: true } },
+  { path: '/tools/wbs', redirect: to => ({ path: '/tools/kanban', query: to.query }) },
+
   { path: '/tools/kanban', component: KanbanTool, meta: { requiresAuth: true } },
   { path: '/tools/devlog', component: DevLogTool, meta: { requiresAuth: true } },
   { path: '/tools/architect-guide', component: ArchitectGuideTool, meta: { requiresAuth: true } },
@@ -56,14 +58,16 @@ const router = createRouter({
 });
 
 router.beforeEach((to, from, next) => {
+  const authStore = useAuthStore(pinia);
+  authStore.hydrate();
   const requiresAuth = to.meta?.requiresAuth;
   if (!requiresAuth) {
     next();
     return;
   }
-  const user = getCurrentUser();
+  const user = authStore.user;
   if (!user) {
-    window.sessionStorage.setItem('auth_redirect', to.fullPath);
+    authStore.setRedirect(to.fullPath);
     next('/login');
     return;
   }

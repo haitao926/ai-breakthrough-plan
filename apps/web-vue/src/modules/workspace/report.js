@@ -31,7 +31,7 @@ export function buildProposalMarkdown(details = {}, wbsTasks = []) {
 
   if (wbsTasks.length) {
     lines.push(
-      '## WBS 任务清单',
+      '## 任务规划清单',
       wbsTasks
         .map(task => {
           const output = task.output ? `（产出：${task.output}）` : '';

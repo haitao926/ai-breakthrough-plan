@@ -10,6 +10,9 @@
         <button @click="refreshData" class="px-3 py-1.5 text-xs bg-white hover:bg-slate-50 border border-slate-200 rounded text-slate-600 transition-colors">
           <i class="fas fa-sync-alt mr-1"></i> 同步
         </button>
+        <button v-if="unplannedTasks.length" @click="scheduleUnplanned" class="px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded transition-colors shadow-sm">
+          <i class="fas fa-calendar-check mr-1"></i> 一键排期
+        </button>
         <div class="h-6 w-px bg-slate-200 mx-1"></div>
         <button @click="shiftView(-7)" class="px-2 py-1.5 text-xs bg-white hover:bg-slate-50 border border-slate-200 rounded text-slate-600">
           <i class="fas fa-chevron-left"></i>
@@ -20,6 +23,25 @@
         <button @click="shiftView(7)" class="px-2 py-1.5 text-xs bg-white hover:bg-slate-50 border border-slate-200 rounded text-slate-600">
           <i class="fas fa-chevron-right"></i>
         </button>
+      </div>
+    </div>
+
+    <!-- Unplanned Section -->
+    <div v-if="unplannedTasks.length" class="px-4 py-3 border-b border-slate-100 bg-slate-50/70">
+      <div class="flex items-center justify-between gap-4">
+        <div class="flex items-center gap-2 text-sm font-semibold text-slate-700">
+          <i class="fas fa-clock text-amber-500"></i>
+          未排期任务 {{ unplannedTasks.length }} 项
+        </div>
+        <button @click="scheduleUnplanned" class="px-3 py-1 text-xs border border-slate-200 rounded text-slate-600 hover:bg-white">
+          按阶段顺排
+        </button>
+      </div>
+      <div class="mt-2 flex flex-wrap gap-2">
+        <div v-for="task in unplannedTasks" :key="`unplanned-${task.id}`" class="unplanned-pill">
+          <span class="phase-pill" :class="`phase-${task.phase}`">{{ phaseLabel(task.phase) }}</span>
+          <span class="truncate max-w-[160px]" :title="task.name">{{ task.name }}</span>
+        </div>
       </div>
     </div>
 
@@ -37,13 +59,20 @@
             创建默认计划
           </button>
         </div>
+        <div v-else-if="!loading && tasks.length && plannedTasks.length === 0" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-50/40 z-10">
+          <div class="text-3xl mb-3 text-slate-300">🗓️</div>
+          <p class="text-slate-500 text-sm mb-4">任务已创建，但尚未排期</p>
+          <button @click="scheduleUnplanned" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm text-sm font-medium transition-colors">
+            一键排期
+          </button>
+        </div>
 
         <!-- Gantt Header (Dates) -->
         <div class="flex border-b border-slate-200 bg-slate-50/80 select-none">
           <div class="w-48 flex-shrink-0 border-r border-slate-200 p-2 text-xs font-bold text-slate-500 flex items-center pl-4 bg-white/50 backdrop-blur-sm sticky left-0 z-10">
             任务名称
           </div>
-          <div class="flex-1 overflow-hidden" ref="headerScrollContainer">
+          <div class="flex-1 overflow-hidden" ref="headerScrollContainer" @wheel="onTimelineWheel">
             <div class="flex" :style="{ width: totalWidth + 'px', transform: `translateX(-${scrollX}px)` }">
               <div 
                 v-for="day in dateHeaders" 
@@ -60,7 +89,7 @@
         </div>
 
         <!-- Gantt Body (Tasks) -->
-        <div class="flex-1 overflow-y-auto overflow-x-hidden relative" @scroll="onBodyScroll">
+        <div class="flex-1 overflow-y-auto overflow-x-hidden relative" @scroll="onBodyScroll" @wheel="onTimelineWheel">
           <!-- Grid Background -->
           <div class="absolute top-0 bottom-0 left-48 z-0 flex" :style="{ width: totalWidth + 'px', transform: `translateX(-${scrollX}px)` }">
              <div 
@@ -73,7 +102,7 @@
           </div>
 
           <!-- Rows -->
-          <div v-for="(task, idx) in tasks" :key="task.id" class="flex relative z-0 hover:bg-slate-50 transition-colors h-12 group">
+          <div v-for="(task, idx) in plannedTasks" :key="task.id" class="flex relative z-0 hover:bg-slate-50 transition-colors h-12 group">
             <div class="w-48 flex-shrink-0 border-r border-slate-200 p-2 text-sm text-slate-700 flex items-center pl-4 bg-white sticky left-0 z-10 border-b border-slate-50 group-hover:border-slate-100">
               <span class="truncate font-medium" :title="task.name">{{ task.name }}</span>
               <button class="ml-auto text-slate-300 hover:text-indigo-500 opacity-0 group-hover:opacity-100 transition" @click="openEdit(task)">
@@ -211,6 +240,12 @@ const scrollX = ref(0);
 const showEdit = ref(false);
 const editError = ref('');
 const editForm = ref({ id: '', name: '', start: '', end: '', color: '#3b82f6' });
+const DEFAULT_DURATION_DAYS = 3;
+
+const isValidDate = (value) => dayjs(value, 'YYYY-MM-DD', true).isValid();
+const isTaskPlanned = (task) => isValidDate(task.start) && isValidDate(task.end);
+const plannedTasks = computed(() => tasks.value.filter(task => isTaskPlanned(task)));
+const unplannedTasks = computed(() => tasks.value.filter(task => !isTaskPlanned(task)));
 
 // --- Layout Helpers ---
 const dateHeaders = computed(() => {
@@ -237,6 +272,13 @@ const PHASE_COLORS = {
   m2: '#f59e0b',
   m3: '#10b981'
 };
+const PHASE_LABELS = {
+  m1: '立项',
+  m2: '实施',
+  m3: '结题'
+};
+
+const phaseLabel = (phase) => PHASE_LABELS[phase] || phase || '任务';
 
 const getWbsCache = () => {
   if (!props.projectId) return { tasks: [] };
@@ -304,41 +346,35 @@ const loadData = async () => {
 
     // Merge
     tasks.value = apiMilestones.map((m, idx) => {
-        const phase = m.description || 'm1';
-        const defaultStart = dayjs().add(idx * 2, 'day').format('YYYY-MM-DD');
-        const defaultEnd = dayjs().add(idx * 2 + 3, 'day').format('YYYY-MM-DD');
-        const startFromDb = m.start_date || m.startDate || m.start;
-        const endFromDb = m.end_date || m.endDate || m.end;
+      const phase = m.description || 'm1';
+      const startFromDb = m.start_date || m.startDate || m.start;
+      const endFromDb = m.end_date || m.endDate || m.end;
+      const start = startFromDb ? dayjs(startFromDb).format('YYYY-MM-DD') : '';
+      const end = endFromDb ? dayjs(endFromDb).format('YYYY-MM-DD') : '';
 
-        let start = startFromDb ? dayjs(startFromDb).format('YYYY-MM-DD') : defaultStart;
-        let end = endFromDb ? dayjs(endFromDb).format('YYYY-MM-DD') : defaultEnd;
+      const saved = savedConfig[m.id] || {};
+      const defaultColor = PHASE_COLORS[phase] || '#3b82f6';
 
-        if (!endFromDb && startFromDb) {
-            end = dayjs(start).add(3, 'day').format('YYYY-MM-DD');
-        }
-        if (!startFromDb && endFromDb) {
-            start = dayjs(end).subtract(3, 'day').format('YYYY-MM-DD');
-        }
-
-        const saved = savedConfig[m.id] || {};
-        const defaultColor = PHASE_COLORS[phase] || '#3b82f6';
-
-        return {
-            id: m.id || `temp-${idx}`,
-            name: m.title,
-            phase,
-            start,
-            end,
-            color: saved.color || defaultColor
-        };
+      return {
+        id: m.id || `temp-${idx}`,
+        name: m.title,
+        phase,
+        start,
+        end,
+        color: saved.color || defaultColor
+      };
     });
 
     if (tasks.value.length === 0) {
-       // Just keep empty state
+      // Just keep empty state
+    } else if (plannedTasks.value.length) {
+      const earliest = plannedTasks.value.reduce((min, task) => {
+        const start = dayjs(task.start);
+        return start.isBefore(min) ? start : min;
+      }, dayjs(plannedTasks.value[0].start));
+      startDate.value = earliest.subtract(3, 'day');
     } else {
-       // Align view to first task
-       const firstStart = dayjs(tasks.value[0].start);
-       startDate.value = firstStart.subtract(3, 'day');
+      startDate.value = dayjs().subtract(3, 'day');
     }
 
   } catch (e) {
@@ -379,9 +415,62 @@ const persistTaskDates = async (task) => {
 
 const persistAllDates = async () => {
     if (!props.projectId) return;
-    for (const task of tasks.value) {
-        await persistTaskDates(task);
+    for (const task of plannedTasks.value) {
+      await persistTaskDates(task);
     }
+};
+
+const getPhaseOrder = (phase) => ({ m1: 0, m2: 1, m3: 2 }[phase] ?? 99);
+
+const findScheduleStart = () => {
+  if (!plannedTasks.value.length) return dayjs().startOf('day');
+  const latest = plannedTasks.value.reduce((max, task) => {
+    const end = dayjs(task.end);
+    return end.isAfter(max) ? end : max;
+  }, dayjs(plannedTasks.value[0].end));
+  return latest.add(1, 'day');
+};
+
+const scheduleUnplanned = async () => {
+  if (!unplannedTasks.value.length) return;
+  if (!confirm('将未排期任务按阶段顺序自动排期？')) return;
+  let cursor = findScheduleStart();
+  const sorted = [...unplannedTasks.value].sort((a, b) => {
+    const phaseDiff = getPhaseOrder(a.phase) - getPhaseOrder(b.phase);
+    if (phaseDiff !== 0) return phaseDiff;
+    return String(a.name || '').localeCompare(String(b.name || ''), 'zh-Hans-CN');
+  });
+  const updates = [];
+
+  sorted.forEach(task => {
+    const hasStart = isValidDate(task.start);
+    const hasEnd = isValidDate(task.end);
+
+    if (hasStart && !hasEnd) {
+      task.end = dayjs(task.start).add(DEFAULT_DURATION_DAYS, 'day').format('YYYY-MM-DD');
+    } else if (!hasStart && hasEnd) {
+      task.start = dayjs(task.end).subtract(DEFAULT_DURATION_DAYS, 'day').format('YYYY-MM-DD');
+    } else if (!hasStart && !hasEnd) {
+      const start = cursor;
+      const end = cursor.add(DEFAULT_DURATION_DAYS, 'day');
+      task.start = start.format('YYYY-MM-DD');
+      task.end = end.format('YYYY-MM-DD');
+      cursor = end.add(1, 'day');
+    }
+
+    const taskEnd = dayjs(task.end);
+    if (taskEnd.isValid()) {
+      const next = taskEnd.add(1, 'day');
+      if (next.isAfter(cursor)) cursor = next;
+    }
+
+    updates.push(task);
+  });
+
+  saveData();
+  for (const task of updates) {
+    await persistTaskDates(task);
+  }
 };
 
 const createDefaultPlan = async () => {
@@ -496,6 +585,7 @@ const getTaskStyle = (task) => {
 
 const isTaskVisible = (task) => {
     // Simple visibility check
+    if (!isTaskPlanned(task)) return false;
     const start = dayjs(task.start);
     const end = dayjs(task.end);
     const viewStart = startDate.value;
@@ -513,6 +603,40 @@ const onBodyScroll = (e) => {
 
 const onBottomScroll = (e) => {
     scrollX.value = e.target.scrollLeft;
+};
+
+const getViewportWidth = () => {
+    if (bottomScrollContainer.value) return bottomScrollContainer.value.clientWidth || 0;
+    if (headerScrollContainer.value) return headerScrollContainer.value.clientWidth || 0;
+    return 0;
+};
+
+const clampScrollX = (value) => {
+    const max = Math.max(0, totalWidth.value - getViewportWidth());
+    return Math.min(Math.max(0, value), max);
+};
+
+const setScrollX = (value) => {
+    const next = clampScrollX(value);
+    scrollX.value = next;
+    if (bottomScrollContainer.value && bottomScrollContainer.value.scrollLeft !== next) {
+        bottomScrollContainer.value.scrollLeft = next;
+    }
+};
+
+const onTimelineWheel = (e) => {
+    const deltaX = e.deltaX || 0;
+    const deltaY = e.deltaY || 0;
+    let delta = 0;
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        delta = deltaX;
+    } else if (e.shiftKey && deltaY) {
+        delta = deltaY;
+    }
+    if (delta !== 0) {
+        e.preventDefault();
+        setScrollX(scrollX.value + delta);
+    }
 };
 
 const shiftView = (days) => {
@@ -609,7 +733,7 @@ const processAI = (text) => {
     if (text.includes('延后') || text.includes('推迟')) {
         const match = text.match(/(\d+)天/);
         const days = match ? parseInt(match[1]) : 1;
-        tasks.value.forEach(t => {
+        plannedTasks.value.forEach(t => {
             t.start = dayjs(t.start).add(days, 'day').format('YYYY-MM-DD');
             t.end = dayjs(t.end).add(days, 'day').format('YYYY-MM-DD');
         });
@@ -649,5 +773,34 @@ watch(() => props.projectId, (id) => {
 .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+}
+.unplanned-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px dashed #e2e8f0;
+    background: #fff;
+    font-size: 12px;
+    color: #475569;
+}
+.phase-pill {
+    padding: 2px 6px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+}
+.phase-m1 {
+    background: rgba(99, 102, 241, 0.12);
+    color: #4f46e5;
+}
+.phase-m2 {
+    background: rgba(245, 158, 11, 0.12);
+    color: #b45309;
+}
+.phase-m3 {
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
 }
 </style>

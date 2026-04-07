@@ -73,8 +73,6 @@ function openDrawio() {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
-body { font-family: 'Inter', sans-serif; background: #f8fafc; }
 .guide-card { transition: all 0.3s ease; }
 .guide-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.1); }
 </style>

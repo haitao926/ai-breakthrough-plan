@@ -228,14 +228,6 @@ export function buildProposalStatus(projectId, projectDetail) {
       done: teamMissing.length === 0,
       detail: teamMissing.length ? `缺：${teamMissing.join('、')}` : '',
       action: 'projects'
-    },
-    {
-      key: 'wbs',
-      label: 'WBS 拆解完成',
-      desc: '至少拆解 5 条任务',
-      done: validWbsCount >= 5,
-      detail: wbsMissing.length ? `缺：${wbsMissing.join('、')}` : '',
-      action: 'wbs'
     }
   ];
 

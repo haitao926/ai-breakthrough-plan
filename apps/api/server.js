@@ -19,7 +19,10 @@ const DEFAULT_WEB_ROOT = path.join(__dirname, '../web-vue/dist');
 const WEB_ROOT = process.env.WEB_ROOT
   ? path.resolve(process.env.WEB_ROOT)
   : DEFAULT_WEB_ROOT;
-const WEB_SPA = String(process.env.WEB_SPA || '').trim() === 'true';
+const WEB_SPA_ENV = String(process.env.WEB_SPA || '').trim().toLowerCase();
+const WEB_SPA = WEB_SPA_ENV
+  ? WEB_SPA_ENV === 'true'
+  : fs.existsSync(path.join(WEB_ROOT, 'index.html')) || fs.existsSync(path.join(DEFAULT_WEB_ROOT, 'index.html'));
 const AUDIT_LOG_PATH = path.join(LOG_DIR, 'audit.log');
 const UPLOAD_MAX_MB = Number.parseInt(process.env.UPLOAD_MAX_FILE_SIZE_MB || '200', 10);
 const UPLOAD_MAX_BYTES = Math.max(1, UPLOAD_MAX_MB) * 1024 * 1024;
@@ -530,6 +533,10 @@ fastify.register(require('@fastify/static'), {
   root: UPLOAD_DIR,
   prefix: '/uploads/',
   decorateReply: false
+});
+
+fastify.get('/favicon.ico', (request, reply) => {
+  reply.code(204).send();
 });
 
 if (WEB_SPA) {

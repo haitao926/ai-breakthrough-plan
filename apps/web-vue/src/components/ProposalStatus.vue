@@ -34,7 +34,7 @@
             <span class="badge" :class="item.done ? 'badge--done' : 'badge--pending'">
               {{ item.done ? '已完成' : '待完成' }}
             </span>
-            <a v-if="item.action" class="link" :href="item.action" target="_blank">去完成</a>
+            <button v-if="item.actionKey || item.action" type="button" class="link link-button" @click="$emit('open-item', item)">去完成</button>
           </div>
         </div>
       </div>
@@ -43,10 +43,10 @@
 
     <div class="status-card">
       <div class="status-card__header">
-        <h3>自动生成的 WBS</h3>
+        <h3>任务规划清单</h3>
         <span class="muted">将作为看板初始任务</span>
       </div>
-      <div v-if="!wbsTasks.length" class="muted">尚未完成 WBS 拆解，去 WBS 页面添加任务。</div>
+      <div v-if="!wbsTasks.length" class="muted">尚未完成任务规划，去任务规划页面添加任务。</div>
       <div v-else class="wbs-list">
         <div v-for="(task, idx) in wbsTasks" :key="idx" class="wbs-item">
           <span class="pill" :class="`pill--${task.phase}`">{{ phaseLabel(task.phase) }}</span>
@@ -74,7 +74,7 @@ const props = defineProps({
   ready: { type: Boolean, default: false }
 });
 
-defineEmits(['refresh']);
+defineEmits(['refresh', 'open-item']);
 
 const doneCount = computed(() => props.items.filter(item => item.done).length);
 const totalCount = computed(() => (props.items.length ? props.items.length : 1));
@@ -207,6 +207,12 @@ function phaseLabel(phase) {
   font-weight: 500;
 }
 .link:hover { text-decoration: underline; }
+.link-button {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
 
 .ghost {
   border: 1px solid #e2e8f0;

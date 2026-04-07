@@ -1,384 +1,304 @@
 <template>
-  <div class="workspace-root">
-    <div class="app-shell">
-      <aside class="sidebar">
-        <div class="sidebar-header">
-          <div class="brand">
-            <div class="brand-icon"><i class="fas fa-cube"></i></div>
-            <span>科创工作台</span>
-          </div>
-          <RouterLink class="home-link" to="/" title="返回首页"><i class="fas fa-home"></i></RouterLink>
-        </div>
+  <div class="workspace-root selection:bg-indigo-100 selection:text-indigo-900 bg-slate-50 min-h-screen">
+    <div v-if="projectId" class="flex h-screen overflow-hidden">
+      <WorkspaceSidebar
+        :project-id="projectId"
+        :project-title="projectTitle"
+        :projects="projects"
+        :show-project-menu="showProjectMenu"
+        :nav-structure="navStructure"
+        :collapsed-groups="collapsedGroups"
+        :current-user="currentUser"
+        :view-mode="viewMode"
+        :current-tool="currentTool"
+        :active-stage="activeStage"
+        class="w-72 flex-shrink-0"
+        @toggle-project-menu="showProjectMenu = !showProjectMenu"
+        @switch-project="switchProject"
+        @toggle-group="toggleGroup"
+        @nav-click="handleNavClick"
+        @logout="logout"
+      />
 
-        <div class="project-switcher">
-          <button class="switcher-btn" @click="showProjectMenu = !showProjectMenu">
-            <div class="switcher-meta">
-              <div class="switcher-label">当前项目</div>
-              <div class="switcher-name">{{ projectTitle }}</div>
-            </div>
-            <i class="fas fa-sort" style="opacity: 0.4; font-size: 12px;"></i>
-          </button>
-          <div v-if="showProjectMenu" class="switcher-menu">
-            <div class="switcher-list">
-              <div v-if="!projects.length" class="empty">暂无项目</div>
-              <button
-                v-for="project in projects"
-                :key="project.id"
-                class="switcher-item"
-                @click="switchProject(project.id)"
-              >
-                <div style="width: 16px; display: flex; justify-content: center;">
-                  <i v-if="project.id === projectId" class="fas fa-check" style="color: var(--primary); font-size: 12px;"></i>
+      <div class="flex-1 flex flex-col min-w-0 bg-slate-50/50">
+        <WorkspaceHeader
+          :view-title="viewTitle"
+          :current-phase-index="currentPhaseIndex"
+          :view-mode="viewMode"
+          :current-tool="currentTool"
+          :active-stage="activeStage"
+          :proposal-ready="proposalStatus.ready"
+          @set-submission-view="setSubmissionView"
+          @set-tool-view="setToolView"
+          @clear-draft="clearCurrentDraft"
+        />
+
+        <main class="flex-1 overflow-y-auto custom-scrollbar relative">
+          <template v-if="viewMode === 'tool'">
+            <div v-if="currentTool === 'inception'" class="p-8 lg:p-12 max-w-7xl mx-auto space-y-12">
+              <div class="bg-slate-900 p-12 lg:p-20 rounded-[48px] text-white shadow-2xl relative overflow-hidden">
+                <div class="flex items-center justify-between relative z-10">
+                  <div>
+                    <h2 class="text-4xl lg:text-5xl font-black mb-4">立项导航中心</h2>
+                    <p class="text-lg text-slate-300 font-medium italic">伟大的创新源于严谨的学术规划。完成核心任务，系统将为生成开题报告。</p>
+                  </div>
+                  <button @click="openFirstMissing" class="px-8 py-4 bg-white text-slate-900 rounded-2xl font-black shadow-xl hover:bg-slate-50 transition-all active:scale-95">
+                    立即开始学术规划
+                  </button>
                 </div>
-                <span class="truncate" :style="{ fontWeight: project.id === projectId ? '600' : '400' }">{{ project.title }}</span>
-              </button>
-            </div>
-            <div class="switcher-footer">
-              <RouterLink class="new-project" to="/projects">新建项目</RouterLink>
-            </div>
-          </div>
-        </div>
-
-        <nav class="sidebar-nav">
-          <div v-for="group in navStructure" :key="group.id" class="nav-group">
-            <div class="nav-group-header" @click="toggleGroup(group.id)">
-              <span class="group-title">{{ group.title }}</span>
-              <i class="fas fa-chevron-down group-arrow" :class="{ rotated: collapsedGroups[group.id] }"></i>
-            </div>
-            <div v-show="!collapsedGroups[group.id]" class="nav-group-items">
-              <div 
-                v-for="item in group.items" 
-                :key="item.key"
-                class="nav-item"
-                :class="{ active: isItemActive(item) }"
-                @click="handleNavClick(item)"
-              >
-                <i :class="item.icon"></i>
-                <span class="flex-1">{{ item.label }}</span>
-                <span v-if="item.badge" class="stage-badge" :class="item.badge.tone">{{ item.badge.label }}</span>
-              </div>
-            </div>
-          </div>
-        </nav>
-
-        <div class="sidebar-footer">
-          <div class="profile">
-            <img class="avatar" :src="currentUser?.avatar_url || ''" alt="avatar" />
-            <div class="name">{{ currentUser?.name || '学生' }}</div>
-          </div>
-          <button class="logout" @click="logout" title="退出登录"><i class="fas fa-sign-out-alt"></i></button>
-        </div>
-      </aside>
-
-      <header class="header">
-        <div class="header-left">
-           <h1 class="header-title">{{ viewTitle }}</h1>
-        </div>
-        
-        <!-- Phase Stepper -->
-        <div class="phase-stepper">
-           <div 
-             v-for="(phase, idx) in ['立项', '实施', '结题']" 
-             :key="idx"
-             class="step-item"
-             :class="{ 
-               active: currentPhaseIndex === idx, 
-               completed: currentPhaseIndex > idx 
-             }"
-           >
-             <div class="step-dot">
-               <i v-if="currentPhaseIndex > idx" class="fas fa-check text-[10px]"></i>
-               <span v-else>{{ idx + 1 }}</span>
-             </div>
-             <span class="step-label">{{ phase }}</span>
-             <div v-if="idx < 2" class="step-line"></div>
-           </div>
-        </div>
-
-        <div class="header-actions">
-          <button v-if="viewMode === 'tool' && currentTool === 'inception'" class="btn-primary" @click="setSubmissionView('proposal')">
-            <i class="fas fa-clipboard-list"></i>
-            {{ proposalStatus.ready ? '提交开题' : '查看开题进度' }}
-          </button>
-          <button v-if="viewMode === 'tool' && currentTool === 'charter'" class="btn-primary" @click="setSubmissionView('proposal')">
-            <i class="fas fa-paper-plane"></i> 提交开题
-          </button>
-          <button v-if="viewMode === 'stage' && activeStage === 'proposal'" class="btn-ghost" @click="setToolView('charter')">
-            <i class="fas fa-file-signature"></i> 返回立项画布
-          </button>
-          <button v-if="viewMode === 'stage'" class="btn-ghost" @click="clearCurrentDraft">清空草稿</button>
-        </div>
-      </header>
-
-      <main class="main-canvas">
-        <template v-if="viewMode === 'tool'">
-          <div v-if="currentTool === 'inception'" class="inception-canvas">
-            <section class="inception-hero">
-              <div>
-                <div class="hero-kicker">Phase 1: Inception</div>
-                <h2>立项导航</h2>
-                <p>完成以下任务以生成开题报告。</p>
-              </div>
-              <div class="hero-actions">
-                <button class="btn-primary" @click="openFirstMissing">
-                  <i class="fas fa-play"></i> {{ proposalStatus.ready ? '查看开题报告' : '继续下一步' }}
-                </button>
-              </div>
-            </section>
-
-            <section class="inception-grid">
-              <div class="inception-card">
-                <div class="card-header">
-                  <h3>总体进度</h3>
-                  <div class="percent">{{ inceptionPercent }}%</div>
-                </div>
-                <div class="progress-bar">
-                  <div class="progress-fill" :style="{ width: inceptionPercent + '%' }"></div>
-                </div>
-                <div class="muted">已完成 {{ inceptionDoneCount }}/{{ inceptionTotalCount }} 项</div>
               </div>
 
-              <div class="inception-card">
-                 <div class="card-header"><h3>当前任务</h3></div>
-                 <div v-if="nextStep" class="next-step">
-                    <div class="font-bold text-slate-800">{{ nextStep.label }}</div>
-                    <div class="muted">{{ nextStep.desc }}</div>
-                    <button class="btn-primary small mt-2" @click="openInceptionItem(nextStep)">立即开始</button>
-                 </div>
-                 <div v-else class="muted">立项任务已全部完成！</div>
-              </div>
-            </section>
-
-            <section class="inception-body">
-              <div class="inception-col">
-                <div class="inception-card">
-                  <div class="card-header"><h3>任务清单</h3></div>
-                  <div class="task-list">
-                    <div v-for="(item, idx) in inceptionItems" :key="item.key" class="task-item" :class="{ done: item.done }">
-                      <div class="task-left">
-                        <div class="task-index">{{ idx + 1 }}</div>
-                        <div>
-                          <div class="task-title">{{ item.label }}</div>
-                          <div class="muted">{{ item.desc }}</div>
+              <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="premium-card lg:col-span-2 !bg-white">
+                  <div class="flex items-center justify-between mb-8">
+                    <div>
+                      <h3 class="text-sm font-black text-slate-900 uppercase tracking-widest mb-1">关键里程碑</h3>
+                      <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">Inception Milestones</p>
+                    </div>
+                    <div class="text-right">
+                      <div class="text-2xl font-black text-indigo-600 leading-none">{{ inceptionPercent }}%</div>
+                      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Overall Progress</div>
+                    </div>
+                  </div>
+                  <div class="relative h-4 bg-slate-100 rounded-full overflow-hidden mb-10 shadow-inner">
+                    <div class="absolute inset-y-0 left-0 bg-gradient-to-r from-indigo-600 to-indigo-400 transition-all duration-1000 ease-out" :style="{ width: inceptionPercent + '%' }">
+                      <div class="absolute inset-0 bg-[linear-gradient(45deg,rgba(255,255,255,.1)_25%,transparent_25%,transparent_50%,rgba(255,255,255,.1)_50%,rgba(255,255,255,.1)_75%,transparent_75%,transparent)] bg-[length:20px_20px] animate-[progress-stripe_2s_linear_infinite]"></div>
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div v-for="(item, idx) in inceptionItems" :key="item.key" 
+                      class="flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 group cursor-pointer"
+                      :class="item.done ? 'bg-emerald-50/30 border-emerald-100' : 'bg-slate-50/50 border-slate-100 hover:border-indigo-200 hover:bg-white hover:shadow-lg hover:shadow-indigo-500/5'"
+                      @click="openInceptionItem(item)"
+                    >
+                      <div class="flex items-center gap-4">
+                        <div class="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black transition-all duration-500"
+                          :class="item.done ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'bg-white text-slate-400 border border-slate-100 group-hover:text-indigo-600'">
+                          <i v-if="item.done" class="fas fa-check"></i>
+                          <span v-else>{{ idx + 1 }}</span>
                         </div>
+                        <span class="text-xs font-bold transition-colors" :class="item.done ? 'text-emerald-700' : 'text-slate-600 group-hover:text-slate-900'">{{ item.label }}</span>
                       </div>
-                      <div class="task-actions">
-                        <i v-if="item.done" class="fas fa-check-circle text-green-500 text-lg"></i>
-                        <button v-else class="btn-ghost small" @click="openInceptionItem(item)">去完成</button>
+                      <i v-if="!item.done" class="fas fa-arrow-right text-[10px] text-slate-300 group-hover:text-indigo-600 transform group-hover:translate-x-1 transition-all"></i>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="premium-card !bg-white space-y-8">
+                  <h3 class="text-sm font-black text-slate-900 uppercase tracking-widest border-b border-slate-100 pb-4">评审状态</h3>
+                  <div class="text-center py-6">
+                    <div class="w-20 h-20 rounded-[24px] mx-auto mb-6 flex items-center justify-center transition-all duration-700"
+                      :class="proposalStatus.ready ? 'bg-emerald-500 text-white shadow-2xl shadow-emerald-500/40 rotate-12 scale-110' : 'bg-slate-100 text-slate-300'">
+                      <i class="fas text-3xl" :class="proposalStatus.ready ? 'fa-check-double' : 'fa-lock'"></i>
+                    </div>
+                    <div class="text-lg font-black text-slate-900 mb-2">{{ proposalStatus.ready ? '一切就绪' : '尚在筹备中' }}</div>
+                    <p class="text-xs text-slate-400 font-medium leading-relaxed">
+                      {{ proposalStatus.ready ? '你已经完成了所有核心规划任务，快去提交评审吧！' : '由于立项关键任务尚未全部完成，开题报告提交通路暂时锁定。' }}
+                    </p>
+                  </div>
+                  <button 
+                    class="w-full py-4 rounded-2xl text-xs font-black tracking-widest uppercase transition-all shadow-xl flex items-center justify-center gap-3 disabled:opacity-50 disabled:shadow-none"
+                    :class="proposalStatus.ready ? 'bg-slate-900 text-white hover:bg-black hover:shadow-slate-400' : 'bg-slate-100 text-slate-400'"
+                    :disabled="!proposalStatus.ready" 
+                    @click="setSubmissionView('proposal')"
+                  >
+                    <i class="fas fa-paper-plane"></i> 提交评审申请
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div v-else-if="currentTool === 'implementation'" class="p-8 lg:p-12 max-w-7xl mx-auto space-y-12 animate-reveal">
+              <header class="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b-2 border-slate-100 pb-12 mb-4">
+                <div class="max-w-xl">
+                  <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-[0.2em] mb-4">
+                    <i class="fas fa-layer-group"></i> Phase 2: Implementation
+                  </div>
+                  <h2 class="text-4xl font-black text-slate-900 tracking-tight mb-3">项目实施工作台</h2>
+                  <p class="text-base text-slate-500 font-medium leading-relaxed">记录每一个微小的技术突破，让创意从代码构思转化为现实成果。</p>
+                </div>
+                <div class="flex items-center gap-4 bg-white p-2 rounded-[24px] border border-slate-200 shadow-sm">
+                   <button class="px-6 py-3 rounded-2xl bg-slate-900 text-white text-[11px] font-black uppercase tracking-widest hover:bg-black transition-all active:scale-95 shadow-lg shadow-slate-200" @click="setToolView('devlog')">记录学术日志</button>
+                   <button class="px-6 py-3 rounded-2xl bg-indigo-50 text-indigo-600 text-[11px] font-black uppercase tracking-widest hover:bg-indigo-100 transition-all active:scale-95" @click="setToolView('kanban')">访问敏捷看板</button>
+                </div>
+              </header>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="premium-card lg:col-span-2 !bg-white">
+                  <div class="flex items-center justify-between mb-10">
+                     <div class="flex items-center gap-3">
+                        <div class="w-1.5 h-8 bg-indigo-600 rounded-full"></div>
+                        <h3 class="text-base font-black text-slate-900 uppercase tracking-widest">实施步履轨迹</h3>
+                     </div>
+                     <div class="flex items-center gap-8">
+                        <div class="text-center">
+                          <div class="text-2xl font-black text-slate-900 leading-none">{{ milestoneCounts.done }}</div>
+                          <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">已攻克</div>
+                        </div>
+                        <div class="text-center">
+                          <div class="text-2xl font-black text-indigo-600 leading-none">{{ milestonePercent }}%</div>
+                           <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">总体效能</div>
+                        </div>
+                     </div>
+                  </div>
+                  
+                  <div class="space-y-4">
+                     <div v-for="task in milestoneTodo" :key="task.id" class="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-white hover:border-indigo-200 transition-all group">
+                        <div class="w-1.5 h-6 rounded-full" :class="`bg-indigo-600`"></div>
+                        <div class="flex-1 min-w-0">
+                           <div class="text-xs font-black text-slate-900 mb-0.5 truncate">{{ task.title }}</div>
+                           <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{{ phaseLabel(task.phase) }} · {{ task.statusLabel }}</div>
+                        </div>
+                        <i class="fas fa-arrow-right text-[10px] text-slate-300 group-hover:text-indigo-600"></i>
+                     </div>
+                  </div>
+                </div>
+
+                <div class="space-y-8">
+                  <div class="premium-card !bg-slate-900 !text-white overflow-hidden relative">
+                    <div class="absolute top-0 right-0 p-4 opacity-5">
+                      <i class="fab fa-git-alt text-6xl"></i>
+                    </div>
+                    <h3 class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-4">云端代码仓库</h3>
+                    <div v-if="repoUrl" class="text-xs font-mono bg-white/10 p-4 rounded-xl border border-white/10 break-all select-all">{{ repoUrl }}</div>
+                    <div v-else class="text-xs text-white/40 italic">暂未绑定代码仓库，请在架构设计中配置。</div>
+                  </div>
+
+                  <div class="premium-card !bg-white">
+                    <h3 class="text-xs font-black text-slate-900 uppercase tracking-widest mb-6 border-b border-slate-50 pb-4">最近实施碎拍</h3>
+                    <div class="space-y-6">
+                      <div v-for="log in implementationLogsPreview" :key="log.id" class="relative pl-6 border-l-2 border-indigo-100 last:border-transparent pb-1">
+                        <div class="absolute left-[-5px] top-0 w-2 h-2 rounded-full bg-indigo-500"></div>
+                        <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">{{ formatDateTime(log.created_at) }}</div>
+                        <div class="text-xs text-slate-600 font-medium leading-relaxed italic line-clamp-2">"{{ log.content }}"</div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-
-              <div class="inception-col">
-                <div class="inception-card">
-                  <div class="card-header"><h3>WBS 预览</h3></div>
-                  <div v-if="!wbsPreview.length" class="muted">暂无数据</div>
-                  <div v-else class="wbs-preview">
-                    <div v-for="(task, idx) in wbsPreview" :key="idx" class="wbs-item">
-                      <span class="pill" :class="`pill--${task.phase}`">{{ phaseLabel(task.phase) }}</span>
-                      <span class="truncate">{{ task.title }}</span>
-                    </div>
-                  </div>
-                  <button class="btn-ghost small mt-2" @click="setToolView('wbs')">管理 WBS</button>
-                </div>
-                <div class="inception-card">
-                   <div class="card-header"><h3>提交状态</h3></div>
-                   <div class="muted mb-2">{{ proposalStatus.ready ? '已就绪' : '未就绪' }}</div>
-                   <button class="btn-primary small" :disabled="!proposalStatus.ready" @click="setSubmissionView('proposal')">提交开题</button>
-                </div>
-              </div>
-            </section>
-          </div>
-
-          <div v-else-if="currentTool === 'implementation'" class="implementation-canvas">
-            <section class="implementation-hero">
-              <div>
-                <div class="hero-kicker">Phase 2: Implementation</div>
-                <h2>实施导航</h2>
-                <p>记录开发过程，管理任务进度。</p>
-              </div>
-              <div class="hero-actions">
-                <button class="btn-primary" @click="setToolView('devlog')">
-                  <i class="fas fa-pen-nib"></i> 写日志
-                </button>
-                <button class="btn-ghost" @click="setToolView('kanban')">
-                  <i class="fas fa-columns"></i> 看板
-                </button>
-              </div>
-            </section>
-
-            <section class="implementation-grid">
-               <div class="impl-card">
-                  <div class="card-header"><h3>任务进度</h3> <div class="percent">{{ milestonePercent }}%</div></div>
-                  <div class="progress-bar"><div class="progress-fill" :style="{ width: milestonePercent + '%' }"></div></div>
-                  <div class="muted">已完成 {{ milestoneCounts.done }}/{{ milestoneCounts.total }}</div>
-               </div>
-               <div class="impl-card">
-                  <div class="card-header"><h3>代码仓库</h3></div>
-                  <div v-if="repoUrl" class="repo-box">{{ repoUrl }}</div>
-                  <div v-else class="muted">未绑定仓库</div>
-               </div>
-            </section>
-            
-            <section class="implementation-body">
-               <div class="impl-card">
-                 <div class="card-header"><h3>待办任务</h3></div>
-                 <div v-if="!milestoneTodo.length" class="muted">暂无待办</div>
-                 <div v-else class="impl-list">
-                    <div v-for="task in milestoneTodo" :key="task.id" class="impl-task">
-                       <div class="impl-task-left">
-                          <span class="pill" :class="`pill--${task.phase}`">{{ phaseLabel(task.phase) }}</span>
-                          <span>{{ task.title }}</span>
-                       </div>
-                       <span class="task-status" :class="milestoneStatusTone(task.status)">{{ task.statusLabel }}</span>
-                    </div>
-                 </div>
-               </div>
-               <div class="impl-card">
-                  <div class="card-header"><h3>最近日志</h3></div>
-                  <div v-if="!implementationLogs.length" class="muted">暂无日志</div>
-                  <div v-else class="log-preview">
-                    <div v-for="log in implementationLogsPreview" :key="log.id" class="log-item">
-                      <div class="log-meta">{{ formatDateTime(log.created_at) }}</div>
-                      <div class="log-content">{{ previewText(log.content) }}</div>
-                    </div>
-                  </div>
-               </div>
-            </section>
-          </div>
-
-          <div v-else-if="currentTool === 'kanban'" class="p-0 h-full overflow-hidden">
-            <KanbanTool />
-          </div>
-          <div v-else-if="currentTool === 'gantt'" class="p-6 h-full overflow-y-auto">
-            <GanttChart :project-id="projectId" />
-          </div>
-          <iframe v-else class="tool-frame" :src="toolFrameSrc"></iframe>
-        </template>
-
-        <div v-show="viewMode === 'stage'" class="stage-container">
-          <div class="stage-header">
-            <h2 class="stage-title">{{ stageConfig.title }}</h2>
-            <p class="stage-desc">{{ stageConfig.desc }}</p>
-          </div>
-
-          <div class="status-banner" :class="statusStyle.banner">
-            <div class="status-icon" :class="statusStyle.icon" v-html="statusStyle.iconHtml"></div>
-            <div>
-              <div class="status-title">{{ statusStyle.title }}</div>
-              <div class="status-meta">{{ statusMeta }}</div>
-            </div>
-          </div>
-
-          <div v-if="latestSubmission?.feedback" class="feedback-card">
-            <div class="feedback-title">老师反馈</div>
-            <div class="feedback-body">{{ latestSubmission.feedback }}</div>
-          </div>
-
-          <div v-if="activeStage === 'proposal'" class="proposal-wrapper">
-            <ProposalStatus
-              :items="proposalStatus.items"
-              :missing="proposalStatus.missing"
-              :wbs-tasks="proposalStatus.wbsTasks"
-              :ready="proposalStatus.ready"
-              @refresh="refreshStatus"
-            />
-            <div class="proposal-actions">
-              <button class="btn-primary" :disabled="!proposalStatus.ready || submitting" @click="submitStage">
-                {{ submitting ? '提交中...' : '提交开题报告' }}
-              </button>
-            </div>
-          </div>
-
-          <form v-else class="stage-form" @submit.prevent="submitStage">
-            <div class="form-grid">
-              <label v-for="field in stageConfig.fields" :key="field.name">
-                <span class="form-label">
-                  {{ field.label }}
-                  <span v-if="field.required" class="required">*</span>
-                </span>
-                <textarea
-                  v-if="field.type === 'textarea'"
-                  v-model="formDetails[field.name]"
-                  class="form-input textarea"
-                  :placeholder="field.placeholder || ''"
-                ></textarea>
-                <input
-                  v-else
-                  v-model="formDetails[field.name]"
-                  class="form-input"
-                  :placeholder="field.placeholder || ''"
-                />
-              </label>
             </div>
 
-            <div class="attachments">
-              <div class="attachments-header">
-                <span>附件上传</span>
-                <span class="muted">支持多文件</span>
-              </div>
-              <input ref="fileInput" type="file" multiple @change="handleFileChange" />
-              <div v-if="files.length" class="file-list">
-                <div v-for="file in files" :key="file.name" class="file-item">
-                  <span class="file-name">{{ file.name }}</span>
-                  <span class="file-size">{{ formatSize(file.size) }}</span>
-                </div>
-              </div>
+            <div v-else-if="currentTool === 'kanban'" class="h-full">
+              <KanbanTool />
             </div>
+            <div v-else-if="currentTool === 'gantt'" class="p-8 lg:p-12 h-full overflow-y-auto custom-scrollbar">
+              <GanttChart :project-id="projectId" />
+            </div>
+            <iframe v-else class="w-full h-full border-none bg-white" :src="toolFrameSrc"></iframe>
+          </template>
 
-            <div class="form-actions">
-              <button class="btn-primary" type="submit" :disabled="submitting">
-                {{ submitting ? '提交中...' : '提交评审' }}
-              </button>
-            </div>
-          </form>
-        </div>
-      </main>
+          <!-- 提交面板 -->
+          <StageSubmissionPanel
+            v-show="viewMode === 'stage'"
+            :stage-config="stageConfig"
+            :status-style="statusStyle"
+            :status-meta="statusMeta"
+            :latest-submission="latestSubmission"
+            :proposal-status="proposalStatus"
+            :active-stage="activeStage"
+            :submitting="submitting"
+            :form-details="formDetails"
+            :files="files"
+            :file-input-key="fileInputKey"
+            :format-size="formatSize"
+            @refresh-status="refreshStatus"
+            @open-item="openInceptionItem"
+            @submit-stage="submitStage"
+            @file-change="handleFileChange"
+          />
+        </main>
+      </div>
     </div>
+
+    <!-- 项目广场入口 -->
+    <ProjectPlaza
+      v-else
+      :projects="projects"
+      :projects-loading="projectsLoading"
+      :status-options="statusOptions"
+      :plaza-keyword="plazaKeyword"
+      :plaza-status="plazaStatus"
+      :plaza-sort="plazaSort"
+      :quick-create-title="quickCreateTitle"
+      :creating-project="creatingProject"
+      :quick-create-error="quickCreateError"
+      :show-recent="showRecent"
+      :recent-projects="recentProjects"
+      :filtered-projects="filteredProjects"
+      :last-visited-project-id="lastVisitedProjectId"
+      :project-status-label="projectStatusLabel"
+      :format-date="formatDate"
+      @update:quickCreateTitle="quickCreateTitle = $event"
+      @update:plazaKeyword="plazaKeyword = $event"
+      @update:plazaStatus="plazaStatus = $event"
+      @update:plazaSort="plazaSort = $event"
+      @create-project="createProject"
+      @switch-project="switchProject"
+    />
   </div>
 </template>
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { storeToRefs } from 'pinia';
 import { useRoute, useRouter } from 'vue-router';
-import ProposalStatus from '@/components/ProposalStatus.vue';
 import GanttChart from '@/components/GanttChart.vue';
+import ProjectPlaza from '@/components/workspace/ProjectPlaza.vue';
+import StageSubmissionPanel from '@/components/workspace/StageSubmissionPanel.vue';
+import WorkspaceHeader from '@/components/workspace/WorkspaceHeader.vue';
+import WorkspaceSidebar from '@/components/workspace/WorkspaceSidebar.vue';
 import KanbanTool from '@/pages/tools/Kanban.vue';
 import { apiFetch } from '@/api/client';
 import { buildProposalStatus } from '@/modules/inception/proposal';
 import { STAGE_CONFIG, getStageConfig, validateStageDetails } from '@/modules/workspace/stages';
 import { buildProposalMarkdown } from '@/modules/workspace/report';
-import { clearDraft, loadDraft, saveDraft } from '@/modules/workspace/draft';
-import { getCurrentUser, logout as doLogout } from '@/api/authApi';
+import { useAuthStore } from '@/stores/auth';
+import { useProjectStore } from '@/stores/project';
+import { useDraftStore } from '@/stores/draft';
 
 const route = useRoute();
 const router = useRouter();
 const projectId = computed(() => route.query.project);
 
-const currentUser = ref(null);
-const projects = ref([]);
-const showProjectMenu = ref(false);
+const authStore = useAuthStore();
+const projectStore = useProjectStore();
+const draftStore = useDraftStore();
 
-const projectDetail = ref(null);
-const submissionIndex = ref({});
+authStore.hydrate();
+
+const { user: currentUser } = storeToRefs(authStore);
+const {
+  list: projects,
+  listLoading: projectsLoading,
+  detail: projectDetail,
+  submissionIndex,
+  milestones: milestoneList,
+  milestonesLoading: milestoneLoading,
+  logs: implementationLogs,
+  logsLoading: logLoading,
+  lastVisitedId: lastVisitedProjectId
+} = storeToRefs(projectStore);
+const draftMap = computed(() => draftStore.draftMap(projectId.value));
+
+const showProjectMenu = ref(false);
+const plazaKeyword = ref('');
+const plazaStatus = ref('');
+const plazaSort = ref('updated_desc');
+const quickCreateTitle = ref('');
+const creatingProject = ref(false);
+const quickCreateError = ref('');
+
 const viewMode = ref('tool');
 const currentTool = ref('inception');
 const toolPinned = ref(false);
 const activeStage = ref('proposal');
 const submitting = ref(false);
 const statusVersion = ref(0);
-const milestoneList = ref([]);
-const milestoneLoading = ref(false);
-const implementationLogs = ref([]);
-const logLoading = ref(false);
 
-const fileInput = ref(null);
+const fileInputKey = ref(0);
 const files = ref([]);
 const formDetails = reactive({});
 const draftTimer = ref(null);
-const draftMap = ref({});
 
 // --- Nav Structure ---
 const navStructure = ref([
@@ -386,7 +306,7 @@ const navStructure = ref([
     id: 'overview',
     title: '项目概览',
     items: [
-      { key: 'kanban', label: '任务看板', icon: 'fas fa-columns', action: 'tool', value: 'kanban' },
+      { key: 'kanban', label: '任务规划 (Tasks)', icon: 'fas fa-tasks', action: 'tool', value: 'kanban' },
       { key: 'gantt', label: '进度甘特', icon: 'fas fa-stream', action: 'tool', value: 'gantt' }
     ]
   },
@@ -399,7 +319,6 @@ const navStructure = ref([
       { key: 'pre_research', label: '前期调研', icon: 'fas fa-search', action: 'tool', value: 'pre_research' },
       { key: 'literature', label: '文献阅读', icon: 'fas fa-book-reader', action: 'tool', value: 'literature' },
       { key: 'innovation', label: '创新点梳理', icon: 'fas fa-lightbulb', action: 'tool', value: 'innovation' },
-      { key: 'wbs', label: 'WBS 拆解', icon: 'fas fa-project-diagram', action: 'tool', value: 'wbs' },
       { key: 'architect', label: '架构设计', icon: 'fas fa-sitemap', action: 'tool', value: 'architect' },
       { key: 'proposal_sub', label: '提交开题', icon: 'fas fa-clipboard-list', action: 'stage', value: 'proposal', isSubmission: true }
     ]
@@ -441,16 +360,6 @@ function handleNavClick(item) {
   } else if (item.action === 'stage') {
     setSubmissionView(item.value);
   }
-}
-
-function isItemActive(item) {
-  if (item.action === 'tool') {
-    return viewMode.value === 'tool' && currentTool.value === item.value;
-  }
-  if (item.action === 'stage') {
-    return viewMode.value === 'stage' && activeStage.value === item.value;
-  }
-  return false;
 }
 
 // Update nav badges based on state
@@ -499,6 +408,54 @@ const inceptionTips = {
   projects: '建议输出：团队成员与分工'
 };
 
+const STATUS_LABELS = {
+  draft: '草稿',
+  submitted: '已提交',
+  reviewing: '审核中',
+  approved: '已通过',
+  rejected: '需修改',
+  in_progress: '进行中',
+  midterm_review: '中期检查',
+  final_review: '结题检查',
+  archived: '已归档'
+};
+
+const statusOptions = computed(() => Object.keys(STATUS_LABELS).map(key => ({ value: key, label: STATUS_LABELS[key] })));
+
+const sortedProjects = computed(() => {
+  return [...projects.value].sort((a, b) => {
+    const aTime = new Date(a.updated_at || a.created_at || 0).getTime();
+    const bTime = new Date(b.updated_at || b.created_at || 0).getTime();
+    return bTime - aTime;
+  });
+});
+
+const filteredProjects = computed(() => {
+  let list = [...projects.value];
+  const keyword = plazaKeyword.value.trim().toLowerCase();
+  if (keyword) {
+    list = list.filter(item => {
+      const title = String(item.title || '').toLowerCase();
+      const summary = String(item.summary || '').toLowerCase();
+      return title.includes(keyword) || summary.includes(keyword);
+    });
+  }
+  if (plazaStatus.value) {
+    list = list.filter(item => item.status === plazaStatus.value);
+  }
+  if (plazaSort.value === 'title_asc') {
+    list.sort((a, b) => String(a.title || '').localeCompare(String(b.title || ''), 'zh-Hans-CN'));
+  } else if (plazaSort.value === 'created_desc') {
+    list.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+  } else {
+    list.sort((a, b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0));
+  }
+  return list;
+});
+
+const recentProjects = computed(() => sortedProjects.value.slice(0, 3));
+const showRecent = computed(() => !plazaKeyword.value && !plazaStatus.value && plazaSort.value === 'updated_desc');
+
 const stageConfig = computed(() => getStageConfig(activeStage.value));
 
 const latestSubmission = computed(() => submissionIndex.value[activeStage.value] || null);
@@ -536,6 +493,7 @@ const implementationLogsPreview = computed(() => implementationLogs.value.slice(
 const projectTitle = computed(() => projectDetail.value?.project?.title || '未选择项目');
 
 const viewTitle = computed(() => {
+  if (!projectId.value) return '项目广场';
   if (viewMode.value === 'tool') {
     const flat = navStructure.value.flatMap(g => g.items);
     const item = flat.find(i => i.value === currentTool.value && i.action === 'tool');
@@ -601,21 +559,34 @@ const statusMeta = computed(() => {
 });
 
 async function loadProjects() {
+  await projectStore.fetchList();
+}
+
+async function createProject() {
+  const title = quickCreateTitle.value.trim();
+  if (!title) {
+    quickCreateError.value = '请输入项目名称';
+    return;
+  }
+  quickCreateError.value = '';
+  creatingProject.value = true;
   try {
-    const res = await apiFetch('/projects');
-    const data = await res.json();
-    projects.value = data.projects || [];
-    if (!projectId.value && projects.value.length) {
-      switchProject(projects.value[0].id);
+    const project = await projectStore.create(title);
+    quickCreateTitle.value = '';
+    if (project?.id) {
+      switchProject(project.id);
     }
   } catch (err) {
-    console.error(err);
+    quickCreateError.value = err.message || '创建失败';
+  } finally {
+    creatingProject.value = false;
   }
 }
 
 function switchProject(id) {
   showProjectMenu.value = false;
   toolPinned.value = false;
+  projectStore.setLastVisited(id);
   router.replace({ path: '/workspace', query: { project: id } });
 }
 
@@ -674,31 +645,9 @@ function phaseLabel(phase) {
   return map[phase] || phase || '任务';
 }
 
-function normalizeMilestoneStatus(status) {
-  if (!status) return 'todo';
-  if (['todo', 'doing', 'review', 'done'].includes(status)) return status;
-  const map = { pending: 'todo', submitted: 'review', approved: 'done', rejected: 'todo' };
-  return map[status] || 'todo';
-}
-
-function milestoneStatusLabel(status) {
-  const map = { todo: '待办', doing: '进行中', review: '待验收', done: '已完成' };
-  return map[status] || '待办';
-}
-
 function milestoneStatusTone(status) {
   const map = { todo: 'status-pending', doing: 'status-doing', review: 'status-review', done: 'status-done' };
   return map[status] || 'status-pending';
-}
-
-function parseDeliverables(raw) {
-  if (!raw) return {};
-  if (typeof raw === 'object') return raw;
-  try {
-    return JSON.parse(raw) || {};
-  } catch (e) {
-    return {};
-  }
 }
 
 function previewText(text) {
@@ -709,23 +658,12 @@ function previewText(text) {
 
 function applyToolActions(result) {
   if (!result?.items) return result;
-  const id = projectId.value;
-  const map = {
-    charter: `/tools/charter?project=${id}`,
-    pre_research: `/tools/pre_research?project=${id}`,
-    literature: `/tools/literature?project=${id}`,
-    innovation: `/tools/innovation?project=${id}`,
-    wbs: `/tools/wbs?project=${id}`,
-    projects: `/projects`
-  };
   return {
     ...result,
     items: result.items.map(item => {
-      const key = item.action;
       return {
         ...item,
-        actionKey: item.actionKey || key,
-        action: map[key] || ''
+        actionKey: item.actionKey || item.action
       };
     })
   };
@@ -757,6 +695,17 @@ function formatDateTime(value) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+function formatDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  const pad = num => String(num).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function projectStatusLabel(status) {
+  return STATUS_LABELS[status] || status || '进行中';
+}
+
 function formatSize(bytes) {
   if (!bytes) return '0B';
   const units = ['B', 'KB', 'MB', 'GB'];
@@ -770,66 +719,17 @@ function formatSize(bytes) {
 }
 
 async function fetchMilestones() {
-  if (!projectId.value) {
-    milestoneList.value = [];
-    return;
-  }
-  milestoneLoading.value = true;
-  try {
-    const res = await apiFetch(`/projects/${projectId.value}/milestones`);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || '加载失败');
-    milestoneList.value = (data.milestones || []).map(item => {
-      const status = normalizeMilestoneStatus(item.status);
-      return {
-        ...item,
-        status,
-        statusLabel: milestoneStatusLabel(status),
-        phase: item.description || 'm1'
-      };
-    });
-    if (projectId.value) {
-      const cacheKey = `ai_course_wbs_${projectId.value}`;
-      const wbsTasks = milestoneList.value.map(item => {
-        const deliverables = parseDeliverables(item.deliverables);
-        return {
-          title: item.title,
-          phase: item.phase || 'm1',
-          output: deliverables.output || ''
-        };
-      });
-      localStorage.setItem(cacheKey, JSON.stringify({ tasks: wbsTasks }));
-      refreshStatus();
-    }
-  } catch (err) {
-    console.error(err);
-    milestoneList.value = [];
-  } finally {
-    milestoneLoading.value = false;
-  }
+  await projectStore.fetchMilestones(projectId.value);
+  refreshStatus();
 }
 
 async function fetchDevLogs() {
-  if (!projectId.value) {
-    implementationLogs.value = [];
-    return;
-  }
-  logLoading.value = true;
-  try {
-    const res = await apiFetch(`/projects/${projectId.value}/logs`);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || '加载失败');
-    implementationLogs.value = Array.isArray(data.logs) ? data.logs : [];
-  } catch (err) {
-    console.error(err);
-    implementationLogs.value = [];
-  } finally {
-    logLoading.value = false;
-  }
+  await projectStore.fetchLogs(projectId.value);
 }
 
 async function refreshImplementationData() {
-  await Promise.all([fetchMilestones(), fetchDevLogs()]);
+  await projectStore.refreshImplementationData(projectId.value);
+  refreshStatus();
 }
 
 function applyDefaultTool() {
@@ -850,26 +750,17 @@ function applyDefaultTool() {
 async function fetchProjectDetail() {
   if (!projectId.value) return;
   try {
-    const res = await apiFetch(`/projects/${projectId.value}`);
-    const data = await res.json();
-    if (res.ok) {
-      projectDetail.value = data;
-      submissionIndex.value = indexSubmissions(data.submissions || []);
-      refreshDraftCache();
-      applyDefaultTool();
-      await refreshImplementationData();
-    }
+    await projectStore.fetchDetail(projectId.value);
+    refreshDraftCache();
+    applyDefaultTool();
+    await refreshImplementationData();
   } catch (err) {
     console.error(err);
   }
 }
 
 function refreshDraftCache() {
-  const next = {};
-  Object.keys(STAGE_CONFIG).forEach(key => {
-    next[key] = loadDraft(projectId.value, key);
-  });
-  draftMap.value = next;
+  draftStore.refreshProjectDrafts(projectId.value, Object.keys(STAGE_CONFIG));
 }
 
 function refreshStatus() {
@@ -879,11 +770,11 @@ function refreshStatus() {
 
 function resetForm(stageKey) {
   files.value = [];
-  if (fileInput.value) fileInput.value.value = '';
+  fileInputKey.value += 1;
   Object.keys(formDetails).forEach(key => delete formDetails[key]);
   if (stageKey === 'proposal') return;
   const config = getStageConfig(stageKey);
-  const draft = loadDraft(projectId.value, stageKey);
+  const draft = draftMap.value[stageKey] || null;
   const latest = submissionIndex.value[stageKey];
   const details = draft?.details || latest?.details || {};
   config.fields.forEach(field => {
@@ -908,15 +799,13 @@ function scheduleDraftSave() {
   if (!projectId.value || activeStage.value === 'proposal') return;
   if (draftTimer.value) clearTimeout(draftTimer.value);
   draftTimer.value = setTimeout(() => {
-    const payload = saveDraft(projectId.value, activeStage.value, { ...formDetails });
-    draftMap.value = { ...draftMap.value, [activeStage.value]: payload };
+    draftStore.saveProjectDraft(projectId.value, activeStage.value, { ...formDetails });
   }, 600);
 }
 
 function clearCurrentDraft() {
   if (!projectId.value || activeStage.value === 'proposal') return;
-  clearDraft(projectId.value, activeStage.value);
-  draftMap.value = { ...draftMap.value, [activeStage.value]: null };
+  draftStore.clearProjectDraft(projectId.value, activeStage.value);
   resetForm(activeStage.value);
 }
 
@@ -1017,7 +906,7 @@ async function submitStage() {
       await syncMilestonesFromWbs(details.wbs || []);
     }
 
-    clearDraft(projectId.value, stageKey);
+    draftStore.clearProjectDraft(projectId.value, stageKey);
     await fetchProjectDetail();
     window.alert('提交成功');
   } catch (err) {
@@ -1043,19 +932,19 @@ function handleMessage(event) {
 }
 
 function logout() {
-  doLogout();
+  authStore.logout();
   router.replace('/login');
 }
 
 onMounted(async () => {
-  const user = getCurrentUser();
+  authStore.hydrate();
+  const user = authStore.user;
   if (!user) {
     const redirect = projectId.value ? `/workspace?project=${projectId.value}` : '/workspace';
-    window.sessionStorage.setItem('auth_redirect', redirect);
+    authStore.setRedirect(redirect);
     router.replace('/login');
     return;
   }
-  currentUser.value = user;
   await loadProjects();
   await fetchProjectDetail();
   refreshStatus();
@@ -1933,8 +1822,220 @@ const STATUS_STYLE = {
   color: var(--text-secondary);
 }
 
+.project-plaza {
+  display: grid;
+  gap: 24px;
+  padding: 2.5rem;
+}
+.plaza-shell {
+  min-height: 100vh;
+  background: var(--bg-app);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+.plaza-shell .project-plaza {
+  width: min(1200px, 92vw);
+  margin: 0 auto;
+  padding-top: 2.5rem;
+  align-self: center;
+}
+.plaza-nav {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  background: rgba(248, 250, 252, 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-main);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2.5rem;
+  z-index: 10;
+}
+.plaza-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.plaza-brand .brand-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: var(--primary-600);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+}
+.brand-title {
+  font-weight: 700;
+  color: var(--text-main);
+}
+.brand-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.plaza-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.plaza-loading {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  border: 1px solid var(--border-main);
+  padding: 20px;
+  border-radius: 12px;
+  background: var(--bg-card);
+  text-align: center;
+}
+.plaza-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  border-bottom: 1px solid var(--border-main);
+  padding-bottom: 1.5rem;
+}
+.plaza-create {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.plaza-create-input {
+  min-width: 220px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-main);
+  background: var(--bg-card);
+  font-size: 0.85rem;
+  color: var(--text-main);
+  outline: none;
+}
+.plaza-create-input:focus {
+  border-color: var(--primary-200);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.12);
+}
+.plaza-error {
+  margin-top: -12px;
+  font-size: 0.8rem;
+  color: #ef4444;
+}
+.plaza-tools {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.plaza-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-main);
+  background: var(--bg-card);
+  color: var(--text-muted);
+}
+.plaza-search input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.85rem;
+  color: var(--text-main);
+  min-width: 200px;
+}
+.plaza-tools select {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-main);
+  background: var(--bg-card);
+  font-size: 0.85rem;
+  color: var(--text-main);
+}
+.plaza-recent {
+  display: grid;
+  gap: 12px;
+}
+.plaza-section-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.plaza-header h2 {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--text-main);
+  margin: 0;
+}
+.plaza-header p {
+  color: var(--text-secondary);
+  margin-top: 0.5rem;
+}
+.plaza-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+.plaza-card {
+  text-align: left;
+  background: var(--bg-card);
+  border: 1px solid var(--border-main);
+  border-radius: var(--radius-main);
+  padding: 16px;
+  box-shadow: var(--shadow-card);
+  display: grid;
+  gap: 8px;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+.plaza-card--active {
+  border-color: var(--primary-200);
+  box-shadow: 0 10px 22px rgba(99, 102, 241, 0.08);
+}
+.plaza-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--primary-100);
+  box-shadow: var(--shadow-hover);
+}
+.plaza-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+.plaza-meta {
+  display: flex;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  align-items: center;
+}
+.plaza-status {
+  background: var(--primary-50);
+  color: var(--primary-700);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+.plaza-desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+.plaza-empty {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  border: 1px dashed var(--border-main);
+  padding: 24px;
+  border-radius: 12px;
+  text-align: center;
+  background: var(--bg-card);
+}
+
 .btn-primary.small,
-.btn-ghost.small {
+.btn-secondary.small {
   font-size: 0.75rem;
   padding: 4px 10px;
   height: auto;

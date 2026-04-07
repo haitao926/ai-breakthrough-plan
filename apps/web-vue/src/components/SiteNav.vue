@@ -20,14 +20,17 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
-import { getCurrentUser } from '@/api/authApi';
+import { computed } from 'vue';
+import { storeToRefs } from 'pinia';
+import { useAuthStore } from '@/stores/auth';
 
 const props = defineProps({
   active: { type: String, default: '' }
 });
 
-const user = ref(getCurrentUser());
+const authStore = useAuthStore();
+authStore.hydrate();
+const { user } = storeToRefs(authStore);
 
 const active = computed(() => props.active);
 </script>

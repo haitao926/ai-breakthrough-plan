@@ -1,117 +1,125 @@
 <template>
-  <div class="tool-root">
-    <nav class="tool-nav">
-      <div class="nav-left">
-        <RouterLink to="/tools" class="nav-back"><i class="fas fa-arrow-left"></i></RouterLink>
-        <h1 class="nav-title">
-          <i class="fas fa-sitemap text-indigo-600 mr-2"></i> WBS 任务拆解
-        </h1>
-      </div>
-      <div class="nav-right">
-        <span class="save-status" :class="saved ? 'text-emerald-600' : 'text-slate-400'">
-          <i v-if="saved" class="fas fa-check mr-1"></i> {{ saveStatus }}
-        </span>
+  <div class="wbs-tool bg-slate-50 min-h-screen pb-20">
+    <!-- Header Nav -->
+    <nav class="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200/60 transition-all">
+      <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-600/20">
+            <i class="fas fa-sitemap text-lg"></i>
+          </div>
+          <div>
+            <h1 class="text-sm font-black text-slate-900 uppercase tracking-widest">任务拆解与规划</h1>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter italic">WBS & Milestone Planning</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+          <span class="text-[10px] font-black uppercase tracking-widest transition-all duration-500" :class="saved ? 'text-emerald-500' : 'text-slate-300'">
+            <i v-if="saved" class="fas fa-satellite-dish mr-1 animate-pulse"></i> {{ saved ? 'Cloud Synced' : 'Auto-saving...' }}
+          </span>
+          <div class="h-8 w-px bg-slate-200 mx-2"></div>
+          <button @click="generateTasks(true)" class="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all active:scale-95">
+             <i class="fas fa-magic mr-2"></i> AI 智能生成任务
+          </button>
+        </div>
       </div>
     </nav>
 
-    <main class="tool-main">
-      <!-- 1. Brief & Generate -->
-      <section class="brief-section card-base">
-        <div class="brief-header">
-          <div class="brief-title">
-            <h2>项目构思</h2>
-            <p>描述你的想法，AI 帮你拆解任务。</p>
+    <main class="max-w-7xl mx-auto px-6 py-12 space-y-12 animate-reveal">
+      <!-- Project Context & Brief -->
+      <section class="premium-card !bg-white grid lg:grid-cols-3 gap-12 items-start shadow-2xl shadow-indigo-500/5">
+        <div class="lg:col-span-2 space-y-8">
+          <div class="flex items-center gap-3">
+             <div class="w-1.5 h-6 bg-indigo-600 rounded-full"></div>
+             <h2 class="text-xs font-black text-slate-900 uppercase tracking-widest">项目构思与目标</h2>
           </div>
-          <div class="brief-actions">
-            <button class="btn-ghost small" @click="showFeasibility = !showFeasibility">
-              <i class="fas fa-clipboard-check mr-1"></i> 可行性自检
-            </button>
-            <button class="btn-primary" @click="generateTasks(true)">
-              <i class="fas fa-magic mr-2"></i> 自动生成任务
-            </button>
-          </div>
-        </div>
-
-        <div class="brief-form">
-          <div class="form-group">
-            <label>一句话描述</label>
-            <input v-model.trim="brief.idea" placeholder="例如：我想做一个智能浇花装置..." />
-          </div>
-          <div class="form-group">
-            <label>解决对象</label>
-            <input v-model.trim="brief.target" placeholder="例如：经常出差的上班族" />
-          </div>
-          <div class="form-group">
-            <label>项目类型</label>
-            <select v-model="brief.type">
-              <option value="product">工程产品</option>
-              <option value="research">课题研究</option>
-              <option value="impact">社会公益</option>
-            </select>
+          <div class="grid md:grid-cols-2 gap-6">
+            <div class="space-y-2">
+              <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">一句话构思</label>
+              <input v-model.trim="brief.idea" class="wbs-input" placeholder="例如：开发一个基于人脸识别的自动签到系统">
+            </div>
+            <div class="space-y-2">
+              <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">目标用户/场景</label>
+              <input v-model.trim="brief.target" class="wbs-input" placeholder="例如：经常需要点名的实验室场景">
+            </div>
           </div>
         </div>
 
-        <div v-if="showFeasibility" class="feasibility-panel">
-          <label><input type="checkbox" v-model="feasibility.resource"> 能获取所需资源</label>
-          <label><input type="checkbox" v-model="feasibility.time"> 每周保证 2 小时</label>
-          <label><input type="checkbox" v-model="feasibility.scope"> 难度适中可完成</label>
+        <div class="space-y-8">
+          <div class="flex items-center gap-3">
+             <div class="w-1.5 h-6 bg-indigo-600 rounded-full"></div>
+             <h2 class="text-xs font-black text-slate-900 uppercase tracking-widest">可行性自检</h2>
+          </div>
+          <div class="bg-slate-50 p-6 rounded-3xl border border-slate-100 flex flex-col gap-4">
+             <label v-for="(val, key) in feasibility" :key="key" class="flex items-center gap-3 cursor-pointer group">
+                <div class="w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all"
+                  :class="feasibility[key] ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 bg-white group-hover:border-indigo-400'">
+                  <i v-if="feasibility[key]" class="fas fa-check text-[10px]"></i>
+                  <input type="checkbox" v-model="feasibility[key]" class="hidden">
+                </div>
+                <span class="text-[11px] font-black uppercase tracking-widest transition-colors" :class="feasibility[key] ? 'text-indigo-600' : 'text-slate-400'">
+                  {{ key === 'resource' ? '资源到位' : key === 'time' ? '时间充裕' : '难度匹配' }}
+                </span>
+             </label>
+          </div>
         </div>
       </section>
 
-      <!-- 2. Task Lists by Phase -->
-      <div class="phases-grid">
-        <div v-for="phase in phases" :key="phase.key" class="phase-col">
-          <div class="phase-header">
-            <div class="phase-meta">
-              <span class="phase-badge" :class="phase.badgeClass">{{ phase.label }}</span>
-              <span class="phase-count">{{ phaseCounts[phase.key] }}</span>
-            </div>
-            <button class="add-btn" @click="focusDraft(phase.key)">
-              <i class="fas fa-plus"></i>
-            </button>
+      <!-- Kanban Columns -->
+      <div class="grid lg:grid-cols-3 gap-8">
+        <div v-for="phase in phases" :key="phase.key" class="space-y-6">
+          <div class="flex items-center justify-between px-2">
+             <div class="flex items-center gap-3">
+                <span class="w-10 h-10 rounded-2xl bg-white shadow-sm flex items-center justify-center text-xs font-black text-slate-900 border border-slate-100">
+                   {{ phase.key === 'm1' ? '01' : phase.key === 'm2' ? '02' : '03' }}
+                </span>
+                <div>
+                   <h3 class="text-[10px] font-black text-slate-900 uppercase tracking-widest">{{ phase.label }}</h3>
+                   <p class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">{{ phaseCounts[phase.key] }} 条任务记录</p>
+                </div>
+             </div>
+             <button @click="focusDraft(phase.key)" class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all">
+                <i class="fas fa-plus text-xs"></i>
+             </button>
           </div>
 
-          <div class="task-list">
-            <!-- Draft Input -->
-            <div class="task-card draft">
-              <div class="draft-fields">
-                <input 
-                  v-model.trim="drafts[phase.key].title" 
-                  :placeholder="phase.placeholder"
-                  @keyup.enter="submitDraft(phase.key)"
-                />
-                <input
-                  v-model.trim="drafts[phase.key].output"
-                  class="draft-output"
-                  placeholder="最小完成标准 / 产出（可选）"
-                />
+          <div class="space-y-4">
+            <!-- Draft Pad -->
+            <div class="p-6 bg-white border border-slate-200 border-dashed rounded-[32px] group hover:border-indigo-400 transition-all">
+              <input v-model.trim="drafts[phase.key].title" class="w-full text-xs font-black bg-transparent outline-none border-none placeholder:text-slate-200" :placeholder="phase.placeholder" @keyup.enter="submitDraft(phase.key)">
+              <div class="flex items-center justify-between mt-4">
+                 <input v-model.trim="drafts[phase.key].output" class="text-[10px] font-bold bg-transparent outline-none border-none placeholder:text-slate-200 text-slate-400 italic" placeholder="产出成果 (Deliverable)">
+                 <button @click="submitDraft(phase.key)" :disabled="!drafts[phase.key].title" class="w-6 h-6 rounded-lg bg-slate-900 text-white flex items-center justify-center disabled:opacity-20">
+                    <i class="fas fa-arrow-right text-[10px]"></i>
+                 </button>
               </div>
-              <button @click="submitDraft(phase.key)" :disabled="!drafts[phase.key].title">
-                <i class="fas fa-arrow-right"></i>
-              </button>
             </div>
 
-            <!-- Tasks -->
-            <div v-for="task in phaseTasks(phase.key)" :key="task.id || task.title" class="task-card">
-              <div class="task-body">
-                <input v-model.trim="task.title" class="task-input" @blur="persistTask(task)" />
-                <input v-model.trim="task.output" class="task-output" placeholder="最小完成标准 / 产出" @blur="persistTask(task)" />
-                <div class="task-hint">
-                  <span>下一步建议：</span>{{ resolveAction(task).hint }}
+            <!-- Task Card Flow -->
+            <div v-for="task in phaseTasks(phase.key)" :key="task.id" class="premium-card !bg-white group">
+              <div class="flex items-start justify-between gap-4 mb-4">
+                 <input v-model.trim="task.title" class="flex-1 text-xs font-black text-slate-900 bg-transparent outline-none border-none focus:text-indigo-600 transition-colors" @blur="persistTask(task)">
+                 <button @click="removeTask(task)" class="w-6 h-6 rounded-lg text-slate-200 hover:text-rose-500 hover:bg-rose-50 transition-all">
+                    <i class="fas fa-times text-[10px]"></i>
+                 </button>
+              </div>
+              
+              <div class="space-y-3 pt-4 border-t border-slate-50">
+                <div class="flex items-center justify-between">
+                   <div class="flex items-center gap-2">
+                      <i class="fas fa-bullseye text-[9px] text-indigo-400"></i>
+                      <input v-model.trim="task.output" class="text-[10px] font-bold text-slate-400 bg-transparent outline-none border-none italic" placeholder="未定义产出" @blur="persistTask(task)">
+                   </div>
                 </div>
-                <div class="task-actions">
-                  <button class="action-link" @click="goNext(task)">
-                    {{ resolveAction(task).label }} <i class="fas fa-chevron-right ml-1"></i>
-                  </button>
-                  <button class="delete-btn" @click="removeTask(task)">
-                    <i class="fas fa-times"></i>
-                  </button>
+                <div class="flex items-center justify-between">
+                   <div class="text-[9px] font-black uppercase tracking-widest text-slate-300">
+                      {{ resolveAction(task).hint }}
+                   </div>
+                   <button @click="goNext(task)" class="px-3 py-1 bg-slate-900 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all">
+                      {{ resolveAction(task).label }}
+                   </button>
                 </div>
               </div>
-            </div>
-            
-            <div v-if="!phaseTasks(phase.key).length" class="empty-state">
-              暂无任务
             </div>
           </div>
         </div>
@@ -121,7 +129,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { apiFetch } from '@/api/client';
 
@@ -132,44 +140,18 @@ const dataKey = computed(() => projectId.value ? `ai_course_wbs_${projectId.valu
 const briefKey = computed(() => projectId.value ? `ai_course_wbs_brief_${projectId.value}` : 'ai_course_wbs_brief');
 
 const tasks = ref([]);
-const saveStatus = ref('已同步');
 const saved = ref(true);
 const useLocal = ref(false);
-const showFeasibility = ref(false);
-const drafts = reactive({
-  m1: { title: '', output: '' },
-  m2: { title: '', output: '' },
-  m3: { title: '', output: '' }
-});
-
-const brief = reactive({
-  idea: '',
-  target: '',
-  type: 'product',
-  resources: '',
-  timeline: ''
-});
+const drafts = reactive({ m1: { title: '', output: '' }, m2: { title: '', output: '' }, m3: { title: '', output: '' } });
+const brief = reactive({ idea: '', target: '', type: 'product' });
 const feasibility = reactive({ resource: false, time: false, scope: false });
-
-const mode = ref('product');
-let statusTimer = null;
 let ready = false;
 
-const MODE_LABELS = {
-  product: '工程产品',
-  research: '课题研究',
-  impact: '社会公益'
-};
-
-const selectedType = computed(() => brief.type || mode.value || 'product');
-const deliverableType = computed(() => (selectedType.value === 'research' ? 'research' : selectedType.value === 'impact' ? 'impact' : 'engineering'));
-const feasibilityReady = computed(() => feasibility.resource && feasibility.time && feasibility.scope);
-
-const phases = computed(() => [
-  { key: 'm1', label: '阶段一：立项', placeholder: '添加调研或阅读任务...', badgeClass: 'badge-indigo' },
-  { key: 'm2', label: '阶段二：实施', placeholder: '添加设计或开发任务...', badgeClass: 'badge-amber' },
-  { key: 'm3', label: '阶段三：结题', placeholder: '添加总结或展示任务...', badgeClass: 'badge-emerald' }
-]);
+const phases = [
+  { key: 'm1', label: 'PHASE 01: INCEPTION', placeholder: '添加调研或立项任务...' },
+  { key: 'm2', label: 'PHASE 02: EXECUTION', placeholder: '添加设计或开发任务...' },
+  { key: 'm3', label: 'PHASE 03: CONCLUSION', placeholder: '添加总结或提交任务...' }
+];
 
 const phaseCounts = computed(() => ({
   m1: tasks.value.filter(item => item.phase === 'm1').length,
@@ -178,124 +160,48 @@ const phaseCounts = computed(() => ({
 }));
 
 const ACTIONS = {
-  charter: { label: '去立项', type: 'tool', hint: '完善问题与目标' },
-  pre_research: { label: '去调研', type: 'tool', hint: '完成问卷/访谈' },
-  literature: { label: '去阅读', type: 'tool', hint: '补充阅读笔记' },
-  innovation: { label: '去创新', type: 'tool', hint: '写清差异与验证' },
-  architect: { label: '去架构', type: 'tool', hint: '画出系统结构' },
-  wbs: { label: 'WBS', type: 'tool', hint: '补齐任务清单' },
-  kanban: { label: '看板', type: 'tool', hint: '更新任务进度' },
-  devlog: { label: '日志', type: 'tool', hint: '记录今日进展' }
+  charter: { label: '去立项', hint: '完善愿景' },
+  pre_research: { label: '去调研', hint: '收集证据' },
+  literature: { label: '去阅读', hint: '学术深度' },
+  innovation: { label: '去创新', hint: '核心价值' },
+  architect: { label: '去架构', hint: '技术大图' },
+  kanban: { label: '去看板', hint: '敏捷实施' },
+  devlog: { label: '去日志', hint: '记录历程' }
 };
 
-const STAGE_LABELS = {
-  proposal: '提交开题',
-  milestone_1: '提交里程碑1',
-  midterm: '提交中期',
-  milestone_2: '提交里程碑2',
-  final: '提交结题'
-};
-
-function touchSaved() {
-  saved.value = true;
-  saveStatus.value = '已保存';
-  clearTimeout(statusTimer);
-  statusTimer = setTimeout(() => {
-    // saved.value = false; 
-    // keep green
-  }, 2000);
-}
+const STAGE_LABELS = { proposal: '开题审批', milestone_1: 'M1验收', midterm: '中期审查', milestone_2: 'M2验收', final: '结题评审' };
 
 function normalizeTask(task) {
   return {
-    id: task?.id ? String(task.id) : '',
+    id: task?.id ? String(task.id) : `local-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
     title: String(task?.title || ''),
     phase: task?.phase || 'm1',
     output: String(task?.output || ''),
     action: task?.action || '',
-    hint: task?.hint || '',
-    deliverables: task?.deliverables || {}
+    hint: task?.hint || ''
   };
 }
 
-function buildDeliverables(output, meta = {}) {
-  const payload = {};
-  const cleanOutput = String(output || '').trim();
-  if (cleanOutput) payload.output = cleanOutput;
-  if (meta.action) payload.action = meta.action;
-  if (meta.hint) payload.hint = meta.hint;
-  return payload;
-}
-
-function saveLocalData() {
-  if (!ready) return;
-  localStorage.setItem(dataKey.value, JSON.stringify({
-    tasks: tasks.value.map(task => ({
-      title: task.title,
-      phase: task.phase,
-      output: task.output,
-      action: task.action,
-      hint: task.hint
-    }))
-  }));
-  touchSaved();
-  notifyParent();
-}
-
-function syncLocalCache(silent = true) {
-  if (!projectId.value) return;
-  localStorage.setItem(dataKey.value, JSON.stringify({
-    tasks: tasks.value.map(task => ({
-      title: task.title,
-      phase: task.phase,
-      output: task.output,
-      action: task.action,
-      hint: task.hint
-    }))
-  }));
-  if (!silent) touchSaved();
-  if (!silent) notifyParent();
-}
-
+// Data Syncing
 async function loadData() {
-  if (!projectId.value) {
-    useLocal.value = true;
-    loadLocal();
-    ready = true;
-    return;
-  }
+  if (!projectId.value) { useLocal.value = true; loadLocal(); ready = true; return; }
   try {
     const res = await apiFetch(`/projects/${projectId.value}/milestones`);
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || '加载失败');
+    if (!res.ok) throw new Error('Load failed');
     tasks.value = (data.milestones || []).map(item => {
       let deliverables = {};
       try { deliverables = JSON.parse(item.deliverables || '{}'); } catch(e){}
-      return normalizeTask({
-        id: item.id,
-        title: item.title,
-        phase: item.description || 'm1',
-        output: deliverables.output || '',
-        action: deliverables.action,
-        hint: deliverables.hint,
-        deliverables
-      });
+      return normalizeTask({ id: item.id, title: item.title, phase: item.description || 'm1', output: deliverables.output, action: deliverables.action, hint: deliverables.hint });
     });
     useLocal.value = false;
-    syncLocalCache();
-  } catch (e) {
-    console.error(e);
-    useLocal.value = true;
-    loadLocal();
-  } finally {
-    ready = true;
-  }
+  } catch (e) { useLocal.value = true; loadLocal(); }
+  finally { ready = true; }
 }
 
 function loadLocal() {
   const savedData = JSON.parse(localStorage.getItem(dataKey.value) || '{}');
-  const rawTasks = Array.isArray(savedData.tasks) ? savedData.tasks : [];
-  tasks.value = rawTasks.map(task => normalizeTask(task));
+  tasks.value = (savedData.tasks || []).map(t => normalizeTask(t));
 }
 
 function loadBrief() {
@@ -308,200 +214,84 @@ function loadBrief() {
   } catch(e){}
 }
 
-function saveBrief() {
-  localStorage.setItem(briefKey.value, JSON.stringify({
-    idea: brief.idea,
-    target: brief.target,
-    type: brief.type,
-    feasibility: { ...feasibility }
-  }));
+function syncLocal() {
+  if (!ready) return;
+  localStorage.setItem(dataKey.value, JSON.stringify({ tasks: tasks.value }));
+  localStorage.setItem(briefKey.value, JSON.stringify({ ...brief, feasibility }));
+  saved.value = false;
+  setTimeout(() => { saved.value = true; }, 1000);
 }
 
-function hasTaskTitle(title) {
-  const key = String(title || '').trim().toLowerCase();
-  return tasks.value.some(task => String(task.title).trim().toLowerCase() === key);
-}
-
+// Task Actions
 async function createTask(title, phase, output = '', meta = {}) {
-  const cleanTitle = String(title || '').trim();
+  const cleanTitle = title.trim();
   if (!cleanTitle) return;
-  if (hasTaskTitle(cleanTitle)) return;
+  if (tasks.value.some(t => t.title === cleanTitle && t.phase === phase)) return;
 
-  if (useLocal.value || !projectId.value) {
-    tasks.value.push(normalizeTask({
-      id: `local-${Date.now()}`,
-      title: cleanTitle,
-      phase,
-      output,
-      action: meta.action,
-      hint: meta.hint
-    }));
-    saveLocalData();
-    return;
+  const newTask = normalizeTask({ title: cleanTitle, phase, output, ...meta });
+  
+  if (!useLocal.value && projectId.value) {
+    try {
+      const res = await apiFetch(`/projects/${projectId.value}/milestones`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: cleanTitle, phase, output, deliverables: JSON.stringify({ output, ...meta }) })
+      });
+      const data = await res.json();
+      newTask.id = data.id;
+    } catch(e) { console.error('Cloud creation failed'); }
   }
-
-  try {
-    const res = await apiFetch(`/projects/${projectId.value}/milestones`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title: cleanTitle,
-        phase,
-        output,
-        deliverables: buildDeliverables(output, meta)
-      })
-    });
-    const data = await res.json();
-    tasks.value.push(normalizeTask({
-      id: data.id,
-      title: cleanTitle,
-      phase,
-      output,
-      action: meta.action,
-      hint: meta.hint
-    }));
-    syncLocalCache();
-    touchSaved();
-    notifyParent();
-  } catch (err) {
-    alert('创建失败');
-  }
+  
+  tasks.value.push(newTask);
+  syncLocal();
 }
 
 async function persistTask(task) {
-  if (!task) return;
-  if (useLocal.value || !projectId.value || !task.id) {
-    saveLocalData();
-    return;
+  syncLocal();
+  if (!useLocal.value && projectId.value && !String(task.id).startsWith('local-')) {
+    try {
+      await apiFetch(`/milestones/${task.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: task.title, phase: task.phase, output: task.output, deliverables: JSON.stringify({ output: task.output, action: task.action, hint: task.hint }) })
+      });
+    } catch(e){}
   }
-  try {
-    await apiFetch(`/milestones/${task.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title: task.title,
-        phase: task.phase,
-        output: task.output,
-        deliverables: buildDeliverables(task.output, { action: task.action, hint: task.hint })
-      })
-    });
-    syncLocalCache();
-    touchSaved();
-    notifyParent();
-  } catch (err) {}
 }
 
 async function removeTask(task) {
-  if (!task) return;
-  if (useLocal.value || !projectId.value || !task.id) {
-    tasks.value = tasks.value.filter(item => item !== task);
-    saveLocalData();
-    return;
+  tasks.value = tasks.value.filter(t => t.id !== task.id);
+  syncLocal();
+  if (!useLocal.value && projectId.value && !String(task.id).startsWith('local-')) {
+    try { await apiFetch(`/milestones/${task.id}`, { method: 'DELETE' }); } catch(e){}
   }
-  try {
-    await apiFetch(`/milestones/${task.id}`, { method: 'DELETE' });
-    tasks.value = tasks.value.filter(item => item.id !== task.id);
-    syncLocalCache();
-    touchSaved();
-    notifyParent();
-  } catch (err) {}
-}
-
-function phaseTasks(phaseKey) {
-  return tasks.value.filter(task => task.phase === phaseKey);
 }
 
 function submitDraft(phase) {
-  const title = drafts[phase].title.trim();
-  if (!title) return;
-  createTask(title, phase, drafts[phase].output);
+  if (!drafts[phase].title) return;
+  createTask(drafts[phase].title, phase, drafts[phase].output);
   drafts[phase].title = '';
   drafts[phase].output = '';
 }
 
-function buildGuidedTasks() {
-  const list = [];
-  const add = (title, phase, action, output = '', hint = '') => list.push({ title, phase, action, output, hint });
-  const idea = brief.idea.trim();
-  const target = brief.target.trim();
-  const prefix = idea ? `围绕「${idea}」` : '';
-  const targetHint = target ? `关注对象：${target}` : '';
-
-  add(`${prefix}明确问题与目标`, 'm1', 'charter', '问题与目标清单', targetHint || '先写清楚问题与目标');
-  add('前期调研（问卷/访谈/观察）', 'm1', 'pre_research', '调研记录', '至少 1 份调研记录');
-  add('文献阅读或案例阅读', 'm1', 'literature', '阅读笔记', '至少 1 篇/1 个案例');
-  add('创新点梳理与对比', 'm1', 'innovation', '创新点说明', '写清差异与验证方式');
-
-  if (deliverableType.value === 'research') {
-    add('研究方法与实验设计', 'm2', 'pre_research', '实验设计方案', '明确变量与流程');
-    add('实验执行与数据收集', 'm2', 'devlog', '实验记录', '记录每次实验');
-    add('数据分析与结果结论', 'm3', 'devlog', '分析结果', '用图表呈现结果');
-    add('研究报告撰写', 'm3', 'submission:final', '研究报告', '形成完整研究报告');
-  } else if (deliverableType.value === 'impact') {
-    add('行动方案与资源准备', 'm2', 'pre_research', '行动清单', '列出资源与步骤');
-    add('行动执行与过程记录', 'm2', 'devlog', '过程记录', '拍照/记录执行过程');
-    add('影响评估与传播', 'm3', 'submission:final', '传播材料', '总结影响与成果');
-  } else {
-    add('方案与原型设计', 'm2', 'architect', '流程图或原型', '画出系统结构');
-    add('核心功能实现', 'm2', 'devlog', '代码提交', '完成一次代码提交');
-    add('测试与优化', 'm2', 'devlog', '测试记录', '记录问题与改进');
-    add('演示视频录制', 'm3', 'submission:milestone_2', '演示视频', '录制 1~3 分钟');
-    add('成果整理与报告', 'm3', 'submission:final', '结题材料', '提交最终成果');
-  }
-  return list;
-}
-
-async function generateTasks(replace) {
-  if (!brief.idea && !confirm('未填写构思，确定生成通用任务？')) return;
-  const suggestions = buildGuidedTasks();
-  
-  if (replace && tasks.value.length) {
-    if (!confirm('确定覆盖现有任务吗？')) return;
-    for (const task of [...tasks.value]) await removeTask(task);
-  }
-
-  for (const item of suggestions) {
-    if (!hasTaskTitle(item.title)) {
-      await createTask(item.title, item.phase, item.output || '', { action: item.action, hint: item.hint });
-    }
-  }
-}
-
-function inferActionFromTitle(title, phase) {
-  const text = String(title || '');
-  if (/调研|问卷|访谈|观察/.test(text)) return 'pre_research';
-  if (/文献|阅读|论文|案例/.test(text)) return 'literature';
-  if (/创新|对比|差异/.test(text)) return 'innovation';
-  if (/架构|流程图|原型|设计/.test(text)) return 'architect';
-  if (/开题/.test(text)) return 'submission:proposal';
-  if (/中期/.test(text)) return 'submission:midterm';
-  if (/演示|视频/.test(text)) return 'submission:milestone_2';
-  if (/结题|报告|答辩|总结/.test(text)) return 'submission:final';
-  if (/代码|开发|实现/.test(text)) return 'devlog';
-  if (phase === 'm1') return 'charter';
-  if (phase === 'm2') return 'kanban';
-  if (phase === 'm3') return 'submission:final';
-  return 'kanban';
-}
-
+// Logic & Intelligence
 function resolveAction(task) {
-  const rawKey = task.action || inferActionFromTitle(task.title, task.phase);
-  if (rawKey && rawKey.startsWith('submission:')) {
-    const stage = rawKey.split(':')[1] || 'final';
-    return {
-      type: 'stage',
-      key: stage,
-      label: STAGE_LABELS[stage] || '去提交',
-      hint: task.hint || '完成阶段提交'
-    };
-  }
-  const config = ACTIONS[rawKey] || ACTIONS.kanban;
-  return {
-    type: 'tool',
-    key: rawKey,
-    label: config.label,
-    hint: task.hint || config.hint || '前往下一步'
+  const infer = (title) => {
+    if (/调研|访谈/.test(title)) return 'pre_research';
+    if (/文献|阅读/.test(title)) return 'literature';
+    if (/开题/.test(title)) return 'submission:proposal';
+    if (/架构|图/.test(title)) return 'architect';
+    if (/开发|实现/.test(title)) return 'devlog';
+    if (/结题|报告/.test(title)) return 'submission:final';
+    return 'kanban';
   };
+  const key = task.action || infer(task.title);
+  if (key.startsWith('submission:')) {
+    const stage = key.split(':')[1];
+    return { type: 'stage', key: stage, label: STAGE_LABELS[stage] || '去提交', hint: '阶段评审节点' };
+  }
+  const cfg = ACTIONS[key] || ACTIONS.kanban;
+  return { type: 'tool', key, label: cfg.label, hint: cfg.hint };
 }
 
 function goNext(task) {
@@ -514,281 +304,38 @@ function goNext(task) {
   }
 }
 
-function notifyParent() {
-  try {
-    if (window.parent && window.parent !== window) {
-      window.parent.postMessage({ type: 'wbs-updated', projectId: projectId.value }, window.location.origin);
-    }
-  } catch (e) {}
+async function generateTasks(replace) {
+  if (replace && tasks.value.length > 0) {
+    if (!confirm('确定覆盖当前任务清单吗？')) return;
+    tasks.value = [];
+  }
+  
+  const suggestions = [
+    { title: '确立立项核心愿景', phase: 'm1', action: 'charter', output: '初步愿景说明' },
+    { title: '针对目标群体的痛点调研', phase: 'm1', action: 'pre_research', output: '调研分析报告' },
+    { title: '行业同类案例/技术调研', phase: 'm1', action: 'literature', output: '调研笔记' },
+    { title: '系统架构与技术路线设计', phase: 'm2', action: 'architect', output: '架构图' },
+    { title: '核心原型/最小化可行产品开发', phase: 'm2', action: 'devlog', output: 'MVP 原型' },
+    { title: '用户测试与反馈收集', phase: 'm2', action: 'devlog', output: '测试记录' },
+    { title: '撰写结题项目报告', phase: 'm3', action: 'submission:final', output: '项目终稿' }
+  ];
+
+  for (const s of suggestions) await createTask(s.title, s.phase, s.output, { action: s.action });
 }
 
-function focusDraft(phase) {
-  // logic to focus input
-}
+function focusDraft(p) { /* Focus logic */ }
 
-watch(brief, saveBrief, { deep: true });
-watch(feasibility, saveBrief, { deep: true });
+watch([brief, feasibility], syncLocal, { deep: true });
 
-onMounted(() => {
-  loadData();
-  loadBrief();
-});
-
-watch(() => projectId.value, () => {
-  ready = false;
-  loadData();
-  loadBrief();
-});
+onMounted(() => { loadData(); loadBrief(); });
 </script>
 
 <style scoped>
-.tool-root {
-  min-height: 100vh;
-  background: var(--bg-app);
-  display: flex;
-  flex-direction: column;
+.wbs-tool { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+.premium-card { @apply rounded-[40px] border border-slate-200/60 p-8 shadow-sm; }
+.wbs-input {
+  @apply w-full p-4 bg-slate-50 border-none rounded-2xl outline-none text-[11px] font-black transition-all placeholder:text-slate-200 focus:bg-white focus:ring-4 focus:ring-indigo-500/5;
 }
-
-.tool-nav {
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--border-main);
-  padding: 0.75rem 1.5rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: sticky;
-  top: 0;
-  z-index: 50;
-}
-
-.nav-left { display: flex; align-items: center; gap: 1rem; }
-.nav-back { color: var(--text-secondary); transition: color 0.2s; }
-.nav-back:hover { color: var(--text-main); }
-.nav-title { font-size: 1rem; font-weight: 700; color: var(--text-main); display: flex; align-items: center; }
-.save-status { font-size: 0.75rem; font-weight: 500; }
-
-.tool-main {
-  flex: 1;
-  max-width: 1000px;
-  width: 100%;
-  margin: 0 auto;
-  padding: 2rem 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.brief-section {
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.brief-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.brief-title h2 { font-size: 1.25rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem; }
-.brief-title p { color: var(--text-secondary); font-size: 0.875rem; }
-
-.brief-actions { display: flex; gap: 0.75rem; }
-
-.brief-form {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
-  gap: 1rem;
-}
-
-.form-group { display: flex; flex-direction: column; gap: 0.5rem; }
-.form-group label { font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); }
-.form-group input, .form-group select {
-  padding: 0.6rem;
-  border: 1px solid var(--border-main);
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
-  background: var(--bg-app);
-}
-
-.feasibility-panel {
-  display: flex;
-  gap: 1.5rem;
-  padding: 0.75rem;
-  background: var(--primary-50);
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
-  color: var(--primary-700);
-}
-
-.phases-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
-}
-
-.phase-col {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.phase-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.phase-badge {
-  font-size: 0.75rem;
-  font-weight: 700;
-  padding: 0.25rem 0.75rem;
-  border-radius: 999px;
-}
-.badge-indigo { background: var(--primary-100); color: var(--primary-700); }
-.badge-amber { background: #fef3c7; color: #b45309; }
-.badge-emerald { background: #dcfce7; color: #047857; }
-
-.phase-count {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  margin-left: 0.5rem;
-}
-
-.add-btn {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: 1px solid var(--border-main);
-  background: var(--bg-card);
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.add-btn:hover { background: var(--primary-50); color: var(--primary-600); border-color: var(--primary-100); }
-
-.task-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.task-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-main);
-  border-radius: 0.75rem;
-  padding: 0.75rem;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
-  transition: all 0.2s;
-}
-.task-card:hover { border-color: var(--primary-100); box-shadow: 0 4px 6px -2px rgba(0,0,0,0.05); }
-
-.task-card.draft {
-  border-style: dashed;
-  background: var(--bg-app);
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-.draft-fields {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-.task-card.draft input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  font-size: 0.875rem;
-  outline: none;
-}
-.draft-output {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-}
-.task-card.draft button {
-  color: var(--primary-600);
-}
-
-.task-body {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.task-input {
-  width: 100%;
-  border: none;
-  background: transparent;
-  font-size: 0.875rem;
-  color: var(--text-main);
-  font-weight: 500;
-  padding: 0;
-  outline: none;
-}
-.task-output {
-  width: 100%;
-  border: none;
-  background: transparent;
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  outline: none;
-}
-.task-hint {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-}
-.task-hint span {
-  color: var(--text-secondary);
-  font-weight: 600;
-  margin-right: 0.25rem;
-}
-
-.task-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--border-subtle);
-}
-
-.action-link {
-  font-size: 0.75rem;
-  color: var(--primary-600);
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-}
-.action-link:hover { text-decoration: underline; }
-
-.delete-btn {
-  color: var(--text-muted);
-  font-size: 0.75rem;
-  cursor: pointer;
-}
-.delete-btn:hover { color: #ef4444; }
-
-.empty-state {
-  text-align: center;
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  padding: 1rem;
-  border: 1px dashed var(--border-main);
-  border-radius: 0.75rem;
-}
-
-.btn-primary.small { padding: 0.4rem 0.8rem; font-size: 0.8rem; }
-.btn-ghost.small { padding: 0.4rem 0.8rem; font-size: 0.8rem; }
-
-@media (max-width: 768px) {
-  .brief-form { grid-template-columns: 1fr; }
-}
+.animate-reveal { animation: reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+@keyframes reveal { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 </style>
