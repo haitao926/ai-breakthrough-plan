@@ -48,42 +48,26 @@
 
     <template v-else>
       <div v-show="mode === 'mission'" class="flex min-h-[calc(100vh-92px)] flex-col xl:flex-row">
-        <LearningPath
-          :slides="lessonSlides"
-          :current-index="currentSlideIndex"
-          @select="loadSlide"
+        <CourseSyllabusSidebar
+          :course-id="courseId"
+          :lessons="lessons"
+          :active-lesson-id="lessonId"
         />
 
-        <main ref="mainScroll" class="flex-1 overflow-y-auto px-6 py-10 lg:px-10 xl:px-14">
-          <div class="mx-auto max-w-6xl space-y-6">
+        <main ref="mainScroll" class="flex-1 overflow-y-auto px-6 py-10 lg:px-10 xl:px-14 relative bg-slate-50/50">
+          <div class="mx-auto max-w-4xl space-y-12">
+            
             <LessonStage
-              :slide="activeSlide"
-              :current-index="currentSlideIndex"
-              :total="lessonSlides.length"
+              :lesson-title="lessonTitle"
+              :lesson-description="lessonData?.description"
+              :phases="lessonPhases"
+              :materials="materials"
+              :deliverables="lessonDeliverables"
             />
 
-            <footer class="flex items-center justify-between gap-4 pb-10">
-              <button
-                class="rounded-2xl border border-slate-200 bg-white px-6 py-4 text-xs font-black uppercase tracking-[0.2em] text-slate-500 transition hover:text-slate-900 disabled:opacity-30"
-                :disabled="currentSlideIndex === 0"
-                @click="prevSlide"
-              >
-                上一页
-              </button>
-              
-              <button
-                class="rounded-2xl px-7 py-4 text-xs font-black uppercase tracking-[0.2em] text-white shadow-xl transition disabled:opacity-30"
-                :class="nextButtonClass"
-                :disabled="nextDisabled"
-                @click="nextSlide"
-              >
-                {{ isLastSlide ? (hasNextLesson ? '进入下一课' : '完成本课') : '下一页' }}
-              </button>
-            </footer>
-
-            <!-- Assignments Section (Moved into Main Flow) -->
-            <section id="lesson-assignments" class="pb-14">
-              <div class="rounded-[28px] border border-white/40 bg-white/70 backdrop-blur-md p-6 shadow-xl shadow-slate-200/20">
+            <!-- Assignments Section -->
+            <section id="lesson-assignments" class="pb-14 pt-10">
+              <div class="rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm">
                 <div class="flex flex-col gap-3 border-b border-slate-100 pb-5 sm:flex-row sm:items-end sm:justify-between">
                   <div>
                     <div class="text-[10px] font-black uppercase tracking-[0.22em] text-indigo-500">Assignments</div>
@@ -98,27 +82,27 @@
                 <div v-else-if="!lessonAssignments.length" class="py-8 text-sm font-medium text-slate-400">
                   当前课时还没有发布作业。
                 </div>
-                <div v-else class="mt-5 grid gap-4">
-                  <article v-for="assignment in lessonAssignments" :key="assignment.id" class="rounded-2xl border border-slate-200/50 bg-slate-50/50 p-5">
+                <div v-else class="mt-5 grid gap-6">
+                  <article v-for="assignment in lessonAssignments" :key="assignment.id" class="rounded-2xl border border-slate-100 bg-slate-50 p-6">
                     <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                       <div>
-                        <h3 class="text-base font-black text-slate-900">{{ assignment.title }}</h3>
-                        <p class="mt-2 text-sm leading-7 text-slate-500">{{ assignment.requirements || assignment.description || '按课堂要求整理并提交。' }}</p>
+                        <h3 class="text-lg font-black text-slate-900">{{ assignment.title }}</h3>
+                        <p class="mt-2 text-sm leading-7 text-slate-600">{{ assignment.requirements || assignment.description || '按课堂要求整理并提交。' }}</p>
                         <div class="mt-3 flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
                           <span>截止 {{ assignment.dueAt ? formatDate(assignment.dueAt) : '未设置' }}</span>
                           <span class="mx-2 text-slate-200">|</span>
-                          <span>状态 {{ ownSubmission(assignment.id)?.status || '未提交' }}</span>
+                          <span :class="ownSubmission(assignment.id) ? 'text-emerald-500' : ''">状态 {{ ownSubmission(assignment.id)?.status || '未提交' }}</span>
                         </div>
                       </div>
                     </div>
-                    <form class="mt-4 grid gap-3" @submit.prevent="submitAssignment(assignment)">
-                      <textarea v-model="assignmentDrafts[assignment.id].content" class="min-h-[96px] w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="填写作业说明、反思或正文"></textarea>
-                      <input v-model="assignmentDrafts[assignment.id].link" class="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="作品链接 / 代码仓库链接（可选，需 http(s)）" />
-                      <input v-model="assignmentDrafts[assignment.id].attachmentNote" class="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="附件说明（可选）" />
-                      <button class="self-start rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-black text-white shadow-lg shadow-indigo-600/25 transition duration-300 hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-indigo-600/40" type="submit">
+                    <form class="mt-6 grid gap-4" @submit.prevent="submitAssignment(assignment)">
+                      <textarea v-model="assignmentDrafts[assignment.id].content" class="min-h-[120px] w-full rounded-2xl border border-slate-200 bg-white p-4 text-sm font-medium text-slate-700 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="填写作业说明、反思或正文"></textarea>
+                      <input v-model="assignmentDrafts[assignment.id].link" class="w-full rounded-2xl border border-slate-200 bg-white p-4 text-sm font-medium text-slate-700 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="作品链接 / 代码仓库链接（可选，需 http(s)）" />
+                      <input v-model="assignmentDrafts[assignment.id].attachmentNote" class="w-full rounded-2xl border border-slate-200 bg-white p-4 text-sm font-medium text-slate-700 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="附件说明（可选）" />
+                      <button class="self-start rounded-full bg-indigo-600 px-8 py-3.5 text-xs font-black text-white shadow-xl shadow-indigo-600/25 transition duration-300 hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-indigo-600/40" type="submit">
                         {{ ownSubmission(assignment.id) ? '更新提交' : '提交作业' }}
                       </button>
-                      <p v-if="ownSubmission(assignment.id)?.feedback" class="rounded-xl bg-white p-3 text-xs font-bold leading-6 text-slate-500">
+                      <p v-if="ownSubmission(assignment.id)?.feedback" class="mt-2 rounded-xl bg-indigo-50 p-4 text-xs font-bold leading-6 text-indigo-700">
                         教师反馈：{{ ownSubmission(assignment.id).feedback }}
                       </p>
                     </form>
@@ -129,15 +113,6 @@
           </div>
         </main>
 
-        <LearningSidebar
-          :active-slide="activeSlide"
-          :deliverables="lessonDeliverables"
-          :materials="materials"
-          :homework-done="homeworkDone"
-          :homework-name="homeworkName"
-          :homework-uploading="homeworkUploading"
-          @trigger-homework="triggerHomework"
-        />
         <input ref="hwInput" type="file" class="hidden" @change="handleHomeworkUpload" />
       </div>
 
@@ -172,8 +147,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { apiFetch } from '@/api/client';
 import { getAuthToken } from '@/api/auth';
 import { getCurrentUser } from '@/api/authApi';
-import LearningPath from '@/components/study/LearningPath.vue';
-import LearningSidebar from '@/components/study/LearningSidebar.vue';
+import CourseSyllabusSidebar from '@/components/study/CourseSyllabusSidebar.vue';
 import LessonStage from '@/components/study/LessonStage.vue';
 
 const route = useRoute();

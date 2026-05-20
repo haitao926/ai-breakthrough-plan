@@ -1,173 +1,147 @@
 <template>
-  <section class="overflow-hidden rounded-[36px] border border-slate-200 bg-slate-950 p-3 shadow-2xl shadow-indigo-500/10">
-    <div class="relative min-h-[60vh] flex flex-col overflow-hidden rounded-[28px] bg-white">
-      <div class="absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-4 px-8 py-6">
-        <div class="inline-flex items-center gap-2 rounded-full bg-slate-900/90 px-4 py-2 text-[10px] font-black uppercase tracking-[0.22em] text-white">
-          <span class="h-2 w-2 rounded-full" :class="activeSlideDotClass"></span>
-          {{ slide?.typeLabel || '学习页' }}
+  <div class="space-y-12">
+    <!-- Header Area (Title + Description + Materials) -->
+    <header class="rounded-[36px] bg-white p-8 lg:p-12 shadow-sm border border-slate-200">
+      <div class="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-4 py-2 text-[10px] font-black uppercase tracking-[0.22em] text-indigo-500">
+        <span class="h-2 w-2 rounded-full bg-indigo-500"></span>
+        LESSON OVERVIEW
+      </div>
+      <h1 class="mt-6 text-4xl font-black leading-tight tracking-tight text-slate-950 lg:text-5xl">{{ lessonTitle }}</h1>
+      <p v-if="lessonDescription" class="mt-6 text-xl font-medium leading-9 text-slate-600">{{ lessonDescription }}</p>
+
+      <!-- Deliverables List -->
+      <div v-if="deliverables?.length" class="mt-8 rounded-2xl bg-slate-50 p-6 border border-slate-100">
+        <div class="text-[10px] font-black uppercase tracking-[0.24em] text-slate-500">Target Deliverables (本课需产出)</div>
+        <ul class="mt-4 space-y-3">
+          <li v-for="item in deliverables" :key="item" class="flex items-start gap-3">
+            <i class="fas fa-bullseye mt-1 text-emerald-500"></i>
+            <span class="text-sm font-bold leading-6 text-slate-700">{{ item }}</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Materials -->
+      <div v-if="materials?.length" class="mt-8">
+        <div class="text-[10px] font-black uppercase tracking-[0.24em] text-slate-500">Lesson Materials (资料下载)</div>
+        <div class="mt-4 flex flex-wrap gap-3">
+          <a
+            v-for="material in materials"
+            :key="material.id"
+            :href="material.downloadUrl"
+            target="_blank"
+            class="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50"
+          >
+            <i class="fas text-slate-400" :class="materialIcon(material)"></i>
+            <span class="text-sm font-bold text-slate-700">{{ material.title }}</span>
+          </a>
         </div>
-        <div class="rounded-full bg-white/85 px-4 py-2 text-xs font-black text-slate-500 shadow-sm">
-          {{ currentIndex + 1 }} / {{ total || 1 }}
-        </div>
       </div>
+    </header>
 
-      <div v-if="slide" class="flex flex-1 flex-col justify-center px-10 pb-10 pt-24 lg:px-14">
-        <template v-if="slide.type === 'overview'">
-          <div class="max-w-4xl">
-            <div class="text-[11px] font-black uppercase tracking-[0.28em] text-indigo-500">Lesson Overview</div>
-            <h2 class="mt-4 text-3xl font-black leading-tight tracking-tight text-slate-950 lg:text-4xl">{{ slide.title }}</h2>
-            <p class="mt-5 max-w-3xl text-lg font-medium leading-9 text-slate-600">{{ slide.description }}</p>
-          </div>
-          <div class="mt-8 grid gap-4 md:grid-cols-3">
-            <div
-              v-for="item in slide.highlights"
-              :key="item"
-              class="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm font-bold leading-7 text-slate-700"
-            >
-              {{ item }}
-            </div>
-          </div>
-        </template>
-
-        <template v-else-if="slide.type === 'knowledge'">
-          <div class="grid h-full items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
-            <div>
-              <div class="text-[11px] font-black uppercase tracking-[0.28em] text-indigo-500">Knowledge Point</div>
-              <h2 class="mt-4 text-3xl font-black leading-tight tracking-tight text-slate-950 lg:text-4xl">{{ slide.title }}</h2>
-              <p class="mt-5 text-base font-semibold leading-8 text-slate-500">{{ slide.unitTitle || slide.phaseTitle }}</p>
-              <div v-if="slide.examples?.length" class="mt-7 flex flex-wrap gap-2">
-                <span
-                  v-for="example in slide.examples"
-                  :key="example"
-                  class="rounded-full bg-indigo-50 px-3 py-1.5 text-xs font-black text-indigo-600"
-                >
-                  {{ example }}
-                </span>
-              </div>
-            </div>
-            <div class="space-y-4">
-              <article class="slide-prose rounded-[28px] bg-slate-50 px-7 py-6 text-slate-700" v-html="slide.content || emptyHtml"></article>
-              <div v-if="slide.misconceptions?.length" class="rounded-[24px] bg-amber-50 px-5 py-4">
-                <div class="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600">常见误区</div>
-                <ul class="mt-2 space-y-2">
-                  <li v-for="item in slide.misconceptions" :key="item" class="text-sm font-bold leading-6 text-amber-900">{{ item }}</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </template>
-
-        <template v-else-if="slide.type === 'check'">
-          <div class="mx-auto grid max-w-5xl items-center gap-10 lg:grid-cols-[0.9fr_1.1fr]">
-            <div>
-              <div class="text-[11px] font-black uppercase tracking-[0.28em] text-sky-500">Understanding Check</div>
-              <h2 class="mt-4 text-3xl font-black leading-tight tracking-tight text-slate-950 lg:text-4xl">{{ slide.title }}</h2>
-              <p class="mt-5 text-lg font-semibold leading-9 text-slate-600">{{ slide.question }}</p>
-            </div>
-            <div class="space-y-3">
-              <div
-                v-for="(option, index) in slide.options"
-                :key="`${slide.id}-option-${index}`"
-                class="flex items-start gap-4 rounded-[22px] border px-5 py-4"
-                :class="index === slide.answer ? 'border-sky-200 bg-sky-50' : 'border-slate-200 bg-white'"
-              >
-                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-black text-white">{{ optionLetter(index) }}</span>
-                <span class="pt-0.5 text-base font-bold leading-8 text-slate-700">{{ option }}</span>
-              </div>
-              <p v-if="slide.explanation" class="rounded-2xl bg-slate-50 px-5 py-4 text-sm font-bold leading-7 text-slate-600">{{ slide.explanation }}</p>
-            </div>
-          </div>
-        </template>
-
-        <template v-else-if="slide.type === 'activity'">
-          <div class="grid h-full gap-8 lg:grid-cols-[0.85fr_1.15fr]">
-            <div class="flex flex-col justify-center">
-              <div class="text-[11px] font-black uppercase tracking-[0.28em] text-emerald-500">Activity Requirement</div>
-              <h2 class="mt-4 text-3xl font-black leading-tight tracking-tight text-slate-950 lg:text-4xl">{{ slide.title }}</h2>
-              <p class="mt-5 text-base font-semibold leading-8 text-slate-500">{{ slide.description }}</p>
-              <div v-if="slide.deliverable" class="mt-8 rounded-2xl bg-emerald-50 px-5 py-4 text-sm font-black text-emerald-800">
-                产出物：{{ slide.deliverable }}
-              </div>
-            </div>
-            <div class="flex flex-col justify-center">
-              <div class="space-y-4">
-                <div
-                  v-for="(step, index) in slide.steps"
-                  :key="`${slide.id}-step-${index}`"
-                  class="flex items-start gap-4 rounded-[22px] border border-slate-200 bg-white px-5 py-4 shadow-sm"
-                >
-                  <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-black text-white">{{ index + 1 }}</span>
-                  <article class="slide-prose pt-0.5 text-base font-bold leading-8 text-slate-700" v-html="step"></article>
-                </div>
-              </div>
-            </div>
-          </div>
-        </template>
-
-        <template v-else-if="slide.type === 'summary'">
-          <div class="mx-auto max-w-4xl text-center">
-            <div class="text-[11px] font-black uppercase tracking-[0.28em] text-indigo-500">Learning Summary</div>
-            <h2 class="mt-4 text-3xl font-black leading-tight tracking-tight text-slate-950 lg:text-4xl">{{ slide.title }}</h2>
-            <p class="mt-5 text-lg font-medium leading-9 text-slate-600">{{ slide.description }}</p>
-            <div class="mt-8 grid gap-4 md:grid-cols-2">
-              <div
-                v-for="item in slide.items"
-                :key="item"
-                class="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-left text-sm font-bold leading-7 text-slate-700"
-              >
-                {{ item }}
-              </div>
-            </div>
-            
-            <div class="mt-12">
-              <button 
-                class="inline-flex items-center gap-3 rounded-full bg-emerald-500 px-8 py-4 text-sm font-black tracking-widest text-white shadow-xl shadow-emerald-500/30 transition hover:-translate-y-1 hover:bg-emerald-600 hover:shadow-2xl hover:shadow-emerald-500/40"
-                @click="scrollToAssignments"
-              >
-                <i class="fas fa-rocket"></i>
-                所有任务已就绪，直达作业区
-              </button>
-            </div>
-          </div>
-        </template>
-      </div>
-
-      <div v-else class="flex h-full flex-1 items-center justify-center text-slate-400">
-        当前学习内容正在整理。
-      </div>
+    <!-- Main Content Flow (Phases) -->
+    <div v-if="!phases?.length" class="rounded-[36px] bg-slate-100 py-32 text-center text-slate-400 border border-slate-200/60 shadow-inner">
+      <i class="fas fa-hammer text-4xl"></i>
+      <p class="mt-4 text-sm font-bold tracking-widest">内容正在整理中</p>
     </div>
-  </section>
+
+    <div v-else class="space-y-12">
+      <section v-for="(phase, index) in phases" :key="phase.id || index" class="rounded-[36px] bg-white shadow-xl shadow-slate-200/40 border border-slate-200 overflow-hidden">
+        
+        <!-- Phase Header -->
+        <div class="border-b border-slate-100 bg-slate-50/50 px-8 py-6 lg:px-12">
+          <div class="flex items-center justify-between">
+            <h2 class="text-2xl font-black text-slate-900">{{ phase.title }}</h2>
+            <div v-if="phase.duration" class="rounded-full bg-white px-4 py-1.5 text-xs font-black text-slate-500 shadow-sm border border-slate-200">
+              {{ phase.duration }} min
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase Content (Knowledge / Text) -->
+        <div class="px-8 py-10 lg:px-12">
+          <article v-if="phase.student?.content" class="slide-prose" v-html="phase.student.content"></article>
+
+          <!-- Code Prompts -->
+          <div v-if="phase.student?.prompts?.length" class="mt-10 space-y-6">
+            <div v-for="(prompt, pIndex) in phase.student.prompts" :key="pIndex" class="relative overflow-hidden rounded-2xl bg-slate-950 p-6 shadow-2xl">
+              <div class="flex items-center gap-3 mb-4">
+                <div class="flex gap-1.5">
+                  <div class="h-3 w-3 rounded-full bg-rose-500"></div>
+                  <div class="h-3 w-3 rounded-full bg-amber-500"></div>
+                  <div class="h-3 w-3 rounded-full bg-emerald-500"></div>
+                </div>
+                <div class="text-[10px] font-black uppercase tracking-widest text-slate-500">{{ prompt.label || 'Prompt' }}</div>
+              </div>
+              <pre class="whitespace-pre-wrap font-mono text-sm leading-7 text-emerald-400 selection:bg-emerald-500/30">{{ prompt.text }}</pre>
+            </div>
+          </div>
+
+          <!-- Tasks / Activities -->
+          <div v-if="phase.student?.tasks?.length" class="mt-10 rounded-[28px] border border-sky-100 bg-sky-50 p-8">
+            <div class="text-[11px] font-black uppercase tracking-[0.24em] text-sky-600 mb-6">Activity Tasks</div>
+            <div class="space-y-4">
+              <div
+                v-for="(task, tIndex) in phase.student.tasks"
+                :key="tIndex"
+                class="flex items-start gap-4 rounded-2xl bg-white px-5 py-4 shadow-sm"
+              >
+                <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-100 text-xs font-black text-sky-600">
+                  {{ tIndex + 1 }}
+                </div>
+                <div class="slide-prose pt-0.5 text-sm font-bold leading-7 text-slate-700" v-html="task"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Summary End Mark -->
+    <div v-if="phases?.length" class="flex justify-center pt-8 pb-10">
+      <button 
+        class="inline-flex items-center gap-3 rounded-full bg-emerald-500 px-10 py-5 text-sm font-black tracking-widest text-white shadow-xl shadow-emerald-500/30 transition hover:-translate-y-1 hover:bg-emerald-600 hover:shadow-2xl hover:shadow-emerald-500/40"
+        @click="scrollToAssignments"
+      >
+        <i class="fas fa-rocket"></i>
+        我已经完成了上述内容，去交作业！
+      </button>
+    </div>
+
+  </div>
 </template>
 
 <script setup>
-import { computed } from 'vue';
-
-const props = defineProps({
-  slide: {
-    type: Object,
-    default: null
+defineProps({
+  lessonTitle: {
+    type: String,
+    default: ''
   },
-  currentIndex: {
-    type: Number,
-    default: 0
+  lessonDescription: {
+    type: String,
+    default: ''
   },
-  total: {
-    type: Number,
-    default: 0
+  phases: {
+    type: Array,
+    default: () => []
+  },
+  materials: {
+    type: Array,
+    default: () => []
+  },
+  deliverables: {
+    type: Array,
+    default: () => []
   }
 });
 
-const emptyHtml = '<p>当前内容正在整理中。</p>';
-
-const activeSlideDotClass = computed(() => {
-  if (props.slide?.type === 'activity') return 'bg-emerald-400';
-  if (props.slide?.type === 'check') return 'bg-sky-400';
-  if (props.slide?.type === 'summary') return 'bg-amber-400';
-  return 'bg-indigo-400';
-});
-
-function optionLetter(index) {
-  return String.fromCharCode(65 + index);
+function materialIcon(material) {
+  const kind = String(material?.kind || '').toLowerCase();
+  const path = String(material?.path || '').toLowerCase();
+  if (kind === 'presentation' || /\.pptx?$/i.test(path)) return 'fa-file-powerpoint';
+  if (kind === 'video' || /\.mp4$/i.test(path)) return 'fa-file-video';
+  if (kind === 'html') return 'fa-file-code';
+  if (/\.md$/i.test(path)) return 'fa-file-lines';
+  return 'fa-file';
 }
 
 function scrollToAssignments() {
@@ -175,7 +149,6 @@ function scrollToAssignments() {
   if (el) {
     el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     
-    // 增加一个高亮动画反馈
     el.classList.add('ring-4', 'ring-emerald-500/50', 'ring-offset-4', 'transition-all', 'duration-500');
     setTimeout(() => {
       el.classList.remove('ring-4', 'ring-emerald-500/50', 'ring-offset-4');
@@ -186,11 +159,11 @@ function scrollToAssignments() {
 
 <style scoped>
 .slide-prose :deep(p) {
-  @apply text-lg font-semibold leading-9 text-slate-700;
+  @apply text-lg font-medium leading-9 text-slate-700;
 }
 
 .slide-prose :deep(p + p) {
-  @apply mt-4;
+  @apply mt-5;
 }
 
 .slide-prose :deep(strong) {
@@ -198,32 +171,28 @@ function scrollToAssignments() {
 }
 
 .slide-prose :deep(ul) {
-  @apply space-y-3 text-lg font-semibold leading-8 text-slate-700;
-}
-
-.slide-prose :deep(li) {
-  @apply rounded-2xl bg-white px-4 py-3 shadow-sm;
+  @apply mt-4 space-y-2 text-lg font-medium leading-8 text-slate-700 list-disc pl-5;
 }
 
 .slide-prose :deep(code) {
-  @apply rounded-md bg-slate-200/70 px-1.5 py-0.5 text-[0.85em] font-black text-pink-600;
+  @apply rounded-md bg-slate-100 px-1.5 py-0.5 text-[0.85em] font-black text-pink-600;
 }
 
 .slide-prose :deep(pre) {
-  @apply relative mt-6 mb-6 overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950 px-5 pb-5 pt-12 text-sm font-medium leading-relaxed text-emerald-400 shadow-xl shadow-slate-900/20;
+  @apply relative mt-8 mb-8 overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950 px-6 pb-6 pt-14 text-sm font-medium leading-relaxed text-emerald-400 shadow-xl shadow-slate-900/20;
 }
 
 .slide-prose :deep(pre::before) {
   content: '';
   display: block;
   position: absolute;
-  top: 16px;
+  top: 18px;
   left: 20px;
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: #ff5f56;
-  box-shadow: 18px 0 0 #ffbd2e, 36px 0 0 #27c93f;
+  box-shadow: 20px 0 0 #ffbd2e, 40px 0 0 #27c93f;
 }
 
 .slide-prose :deep(pre code) {
