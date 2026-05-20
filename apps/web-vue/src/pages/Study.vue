@@ -22,9 +22,20 @@
           </div>
         </div>
 
-        <div class="flex rounded-2xl border border-slate-200 bg-slate-100 p-1.5">
-          <button :class="modeButtonClass('mission')" @click="setMode('mission')">课件舞台</button>
-          <button :class="modeButtonClass('guide')" @click="setMode('guide')">完整讲义</button>
+        <div class="flex items-center gap-4">
+          <button
+            v-if="mode === 'mission'"
+            @click="showWorkbench = !showWorkbench"
+            class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4.5 py-2.5 text-xs font-black text-slate-700 shadow-sm transition hover:border-indigo-200 hover:text-indigo-600 hover:-translate-y-0.5 active:scale-95"
+          >
+            <i class="fas" :class="showWorkbench ? 'fa-columns' : 'fa-laptop-code'"></i>
+            {{ showWorkbench ? '收起工作台' : '展开工作台' }}
+          </button>
+
+          <div class="flex rounded-2xl border border-slate-200 bg-slate-100 p-1.5">
+            <button :class="modeButtonClass('mission')" @click="setMode('mission')">课件舞台</button>
+            <button :class="modeButtonClass('guide')" @click="setMode('guide')">完整讲义</button>
+          </div>
         </div>
       </div>
     </header>
@@ -128,6 +139,14 @@
           </div>
         </main>
 
+        <InteractiveWorkbench
+          v-if="showWorkbench"
+          :lesson-title="lessonTitle"
+          :lesson-description="lessonData?.description"
+          :lesson-id="lessonId"
+          :course-id="courseId"
+        />
+
         <input ref="hwInput" type="file" class="hidden" @change="handleHomeworkUpload" />
       </div>
 
@@ -164,11 +183,13 @@ import { getAuthToken } from '@/api/auth';
 import { getCurrentUser } from '@/api/authApi';
 import CourseSyllabusSidebar from '@/components/study/CourseSyllabusSidebar.vue';
 import LessonStage from '@/components/study/LessonStage.vue';
+import InteractiveWorkbench from '@/components/study/InteractiveWorkbench.vue';
 
 const route = useRoute();
 const router = useRouter();
 
 const mode = ref('mission');
+const showWorkbench = ref(true);
 const loadingPage = ref(true);
 const pageError = ref('');
 const guideLoading = ref(false);
