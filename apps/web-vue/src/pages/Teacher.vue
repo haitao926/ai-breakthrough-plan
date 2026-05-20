@@ -82,10 +82,18 @@
           <button class="primary-btn small full-skill-btn" @click="uploadKind = 'competition'">
             <i class="fas fa-trophy"></i> 赛事预览
           </button>
+          <button class="primary-btn small full-skill-btn" @click="uploadKind = 'banner'">
+            <i class="fas fa-images"></i> 门户 Banner
+          </button>
+          <button class="primary-btn small full-skill-btn" @click="uploadKind = 'story'">
+            <i class="fas fa-star"></i> 成果故事
+          </button>
           <div class="upload-switch">
             <button :class="{ active: uploadKind === 'course' }" @click="uploadKind = 'course'">课程</button>
             <button :class="{ active: uploadKind === 'project' }" @click="uploadKind = 'project'">项目</button>
             <button :class="{ active: uploadKind === 'competition' }" @click="uploadKind = 'competition'">赛事</button>
+            <button :class="{ active: uploadKind === 'banner' }" @click="uploadKind = 'banner'">Banner</button>
+            <button :class="{ active: uploadKind === 'story' }" @click="uploadKind = 'story'">故事</button>
           </div>
           <button
             v-if="uploadKind === 'course'"
@@ -122,6 +130,30 @@
             <span>{{ competition.publishStatus === 'published' ? '已发布' : '待发布' }} · 报名 {{ competition.registrationStats?.total || 0 }}</span>
           </button>
           <div v-if="uploadKind === 'competition' && !myCompetitions.length" class="empty-note compact">还没有通过赛事 Skill 整理赛事。</div>
+          <button
+            v-if="uploadKind === 'banner'"
+            v-for="(banner, index) in banners"
+            :key="`${banner.title}-${index}`"
+            class="list-item"
+            :class="{ active: selectedBannerIndex === index }"
+            @click="selectBanner(index)"
+          >
+            <strong>{{ banner.title }}</strong>
+            <span>{{ banner.tag || banner.type || 'Banner' }} · {{ banner.targetUrl }}</span>
+          </button>
+          <div v-if="uploadKind === 'banner' && !banners.length" class="empty-note compact">还没有配置门户 Banner。</div>
+          <button
+            v-if="uploadKind === 'story'"
+            v-for="story in stories"
+            :key="story.slug"
+            class="list-item"
+            :class="{ active: selectedStorySlug === story.slug }"
+            @click="selectStory(story)"
+          >
+            <strong>{{ story.title }}</strong>
+            <span>{{ story.result || '成果故事' }}</span>
+          </button>
+          <div v-if="uploadKind === 'story' && !stories.length" class="empty-note compact">还没有配置成果故事。</div>
         </aside>
 
         <section class="main-panel">
@@ -275,7 +307,7 @@
             <div v-if="!selectedProjectTopic" class="empty-note">项目 Skill 上传完成后，会在这里出现题目背景、目标、人数、交付物和发布检查结果。</div>
           </template>
 
-          <template v-else>
+          <template v-else-if="uploadKind === 'competition'">
             <div class="panel-title row-title">
               <div>
                 <p>Competition Skill output</p>
@@ -357,6 +389,80 @@
               </article>
             </section>
             <div v-if="!selectedCompetition" class="empty-note">赛事 Skill 写入平台后，会在这里展示赛事摘要、报名信息和发布确认状态。</div>
+          </template>
+
+          <template v-else-if="uploadKind === 'banner'">
+            <div class="panel-title row-title">
+              <div>
+                <p>Portal banner manager</p>
+                <h2>{{ selectedBannerIndex >= 0 ? '编辑门户 Banner' : '新建门户 Banner' }}</h2>
+              </div>
+              <div class="button-row">
+                <button class="secondary-btn" type="button" @click="startBannerCreate">新建</button>
+                <button v-if="selectedBannerIndex >= 0" class="secondary-btn danger" type="button" @click="deleteBanner">删除</button>
+                <button class="primary-btn small" type="button" @click="saveBanner">保存 Banner</button>
+              </div>
+            </div>
+            <section class="preview-panel">
+              <div class="form-grid">
+                <label>标题<input v-model="bannerForm.title" placeholder="例如：高一 AI 成果展" /></label>
+                <label>标签<input v-model="bannerForm.tag" placeholder="展示 / 赛事 / 课程" /></label>
+                <label>类型<input v-model="bannerForm.type" placeholder="feature" /></label>
+                <label>优先级<input v-model.number="bannerForm.priority" type="number" min="0" /></label>
+                <label>图片地址<input v-model="bannerForm.image" placeholder="/assets/banners/..." /></label>
+                <label>目标链接<input v-model="bannerForm.targetUrl" placeholder="/showcase" /></label>
+              </div>
+            </section>
+            <section class="data-grid">
+              <article v-for="(banner, index) in banners" :key="`${banner.title}-${index}`" class="data-card">
+                <div class="data-card-head">
+                  <div>
+                    <strong>{{ banner.title }}</strong>
+                    <span>{{ banner.tag || banner.type }} · {{ banner.targetUrl }}</span>
+                  </div>
+                  <button class="text-btn" @click="selectBanner(index)">编辑</button>
+                </div>
+              </article>
+            </section>
+          </template>
+
+          <template v-else-if="uploadKind === 'story'">
+            <div class="panel-title row-title">
+              <div>
+                <p>Portal story manager</p>
+                <h2>{{ selectedStorySlug ? '编辑成果故事' : '新建成果故事' }}</h2>
+              </div>
+              <div class="button-row">
+                <button class="secondary-btn" type="button" @click="startStoryCreate">新建</button>
+                <button v-if="selectedStorySlug" class="secondary-btn danger" type="button" @click="deleteStory">删除</button>
+                <button class="primary-btn small" type="button" @click="saveStory">保存故事</button>
+              </div>
+            </div>
+            <section class="preview-panel">
+              <div class="form-grid">
+                <label>标题<input v-model="storyForm.title" placeholder="成果故事标题" /></label>
+                <label>Slug<input v-model="storyForm.slug" :disabled="Boolean(selectedStorySlug)" placeholder="story-slug" /></label>
+                <label>学生/团队<input v-model="storyForm.studentLabel" placeholder="高一某团队" /></label>
+                <label>成果标签<input v-model="storyForm.result" placeholder="市级展示 / 校内路演" /></label>
+                <label>关联赛事<input v-model="storyForm.relatedCompetitionSlug" placeholder="competition-slug" /></label>
+                <label>关联课程<input v-model="storyForm.relatedCourseIdsText" placeholder="project1, robotics-club" /></label>
+                <label>封面<input v-model="storyForm.cover" placeholder="/assets/portal/..." /></label>
+                <label>精选<select v-model="storyForm.featured"><option :value="false">否</option><option :value="true">是</option></select></label>
+              </div>
+              <label class="mt-4 block">摘要<textarea v-model="storyForm.summary" placeholder="简要描述学生成果、过程与亮点"></textarea></label>
+            </section>
+            <section class="data-grid">
+              <article v-for="story in stories" :key="story.slug" class="data-card">
+                <div class="data-card-head">
+                  <div>
+                    <strong>{{ story.title }}</strong>
+                    <span>{{ story.result || '成果故事' }}</span>
+                  </div>
+                  <button class="text-btn" @click="selectStory(story)">编辑</button>
+                </div>
+                <p>{{ story.summary }}</p>
+              </article>
+            </section>
           </template>
         </section>
       </section>
@@ -594,6 +700,10 @@ const registrations = ref([]);
 const registrationStats = ref({});
 const resources = ref([]);
 const projectTopics = ref([]);
+const banners = ref([]);
+const stories = ref([]);
+const selectedBannerIndex = ref(-1);
+const selectedStorySlug = ref('');
 const reviewDrafts = reactive({});
 const projectReviewDrafts = reactive({});
 const courseSaving = ref(false);
@@ -639,6 +749,25 @@ const competitionForm = reactive({
   relatedCourseIdsText: ''
 });
 const competitionRawText = ref('');
+const bannerForm = reactive({
+  title: '',
+  type: 'feature',
+  tag: '',
+  image: '',
+  targetUrl: '',
+  priority: 999
+});
+const storyForm = reactive({
+  title: '',
+  slug: '',
+  studentLabel: '',
+  summary: '',
+  result: '',
+  relatedCompetitionSlug: '',
+  relatedCourseIdsText: '',
+  cover: '',
+  featured: false
+});
 const projectTopicForm = reactive({
   id: null,
   title: '',
