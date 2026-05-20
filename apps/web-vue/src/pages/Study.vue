@@ -82,6 +82,52 @@
                 {{ isLastSlide ? (hasNextLesson ? '进入下一课' : '完成本课') : '下一页' }}
               </button>
             </footer>
+
+            <!-- Assignments Section (Moved into Main Flow) -->
+            <section class="pb-14">
+              <div class="rounded-[28px] border border-white/40 bg-white/70 backdrop-blur-md p-6 shadow-xl shadow-slate-200/20">
+                <div class="flex flex-col gap-3 border-b border-slate-100 pb-5 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <div class="text-[10px] font-black uppercase tracking-[0.22em] text-indigo-500">Assignments</div>
+                    <h2 class="mt-2 text-2xl font-black text-slate-900">本课作业提交</h2>
+                  </div>
+                  <span class="text-xs font-bold text-slate-400">{{ lessonAssignments.length }} 项作业</span>
+                </div>
+
+                <div v-if="assignmentLoading" class="py-8 text-center text-slate-400">
+                  <i class="fas fa-spinner fa-spin"></i> 正在加载作业
+                </div>
+                <div v-else-if="!lessonAssignments.length" class="py-8 text-sm font-medium text-slate-400">
+                  当前课时还没有发布作业。
+                </div>
+                <div v-else class="mt-5 grid gap-4">
+                  <article v-for="assignment in lessonAssignments" :key="assignment.id" class="rounded-2xl border border-slate-200/50 bg-slate-50/50 p-5">
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <h3 class="text-base font-black text-slate-900">{{ assignment.title }}</h3>
+                        <p class="mt-2 text-sm leading-7 text-slate-500">{{ assignment.requirements || assignment.description || '按课堂要求整理并提交。' }}</p>
+                        <div class="mt-3 flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                          <span>截止 {{ assignment.dueAt ? formatDate(assignment.dueAt) : '未设置' }}</span>
+                          <span class="mx-2 text-slate-200">|</span>
+                          <span>状态 {{ ownSubmission(assignment.id)?.status || '未提交' }}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <form class="mt-4 grid gap-3" @submit.prevent="submitAssignment(assignment)">
+                      <textarea v-model="assignmentDrafts[assignment.id].content" class="min-h-[96px] w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="填写作业说明、反思或正文"></textarea>
+                      <input v-model="assignmentDrafts[assignment.id].link" class="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="作品链接 / 代码仓库链接（可选，需 http(s)）" />
+                      <input v-model="assignmentDrafts[assignment.id].attachmentNote" class="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="附件说明（可选）" />
+                      <button class="self-start rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-black text-white shadow-lg shadow-indigo-600/25 transition duration-300 hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-indigo-600/40" type="submit">
+                        {{ ownSubmission(assignment.id) ? '更新提交' : '提交作业' }}
+                      </button>
+                      <p v-if="ownSubmission(assignment.id)?.feedback" class="rounded-xl bg-white p-3 text-xs font-bold leading-6 text-slate-500">
+                        教师反馈：{{ ownSubmission(assignment.id).feedback }}
+                      </p>
+                    </form>
+                  </article>
+                </div>
+              </div>
+            </section>
           </div>
         </main>
 
@@ -112,50 +158,6 @@
           <div v-else class="prose prose-slate mt-8 max-w-none" v-html="guideHtml"></div>
         </div>
       </div>
-
-      <section class="px-6 pb-14 lg:px-10 xl:px-14">
-        <div class="mx-auto max-w-5xl rounded-[28px] border border-white/40 bg-white/70 backdrop-blur-md p-6 shadow-xl shadow-slate-200/20">
-          <div class="flex flex-col gap-3 border-b border-slate-100 pb-5 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <div class="text-[10px] font-black uppercase tracking-[0.22em] text-indigo-500">Assignments</div>
-              <h2 class="mt-2 text-2xl font-black text-slate-900">本课作业提交</h2>
-            </div>
-            <span class="text-xs font-bold text-slate-400">{{ lessonAssignments.length }} 项作业</span>
-          </div>
-
-          <div v-if="assignmentLoading" class="py-8 text-center text-slate-400">
-            <i class="fas fa-spinner fa-spin"></i> 正在加载作业
-          </div>
-          <div v-else-if="!lessonAssignments.length" class="py-8 text-sm font-medium text-slate-400">
-            当前课时还没有发布作业。
-          </div>
-          <div v-else class="mt-5 grid gap-4">
-            <article v-for="assignment in lessonAssignments" :key="assignment.id" class="rounded-2xl border border-slate-200/50 bg-slate-50/50 p-5">
-              <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <h3 class="text-base font-black text-slate-900">{{ assignment.title }}</h3>
-                  <p class="mt-2 text-sm leading-7 text-slate-500">{{ assignment.requirements || assignment.description || '按课堂要求整理并提交。' }}</p>
-                  <div class="mt-3 flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    <span>截止 {{ assignment.dueAt ? formatDate(assignment.dueAt) : '未设置' }}</span>
-                    <span>状态 {{ ownSubmission(assignment.id)?.status || '未提交' }}</span>
-                  </div>
-                </div>
-              </div>
-              <form class="mt-4 grid gap-3" @submit.prevent="submitAssignment(assignment)">
-                <textarea v-model="assignmentDrafts[assignment.id].content" class="assignment-input min-h-[96px]" placeholder="填写作业说明、反思或正文"></textarea>
-                <input v-model="assignmentDrafts[assignment.id].link" class="assignment-input" placeholder="作品链接 / 代码仓库链接（可选，需 http(s)）" />
-                <input v-model="assignmentDrafts[assignment.id].attachmentNote" class="assignment-input" placeholder="附件说明（可选）" />
-                <button class="self-start rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-black text-white hover:bg-indigo-700 transition shadow-lg shadow-indigo-600/25 hover:shadow-indigo-600/40 hover:-translate-y-0.5 duration-300 transform" type="submit">
-                  {{ ownSubmission(assignment.id) ? '更新提交' : '提交作业' }}
-                </button>
-                <p v-if="ownSubmission(assignment.id)?.feedback" class="rounded-xl bg-white p-3 text-xs font-bold leading-6 text-slate-500">
-                  教师反馈：{{ ownSubmission(assignment.id).feedback }}
-                </p>
-              </form>
-            </article>
-          </div>
-        </div>
-      </section>
     </template>
 
     <div v-if="toastVisible" class="fixed bottom-8 right-8 z-[100]">
