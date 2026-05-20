@@ -1,363 +1,713 @@
 <template>
-  <div class="study-page min-h-screen flex flex-col bg-[#f8fafc] text-slate-900 selection:bg-indigo-100 selection:text-indigo-900">
-    <!-- Header -->
-    <header class="h-20 bg-white/80 backdrop-blur-xl border-b border-slate-200/60 px-8 flex items-center justify-between sticky top-0 z-50 transition-all">
-      <div class="flex items-center gap-6">
-        <RouterLink to="/downloads" class="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-900 transition-all">
-          <i class="fas fa-arrow-left"></i>
-        </RouterLink>
+  <div class="min-h-screen text-slate-900 selection:bg-indigo-100 selection:text-indigo-900 study-page">
+    <header class="sticky top-0 z-50 border-b border-slate-200/60 bg-white/80 backdrop-blur-xl">
+      <div class="mx-auto flex max-w-[1600px] items-center justify-between gap-6 px-6 py-5 lg:px-8">
         <div class="flex items-center gap-4">
-           <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-600/20">
-             <i class="fas fa-book-open"></i>
-           </div>
-           <div>
-              <h1 class="text-sm font-black text-slate-900 uppercase tracking-widest leading-none">{{ lessonTitle }}</h1>
-              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-1">{{ projectId }} / {{ lessonId }}</p>
-           </div>
+          <RouterLink
+            :to="backToCourse"
+            class="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-400 transition hover:border-indigo-200 hover:text-indigo-600"
+          >
+            <i class="fas fa-arrow-left"></i>
+          </RouterLink>
+          <div class="flex items-center gap-4">
+            <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-600/20">
+              <i class="fas fa-book-open"></i>
+            </div>
+            <div>
+              <h1 class="text-sm font-black uppercase tracking-[0.22em] text-slate-900">{{ lessonTitle }}</h1>
+              <p class="mt-1 text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">
+                {{ course?.title || '课程' }} / {{ lessonLabel }}
+              </p>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <div class="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200/50">
-        <button :class="modeButtonClass('mission')" @click="setMode('mission')">🎯 任务模式</button>
-        <button :class="modeButtonClass('guide')" @click="setMode('guide')">📖 完整讲义</button>
+        <div class="flex rounded-2xl border border-slate-200 bg-slate-100 p-1.5">
+          <button :class="modeButtonClass('mission')" @click="setMode('mission')">课件舞台</button>
+          <button :class="modeButtonClass('guide')" @click="setMode('guide')">完整讲义</button>
+        </div>
       </div>
     </header>
 
-    <!-- Mission Mode -->
-    <div v-show="mode === 'mission'" class="flex flex-1 overflow-hidden">
-      <!-- Left Sidebar: Progress -->
-      <aside class="w-72 bg-white border-r border-slate-200/60 flex flex-col overflow-y-auto flex-none z-10 p-6 space-y-8">
-        <div>
-           <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Course Timeline</h3>
-           <div class="space-y-3">
+    <section v-if="loadingPage" class="flex min-h-[70vh] items-center justify-center">
+      <div class="text-center text-slate-400">
+        <i class="fas fa-spinner fa-spin text-4xl"></i>
+        <div class="mt-4 text-xs font-black uppercase tracking-[0.24em]">正在加载课时内容</div>
+      </div>
+    </section>
+
+    <section v-else-if="pageError" class="mx-auto max-w-4xl px-6 py-20">
+      <div class="rounded-[32px] border border-rose-100 bg-white p-10 text-center shadow-xl shadow-rose-500/5">
+        <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-rose-50 text-rose-400">
+          <i class="fas fa-circle-exclamation text-xl"></i>
+        </div>
+        <h2 class="mt-5 text-xl font-black tracking-tight text-slate-900">课时加载失败</h2>
+        <p class="mt-3 text-sm font-medium leading-7 text-slate-500">{{ pageError }}</p>
+      </div>
+    </section>
+
+    <template v-else>
+      <div v-show="mode === 'mission'" class="flex min-h-[calc(100vh-92px)] flex-col xl:flex-row">
+        <LearningPath
+          :slides="lessonSlides"
+          :current-index="currentSlideIndex"
+          @select="loadSlide"
+        />
+
+        <main ref="mainScroll" class="flex-1 overflow-y-auto px-6 py-10 lg:px-10 xl:px-14">
+          <div class="mx-auto max-w-6xl space-y-6">
+            <LessonStage
+              :slide="activeSlide"
+              :current-index="currentSlideIndex"
+              :total="lessonSlides.length"
+            />
+
+            <footer class="flex items-center justify-between gap-4 pb-10">
               <button
-                v-for="(phase, idx) in lessonPhases"
-                :key="idx"
-                class="w-full text-left p-4 rounded-2xl text-xs font-black transition-all flex items-center gap-4 group"
-                :class="idx === currentStep ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-slate-500 hover:bg-slate-50'"
-                @click="loadStep(idx)"
+                class="rounded-2xl border border-slate-200 bg-white px-6 py-4 text-xs font-black uppercase tracking-[0.2em] text-slate-500 transition hover:text-slate-900 disabled:opacity-30"
+                :disabled="currentSlideIndex === 0"
+                @click="prevSlide"
               >
-                <div class="w-8 h-8 rounded-xl border-2 flex shrink-0 items-center justify-center text-[10px] transition-colors"
-                  :class="idx === currentStep ? 'border-white/20 bg-white/10' : 'border-slate-100 bg-white group-hover:border-indigo-100'">
-                  {{ idx + 1 }}
-                </div>
-                <span class="truncate">{{ phase.student?.title || phase.title }}</span>
+                上一页
               </button>
-           </div>
-        </div>
+              <div class="hidden items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 sm:flex">
+                <span v-for="(slide, index) in lessonSlides" :key="`dot-${slide.id}`" class="h-2 rounded-full transition-all" :class="index === currentSlideIndex ? 'w-8 bg-indigo-600' : 'w-2 bg-slate-300'"></span>
+              </div>
+              <button
+                class="rounded-2xl px-7 py-4 text-xs font-black uppercase tracking-[0.2em] text-white shadow-xl transition disabled:opacity-30"
+                :class="nextButtonClass"
+                :disabled="nextDisabled"
+                @click="nextSlide"
+              >
+                {{ isLastSlide ? (hasNextLesson ? '进入下一课' : '完成本课') : '下一页' }}
+              </button>
+            </footer>
+          </div>
+        </main>
 
-        <div class="pt-8 border-t border-slate-100">
-           <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 italic">Teacher Note</h3>
-           <div class="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100 text-[11px] font-bold text-indigo-600 leading-relaxed">
-             "先理解逻辑，再敲代码。遇到困难随时向 AI Assistant 提问。"
-           </div>
-        </div>
-      </aside>
+        <LearningSidebar
+          :active-slide="activeSlide"
+          :deliverables="lessonDeliverables"
+          :materials="materials"
+          :homework-done="homeworkDone"
+          :homework-name="homeworkName"
+          :homework-uploading="homeworkUploading"
+          @trigger-homework="triggerHomework"
+        />
+        <input ref="hwInput" type="file" class="hidden" @change="handleHomeworkUpload" />
+      </div>
 
-      <!-- Main Content -->
-      <main ref="mainScroll" class="flex-1 overflow-y-auto bg-[#fcfdfe] scroll-smooth py-12 px-8 lg:px-20">
-        <div class="max-w-4xl mx-auto space-y-12 animate-reveal">
-          <div class="premium-card !bg-white !p-12 min-h-[600px] shadow-2xl shadow-indigo-500/5 relative overflow-hidden">
-            <div v-if="lessonError" class="text-rose-500 font-bold p-6 bg-rose-50 rounded-2xl">{{ lessonError }}</div>
-            <div v-else-if="!currentPhase" class="flex flex-col items-center justify-center py-40 text-slate-300">
-               <i class="fas fa-spinner fa-spin text-3xl mb-4"></i>
-               <span class="text-xs font-black uppercase tracking-widest">Constructing Content...</span>
+      <div v-show="mode === 'guide'" class="px-6 py-12 lg:px-10 xl:px-14">
+        <div class="mx-auto max-w-5xl rounded-[36px] bg-white p-8 shadow-2xl shadow-indigo-500/5 lg:p-10">
+          <div class="flex flex-col gap-3 border-b border-slate-100 pb-6 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div class="text-[10px] font-black uppercase tracking-[0.24em] text-indigo-500">Guide Mode</div>
+              <h2 class="mt-3 text-3xl font-black tracking-tight text-slate-900">{{ course?.title }}</h2>
             </div>
-            
-            <template v-else>
-              <!-- Global Briefing (only on first step) -->
-              <div v-if="showBriefing" class="bg-slate-900 rounded-[32px] p-8 text-white mb-16 shadow-2xl relative overflow-hidden group">
-                <div class="absolute inset-0 bg-[radial-gradient(#fff_1px,transparent_1px)] bg-[size:20px_20px] opacity-10"></div>
-                <div class="relative z-10 flex flex-col md:flex-row items-center gap-10">
-                   <div class="flex-1 space-y-4 text-center md:text-left">
-                      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-indigo-300 text-[9px] font-black uppercase tracking-widest border border-white/5">Initial Mission</div>
-                      <h3 class="text-2xl font-black tracking-tight">选择你的创新航向</h3>
-                      <p class="text-slate-400 text-sm font-medium leading-relaxed">
-                        在所有的技术实践之前，明确你的赛道优先级：研究员、工程师还是公益行动者？这决定了你如何运用所学工具。
-                      </p>
-                      <RouterLink to="/competencies" class="inline-flex items-center px-6 py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20">
-                         查看《三位一体能力地图》
-                      </RouterLink>
-                   </div>
-                   <div class="w-32 h-32 bg-indigo-500/20 rounded-full flex items-center justify-center animate-pulse">
-                      <i class="fas fa-satellite text-4xl text-indigo-400"></i>
-                   </div>
-                </div>
-              </div>
+            <div class="text-sm font-medium text-slate-500">优先展示课程导学或完整讲义</div>
+          </div>
+          <div v-if="guideLoading" class="py-20 text-center text-slate-400">
+            <i class="fas fa-spinner fa-spin text-3xl"></i>
+          </div>
+          <div v-else class="prose prose-slate mt-8 max-w-none" v-html="guideHtml"></div>
+        </div>
+      </div>
 
-              <div class="flex items-center gap-4 mb-8">
-                 <span class="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] px-4 py-1.5 bg-indigo-50 rounded-full">Phase {{ currentStep + 1 }}</span>
-                 <div class="h-px flex-1 bg-slate-100"></div>
-              </div>
-
-              <h2 class="text-4xl font-black text-slate-900 tracking-tight mb-8 leading-tight">{{ currentPhase.title || currentPhaseName }}</h2>
-              
-              <article class="prose prose-slate prose-indigo max-w-none text-slate-600 font-medium leading-loose selection:bg-indigo-100 selection:text-indigo-900 mb-12" v-html="currentPhase.content || ''"></article>
-
-              <!-- AI Prompts Area -->
-              <div v-if="currentPhase.prompts?.length" class="space-y-6 my-12 pt-12 border-t border-slate-50">
-                 <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">AI Prompt Library</h4>
-                 <div v-for="(p, idx) in currentPhase.prompts" :key="idx" 
-                   class="p-6 rounded-[24px] bg-slate-50 border border-slate-100 group cursor-pointer transition-all hover:bg-white hover:shadow-xl hover:shadow-indigo-500/5 hover:border-indigo-100"
-                   @click="copyPrompt(p.text)"
-                 >
-                    <div class="flex items-center justify-between mb-4">
-                       <span class="text-[10px] font-black text-indigo-500 uppercase tracking-widest flex items-center gap-2">
-                          <i class="fas fa-robot"></i> {{ p.label || 'PROMPT' }}
-                       </span>
-                       <span class="text-[9px] font-black text-slate-300 uppercase tracking-widest group-hover:text-indigo-400 transition-colors">Click to copy</span>
-                    </div>
-                    <p class="text-sm font-bold text-slate-700 font-mono italic leading-relaxed">{{ p.text }}</p>
-                 </div>
-              </div>
-
-              <!-- Task List Area -->
-              <div v-if="currentPhase.tasks?.length" class="bg-indigo-900 rounded-[32px] p-8 mt-16 text-white shadow-xl">
-                 <h3 class="text-xs font-black uppercase tracking-widest mb-6 flex items-center gap-3">
-                    <i class="fas fa-tasks-alt text-indigo-400"></i> Action Checklist
-                 </h3>
-                 <div class="space-y-4">
-                    <label v-for="(t, idx) in currentPhase.tasks" :key="idx" class="flex items-start gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all cursor-pointer group">
-                       <div class="relative w-5 h-5 mt-0.5">
-                          <input type="checkbox" class="task-checkbox peer absolute opacity-0 cursor-pointer">
-                          <div class="w-5 h-5 border-2 border-white/20 rounded-md peer-checked:bg-white peer-checked:border-white transition-all flex items-center justify-center">
-                             <i class="fas fa-check text-[10px] text-indigo-900 opacity-0 peer-checked:opacity-100 transition-opacity"></i>
-                          </div>
-                       </div>
-                       <span class="text-sm font-bold text-slate-200 peer-checked:text-slate-500 peer-checked:line-through transition-all leading-tight" v-html="t"></span>
-                    </label>
-                 </div>
-              </div>
-            </template>
+      <section class="px-6 pb-14 lg:px-10 xl:px-14">
+        <div class="mx-auto max-w-5xl rounded-[28px] border border-white/40 bg-white/70 backdrop-blur-md p-6 shadow-xl shadow-slate-200/20">
+          <div class="flex flex-col gap-3 border-b border-slate-100 pb-5 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div class="text-[10px] font-black uppercase tracking-[0.22em] text-indigo-500">Assignments</div>
+              <h2 class="mt-2 text-2xl font-black text-slate-900">本课作业提交</h2>
+            </div>
+            <span class="text-xs font-bold text-slate-400">{{ lessonAssignments.length }} 项作业</span>
           </div>
 
-          <footer class="flex items-center justify-between py-12">
-            <button @click="prevStep" :disabled="currentStep === 0" class="flex items-center gap-4 px-8 py-4 rounded-2xl bg-white border border-slate-200 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-all disabled:opacity-30">
-               <i class="fas fa-arrow-left"></i> PREV PHASE
-            </button>
-            <button @click="nextStep" :disabled="nextDisabled" class="flex items-center gap-4 px-10 py-4 rounded-2xl text-xs font-black uppercase tracking-widest text-white shadow-xl transition-all active:scale-95 disabled:opacity-30" :class="nextButtonClass">
-               {{ currentStep === lessonPhases.length - 1 ? 'COMPLETE COURSE' : 'NEXT PHASE' }} <i class="fas fa-arrow-right"></i>
-            </button>
-          </footer>
-        </div>
-      </main>
-
-      <!-- Right Sidebar: Assets & HW -->
-      <aside class="w-80 bg-white border-l border-slate-200/60 hidden xl:flex flex-col overflow-y-auto p-8 space-y-12">
-        <!-- Resource Section -->
-        <div>
-           <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Core Assets</h3>
-           <div v-if="loadingResources" class="flex items-center justify-center py-10 text-slate-300"><i class="fas fa-spinner fa-spin"></i></div>
-           <div v-else class="space-y-2">
-              <div v-if="!resources.length" class="text-xs font-bold text-slate-300 text-center py-10 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-100 italic">No assets linked</div>
-              <a v-for="file in resources" :key="file.path" :href="resourceLink(file)" target="_blank" 
-                class="flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 transition-all group border border-transparent hover:border-slate-100">
-                <div class="w-10 h-10 rounded-xl bg-slate-50 flex shrink-0 items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all">
-                   <i class="fas" :class="resourceIcon(file)"></i>
+          <div v-if="assignmentLoading" class="py-8 text-center text-slate-400">
+            <i class="fas fa-spinner fa-spin"></i> 正在加载作业
+          </div>
+          <div v-else-if="!lessonAssignments.length" class="py-8 text-sm font-medium text-slate-400">
+            当前课时还没有发布作业。
+          </div>
+          <div v-else class="mt-5 grid gap-4">
+            <article v-for="assignment in lessonAssignments" :key="assignment.id" class="rounded-2xl border border-slate-200/50 bg-slate-50/50 p-5">
+              <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h3 class="text-base font-black text-slate-900">{{ assignment.title }}</h3>
+                  <p class="mt-2 text-sm leading-7 text-slate-500">{{ assignment.requirements || assignment.description || '按课堂要求整理并提交。' }}</p>
+                  <div class="mt-3 flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    <span>截止 {{ assignment.dueAt ? formatDate(assignment.dueAt) : '未设置' }}</span>
+                    <span>状态 {{ ownSubmission(assignment.id)?.status || '未提交' }}</span>
+                  </div>
                 </div>
-                <div class="flex-1 min-w-0">
-                  <div class="text-[11px] font-black text-slate-900 truncate tracking-tight">{{ file.name }}</div>
-                  <div class="text-[9px] font-bold text-slate-400 uppercase">{{ file.isDirectory ? 'Dir' : formatBytes(file.size) }}</div>
-                </div>
-              </a>
-           </div>
+              </div>
+              <form class="mt-4 grid gap-3" @submit.prevent="submitAssignment(assignment)">
+                <textarea v-model="assignmentDrafts[assignment.id].content" class="assignment-input min-h-[96px]" placeholder="填写作业说明、反思或正文"></textarea>
+                <input v-model="assignmentDrafts[assignment.id].link" class="assignment-input" placeholder="作品链接 / 代码仓库链接（可选，需 http(s)）" />
+                <input v-model="assignmentDrafts[assignment.id].attachmentNote" class="assignment-input" placeholder="附件说明（可选）" />
+                <button class="self-start rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-black text-white hover:bg-indigo-700 transition shadow-lg shadow-indigo-600/25 hover:shadow-indigo-600/40 hover:-translate-y-0.5 duration-300 transform" type="submit">
+                  {{ ownSubmission(assignment.id) ? '更新提交' : '提交作业' }}
+                </button>
+                <p v-if="ownSubmission(assignment.id)?.feedback" class="rounded-xl bg-white p-3 text-xs font-bold leading-6 text-slate-500">
+                  教师反馈：{{ ownSubmission(assignment.id).feedback }}
+                </p>
+              </form>
+            </article>
+          </div>
         </div>
+      </section>
+    </template>
 
-        <!-- Homework Section -->
-        <div>
-           <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 italic">Submission Pad</h3>
-           <div class="p-8 rounded-[32px] border-2 border-dashed transition-all cursor-pointer group text-center relative overflow-hidden"
-             :class="homeworkDone ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200 hover:border-indigo-400 hover:bg-slate-100'"
-             @click="triggerHomework">
-              <div v-if="homeworkUploading" class="flex flex-col items-center py-4"><i class="fas fa-spinner fa-spin text-indigo-400 mb-4"></i><p class="text-[10px] font-black uppercase text-indigo-500">Transmitting...</p></div>
-              <template v-else>
-                 <div v-if="!homeworkDone" class="space-y-4">
-                    <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-indigo-600 mx-auto shadow-sm group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
-                       <i class="fas fa-file-export"></i>
-                    </div>
-                    <div class="text-[10px] font-black uppercase tracking-widest text-slate-900">Upload Task</div>
-                    <p class="text-[8px] font-bold text-slate-400 uppercase">ZIP / PDF / CODE</p>
-                 </div>
-                 <div v-else class="space-y-4">
-                    <div class="w-12 h-12 bg-emerald-500 rounded-2xl flex items-center justify-center text-white mx-auto shadow-lg shadow-emerald-500/20"><i class="fas fa-check"></i></div>
-                    <div class="text-[10px] font-black uppercase text-emerald-700">Mission Accomplished</div>
-                    <p class="text-[8px] font-bold text-emerald-600 truncate px-4">{{ homeworkName }}</p>
-                 </div>
-              </template>
-              <input ref="hwInput" type="file" class="hidden" @change="handleHomeworkUpload" />
-           </div>
-        </div>
-
-        <!-- External Tools -->
-        <div>
-           <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Technical Tools</h3>
-           <div class="space-y-4">
-              <a v-for="t in externalTools" :key="t.name" :href="t.url" target="_blank"
-                class="block p-5 rounded-[24px] border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50 transition-all group relative overflow-hidden">
-                 <div class="relative z-10 flex flex-col gap-2">
-                    <div class="flex items-center justify-between">
-                       <span class="text-[10px] font-black text-slate-900 uppercase tracking-widest">{{ t.name }}</span>
-                       <i class="fas fa-external-link-alt text-[8px] text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity"></i>
-                    </div>
-                    <p class="text-[10px] font-bold text-slate-400">{{ t.desc }}</p>
-                 </div>
-              </a>
-           </div>
-        </div>
-      </aside>
-    </div>
-
-    <!-- Guidebook Mode -->
-    <div v-show="mode === 'guide'" class="flex-1 overflow-y-auto bg-white py-20 px-8 lg:px-20">
-      <div class="max-w-4xl mx-auto prose prose-indigo prose-slate max-w-none animate-reveal" v-html="guideHtml"></div>
-    </div>
-
-    <!-- Toast Component -->
-    <div v-if="toastVisible" class="fixed bottom-12 right-12 z-[100] animate-bounce">
-       <div class="bg-indigo-900 text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border border-white/10">
-          <i class="fas fa-comment-check text-emerald-400"></i>
-          <span class="text-[10px] font-black uppercase tracking-widest">{{ toastMessage }}</span>
-       </div>
+    <div v-if="toastVisible" class="fixed bottom-8 right-8 z-[100]">
+      <div class="rounded-2xl bg-slate-900 px-6 py-4 text-[10px] font-black uppercase tracking-[0.22em] text-white shadow-2xl">
+        {{ toastMessage }}
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, reactive } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { apiFetch } from '@/api/client';
+import { getAuthToken } from '@/api/auth';
 import { getCurrentUser } from '@/api/authApi';
+import LearningPath from '@/components/study/LearningPath.vue';
+import LearningSidebar from '@/components/study/LearningSidebar.vue';
+import LessonStage from '@/components/study/LessonStage.vue';
 
 const route = useRoute();
-const projectId = computed(() => String(route.query.project || 'project1'));
-const lessonProjectId = computed(() => (projectId.value === 'common' ? 'project1' : projectId.value));
-const lessonId = computed(() => route.query.lesson || 'lesson1');
+const router = useRouter();
 
 const mode = ref('mission');
-const lessonData = ref(null);
-const lessonError = ref('');
-const currentStep = ref(0);
-const resources = ref([]);
-const loadingResources = ref(false);
-const guideHtml = ref('');
+const loadingPage = ref(true);
+const pageError = ref('');
+const guideLoading = ref(false);
+const guideHtml = ref('<p class="text-slate-500">正在准备讲义内容...</p>');
 const guideLoaded = ref(false);
+const course = ref(null);
+const lessons = ref([]);
+const materials = ref([]);
+const currentSlideIndex = ref(0);
 const homeworkDone = ref(false);
 const homeworkName = ref('');
 const homeworkUploading = ref(false);
+const assignmentLoading = ref(false);
 const hwInput = ref(null);
 const toastVisible = ref(false);
-const toastMessage = ref('Synced');
+const toastMessage = ref('已复制');
 const mainScroll = ref(null);
+const lessonAssignments = ref([]);
+const assignmentSubmissions = ref({});
+const assignmentDrafts = reactive({});
 
-const externalTools = [
-  { name: 'Claude Code', desc: 'VS Code 沉浸式编程助手', url: 'https://claude.ai' },
-  { name: 'Gitea', desc: '校内私有代码仓库', url: `http://${window.location.hostname}:3000` },
-  { name: 'MediaPipe', desc: '谷歌官方算法可视化调试', url: 'https://mediapipe-studio.web.app/' }
-];
-
+const courseId = computed(() => String(route.params.courseId || route.query.project || 'project1'));
+const lessonId = computed(() => String(route.params.lessonId || route.query.lesson || 'lesson1'));
+const lessonData = computed(() => lessons.value.find(item => item.id === lessonId.value) || null);
 const lessonPhases = computed(() => lessonData.value?.phases || []);
-const currentPhase = computed(() => lessonPhases.value[currentStep.value]?.student || null);
-const currentPhaseName = computed(() => lessonPhases.value[currentStep.value]?.title || '');
-const lessonTitle = computed(() => lessonData.value?.title || 'Course In Progress');
-const showBriefing = computed(() => lessonId.value === 'lesson1' && currentStep.value === 0);
-const nextButtonClass = computed(() => currentStep.value === lessonPhases.value.length - 1 ? 'bg-emerald-600 shadow-emerald-500/20' : 'bg-indigo-600 shadow-indigo-600/20');
-const nextDisabled = computed(() => {
-  if (!lessonPhases.value.length) return true;
-  if (currentStep.value === lessonPhases.value.length - 1) {
-    return (parseInt(lessonId.value.replace('lesson', '')) || 1) >= 4;
-  }
-  return false;
+const lessonSlides = computed(() => buildLessonSlides());
+const activeSlide = computed(() => lessonSlides.value[currentSlideIndex.value] || null);
+const lessonDeliverables = computed(() => buildLessonDeliverables());
+const lessonTitle = computed(() => lessonData.value?.title || '课时学习');
+const lessonLabel = computed(() => {
+  const order = lessonData.value?.order || parseInt(String(lessonId.value).replace('lesson', ''), 10) || 1;
+  return `第 ${order} 课`;
+});
+const backToCourse = computed(() => `/courses/${courseId.value}`);
+const emptyPhaseHtml = '<p>当前阶段内容正在整理中。</p>';
+const isLastSlide = computed(() => currentSlideIndex.value >= Math.max(lessonSlides.value.length - 1, 0));
+const currentLessonIndex = computed(() => lessons.value.findIndex(item => item.id === lessonId.value));
+const nextLesson = computed(() => {
+  const index = currentLessonIndex.value;
+  if (index < 0) return null;
+  return lessons.value[index + 1] || null;
+});
+const hasNextLesson = computed(() => Boolean(nextLesson.value));
+const nextDisabled = computed(() => !lessonSlides.value.length);
+const nextButtonClass = computed(() => hasNextLesson.value && isLastSlide.value
+  ? 'bg-emerald-600 shadow-emerald-500/20'
+  : 'bg-indigo-600 shadow-indigo-600/20');
+const routeMode = computed(() => {
+  const value = String(route.query.mode || '').trim();
+  return value === 'guide' ? 'guide' : 'mission';
 });
 
-function modeButtonClass(t) {
-  return mode.value === t 
-    ? 'px-6 py-2.5 rounded-xl text-xs font-black shadow-sm bg-white text-indigo-600 transition'
-    : 'px-6 py-2.5 rounded-xl text-xs font-black text-slate-500 hover:text-slate-900 transition';
+function modeButtonClass(target) {
+  return mode.value === target
+    ? 'rounded-xl bg-white px-5 py-2.5 text-xs font-black text-indigo-600 shadow-sm transition'
+    : 'rounded-xl px-5 py-2.5 text-xs font-black text-slate-500 transition hover:text-slate-900';
 }
 
-function setMode(m) { mode.value = m; if (m === 'guide') loadGuidebook(); }
-function loadStep(idx) { currentStep.value = idx; nextTick(() => { if (mainScroll.value) mainScroll.value.scrollTop = 0; }); }
-function prevStep() { if (currentStep.value > 0) loadStep(currentStep.value - 1); }
-function nextStep() {
-  if (currentStep.value < lessonPhases.value.length - 1) return loadStep(currentStep.value + 1);
-  const curr = parseInt(lessonId.value.replace('lesson', '')) || 1;
-  if (curr < 4) window.location.href = `/study?project=${projectId.value}&lesson=lesson${curr+1}`;
+function formatDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
-async function loadLesson() {
-  lessonError.value = '';
+function encodeDownloadPath(value) {
+  return String(value || '')
+    .split('/')
+    .filter(Boolean)
+    .map(part => encodeURIComponent(part))
+    .join('/');
+}
+
+function setMode(target) {
+  mode.value = target;
+  router.replace({
+    query: {
+      ...route.query,
+      mode: target
+    }
+  }).catch(() => {});
+  if (target === 'guide') {
+    loadGuidebook();
+  }
+}
+
+function stripHtml(value) {
+  return String(value || '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function toTextList(value) {
+  return Array.isArray(value) ? value.map(item => String(item || '').trim()).filter(Boolean) : [];
+}
+
+function makeDeliverableTitle(phase, phaseIndex) {
+  const title = `${phase?.title || ''} ${phase?.student?.title || ''}`;
+  if (/场景|任务/.test(title) && phaseIndex === 0) return '任务场景卡';
+  if (/标准|判断/.test(title)) return '成功标准说明';
+  if (/流程/.test(title)) return '机器人任务流程图';
+  if (/联调|失败|跑通|调试/.test(title)) return '任务调试记录';
+  if (/展示|升级|改进/.test(title)) return '升级清单';
+  return `知识点 ${phaseIndex + 1} 活动记录`;
+}
+
+function buildLessonSlides() {
+  const slides = [];
+  const lesson = lessonData.value;
+  if (!lesson) return slides;
+  const units = Array.isArray(lesson.units) ? lesson.units : [];
+  const deliverables = buildLessonDeliverables();
+
+  slides.push({
+    id: `${lesson.id}-overview`,
+    type: 'overview',
+    typeLabel: '本课导入',
+    title: lesson.title || lessonTitle.value,
+    description: lesson.description || course.value?.summary || '本节课将围绕知识点讲解、活动要求和作业提交展开。',
+    highlights: [
+      `${lesson.duration || 60} 分钟课堂`,
+      `${units.length || lessonPhases.value.length || 0} 个学习单元`,
+      `${deliverables.length || 1} 项本课成果`
+    ]
+  });
+
+  if (units.length) {
+    units.forEach((unit, unitIndex) => {
+      const unitTitle = String(unit?.title || `学习单元 ${unitIndex + 1}`).trim();
+      const pages = Array.isArray(unit?.pages) ? unit.pages : [];
+      pages.forEach((page, pageIndex) => {
+        const type = ['knowledge', 'check', 'activity'].includes(page?.type) ? page.type : 'knowledge';
+        const typeLabelMap = {
+          knowledge: `知识点 ${unitIndex + 1}`,
+          check: '理解检查',
+          activity: `活动 ${unitIndex + 1}`
+        };
+        slides.push({
+          id: `${unit.id || unitIndex}-${page.id || pageIndex}`,
+          type,
+          typeLabel: typeLabelMap[type],
+          title: page?.title || unitTitle,
+          unitTitle,
+          content: page?.content || '',
+          examples: toTextList(page?.examples),
+          misconceptions: toTextList(page?.misconceptions),
+          question: String(page?.question || '').trim(),
+          options: toTextList(page?.options),
+          answer: Number.isFinite(Number(page?.answer)) ? Number(page.answer) : -1,
+          explanation: String(page?.explanation || '').trim(),
+          description: String(page?.description || '').trim() || stripHtml(page?.content) || `完成“${unitTitle}”对应学习任务。`,
+          steps: toTextList(page?.steps),
+          criteria: toTextList(page?.criteria),
+          deliverable: String(page?.deliverable || unit?.deliverable || '').trim()
+        });
+      });
+    });
+  } else {
+    lessonPhases.value.forEach((phase, phaseIndex) => {
+      const student = phase.student || phase;
+      const title = student?.title || phase.title || `知识点 ${phaseIndex + 1}`;
+      const deliverable = makeDeliverableTitle(phase, phaseIndex);
+
+      slides.push({
+        id: `${phase.id || phaseIndex}-knowledge`,
+        type: 'knowledge',
+        typeLabel: `知识点 ${phaseIndex + 1}`,
+        title,
+        phaseTitle: phase.title || `第 ${phaseIndex + 1} 个知识任务`,
+        content: student?.content || emptyPhaseHtml
+      });
+
+      slides.push({
+        id: `${phase.id || phaseIndex}-activity`,
+        type: 'activity',
+        typeLabel: `任务 ${phaseIndex + 1}`,
+        title: `${title}：活动要求`,
+        description: stripHtml(student?.content) || '完成本页要求后，再进入下一页继续学习。',
+        steps: Array.isArray(student?.tasks) && student.tasks.length
+          ? student.tasks
+          : ['完成本知识点对应的课堂操作', '记录过程中的关键问题和结果'],
+        criteria: [],
+        deliverable
+      });
+    });
+  }
+
+  slides.push({
+    id: `${lesson.id}-summary`,
+    type: 'summary',
+    typeLabel: '成果检查',
+    title: '检查本课学习成果',
+    description: '对照右侧成果清单整理材料，确认完整后使用右侧作业提交入口上传。',
+    items: deliverables.length ? deliverables : ['整理本课活动记录', '确认材料完整后在右侧提交']
+  });
+
+  return slides;
+}
+
+function buildLessonDeliverables() {
+  const lesson = lessonData.value;
+  if (!lesson) return [];
+  const homework = toTextList(lesson.homework);
+  if (homework.length) return Array.from(new Set(homework));
+
+  const values = toTextList(lesson.deliverables);
+  if (Array.isArray(lesson.units)) {
+    lesson.units.forEach(unit => {
+      if (unit?.deliverable) values.push(String(unit.deliverable).trim());
+      if (Array.isArray(unit?.pages)) {
+        unit.pages.forEach(page => {
+          if (page?.deliverable) values.push(String(page.deliverable).trim());
+        });
+      }
+    });
+  }
+  if (!values.length) {
+    lessonPhases.value.forEach((phase, index) => values.push(makeDeliverableTitle(phase, index)));
+  }
+  return Array.from(new Set(values.filter(Boolean)));
+}
+
+function loadSlide(index) {
+  currentSlideIndex.value = Math.min(Math.max(index, 0), Math.max(lessonSlides.value.length - 1, 0));
+  nextTick(() => {
+    if (mainScroll.value) {
+      mainScroll.value.scrollTop = 0;
+    }
+  });
+}
+
+function prevSlide() {
+  if (currentSlideIndex.value > 0) {
+    loadSlide(currentSlideIndex.value - 1);
+  }
+}
+
+async function nextSlide() {
+  if (!isLastSlide.value) {
+    loadSlide(currentSlideIndex.value + 1);
+    return;
+  }
+  if (nextLesson.value) {
+    await router.push(`/courses/${courseId.value}/lessons/${nextLesson.value.id}`);
+    return;
+  }
+  await router.push(backToCourse.value);
+}
+
+function handleSlideKeydown(event) {
+  if (mode.value !== 'mission') return;
+  const target = event.target;
+  const tagName = String(target?.tagName || '').toLowerCase();
+  if (['input', 'textarea', 'select', 'button', 'a'].includes(tagName) || target?.isContentEditable) return;
+  if (event.key === 'ArrowLeft') {
+    event.preventDefault();
+    prevSlide();
+  }
+  if (event.key === 'ArrowRight') {
+    event.preventDefault();
+    nextSlide();
+  }
+}
+
+async function loadLessonPage() {
+  loadingPage.value = true;
+  pageError.value = '';
+
   try {
-    const res = await apiFetch(`/download/${lessonProjectId.value}/lessons/${lessonId.value}.json`);
-    if (!res.ok) throw new Error('Lesson file not found');
-    lessonData.value = await res.json();
-  } catch (err) { lessonError.value = err.message; }
+    const [courseRes, lessonsRes, materialsRes] = await Promise.all([
+      apiFetch(`/courses/${courseId.value}`),
+      apiFetch(`/courses/${courseId.value}/lessons`),
+      apiFetch(`/courses/${courseId.value}/materials`)
+    ]);
+
+    const [courseData, lessonsData, materialsData] = await Promise.all([
+      courseRes.json(),
+      lessonsRes.json(),
+      materialsRes.json()
+    ]);
+
+    if (!courseRes.ok) throw new Error(courseData?.error || '课程加载失败');
+    if (!lessonsRes.ok) throw new Error(lessonsData?.error || '课时加载失败');
+    if (!materialsRes.ok) throw new Error(materialsData?.error || '资料加载失败');
+
+    course.value = courseData.course || null;
+    lessons.value = lessonsData.lessons || [];
+    materials.value = materialsData.materials || [];
+
+    if (!lessonData.value) {
+      throw new Error('没有找到对应课时');
+    }
+    await loadLessonAssignments();
+  } catch (err) {
+    pageError.value = err.message || '课时加载失败';
+    course.value = null;
+    lessons.value = [];
+    materials.value = [];
+  } finally {
+    loadingPage.value = false;
+  }
+}
+
+async function loadLessonAssignments() {
+  if (!getAuthToken()) {
+    lessonAssignments.value = [];
+    assignmentSubmissions.value = {};
+    return;
+  }
+  assignmentLoading.value = true;
+  try {
+    const res = await apiFetch(`/assignments?courseId=${encodeURIComponent(courseId.value)}&lessonId=${encodeURIComponent(lessonId.value)}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error || '作业加载失败');
+    lessonAssignments.value = data.assignments || [];
+    await Promise.all(lessonAssignments.value.map(loadOwnAssignmentSubmission));
+  } catch (err) {
+    lessonAssignments.value = [];
+  } finally {
+    assignmentLoading.value = false;
+  }
+}
+
+async function loadOwnAssignmentSubmission(assignment) {
+  assignmentDrafts[assignment.id] = assignmentDrafts[assignment.id] || { content: '', link: '', attachmentNote: '' };
+  const res = await apiFetch(`/assignments/${assignment.id}/submissions`);
+  const data = await res.json();
+  const submission = res.ok ? (data.submissions || [])[0] : null;
+  assignmentSubmissions.value = { ...assignmentSubmissions.value, [assignment.id]: submission || null };
+  if (submission) {
+    assignmentDrafts[assignment.id] = {
+      content: submission.content || '',
+      link: submission.link || '',
+      attachmentNote: submission.attachmentNote || ''
+    };
+  }
+}
+
+function ownSubmission(assignmentId) {
+  return assignmentSubmissions.value[assignmentId] || null;
+}
+
+async function submitAssignment(assignment) {
+  const draft = assignmentDrafts[assignment.id] || {};
+  try {
+    const res = await apiFetch(`/assignments/${assignment.id}/submissions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(draft)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error || '作业提交失败');
+    assignmentSubmissions.value = { ...assignmentSubmissions.value, [assignment.id]: data.submission };
+    toastMessage.value = '作业已提交';
+    toastVisible.value = true;
+    setTimeout(() => {
+      toastVisible.value = false;
+    }, 1800);
+  } catch (err) {
+    pageError.value = err.message || '作业提交失败';
+  }
+}
+
+async function ensureLegacyRedirect() {
+  if (route.path !== '/study') return false;
+  const project = route.query.project;
+  const lesson = route.query.lesson;
+  if (!project || !lesson) return false;
+  await router.replace(`/courses/${project}/lessons/${lesson}`);
+  return true;
 }
 
 async function loadGuidebook() {
-  if (guideLoaded.value) return;
+  if (guideLoaded.value || !course.value?.guidePath) return;
+  guideLoading.value = true;
   try {
-    const res = await fetch(`/api/v1/download/${lessonProjectId.value}/guide.md`);
+    const resourcePath = encodeDownloadPath(course.value.guidePath);
+    const res = await fetch(`/api/v1/download/${encodeURIComponent(course.value.materialsRoot)}/${resourcePath}`);
+    if (!res.ok) throw new Error('guide_not_found');
     const text = await res.text();
     guideHtml.value = window.marked ? window.marked.parse(text) : `<pre>${text}</pre>`;
     guideLoaded.value = true;
-  } catch (err) { guideHtml.value = '<p class="text-rose-500">无法加载完整讲义文件。</p>'; }
+  } catch (err) {
+    guideHtml.value = '<p class="text-rose-500">无法加载完整讲义文件。</p>';
+  } finally {
+    guideLoading.value = false;
+  }
 }
 
-async function loadResources() {
-  loadingResources.value = true;
-  try {
-    const res = await apiFetch(`/files/${projectId.value}`);
-    const data = await res.json();
-    resources.value = (data.files || []).slice(0, 5);
-  } catch (err) { resources.value = []; }
-  finally { loadingResources.value = false; }
-}
-
-function resourceLink(f) { return f.isDirectory ? `/downloads?project=${projectId.value}&path=${encodeURIComponent(f.path)}` : `/api/v1/download/${projectId.value}/${encodeURIComponent(f.path)}`; }
-function resourceIcon(f) {
-  if (f.isDirectory) return 'fa-folder';
-  const ext = f.name.split('.').pop().toLowerCase();
-  const map = { pdf: 'fa-file-pdf', zip: 'fa-file-archive', py: 'fa-file-code', html: 'fa-file-code' };
-  return map[ext] || 'fa-file';
-}
-function formatBytes(b) { return b > 1024 * 1024 ? (b/(1024*1024)).toFixed(1)+'MB' : (b/1024).toFixed(0)+'KB'; }
-
-async function copyPrompt(t) {
-  await navigator.clipboard.writeText(t || '');
-  toastMessage.value = 'AI Prompt Copied';
+async function copyPrompt(text) {
+  await navigator.clipboard.writeText(text || '');
+  toastMessage.value = 'Prompt 已复制';
   toastVisible.value = true;
-  setTimeout(() => toastVisible.value = false, 2000);
+  setTimeout(() => {
+    toastVisible.value = false;
+  }, 1800);
 }
 
-function triggerHomework() { if (!homeworkUploading.value) hwInput.value?.click(); }
-async function handleHomeworkUpload(e) {
-  const file = e.target.files?.[0]; if (!file) return;
+function triggerHomework() {
+  if (!homeworkUploading.value) {
+    hwInput.value?.click();
+  }
+}
+
+async function handleHomeworkUpload(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  const projectRef = course.value?.relatedProjects?.[0] || courseId.value;
+  const projectNumber = parseInt(String(projectRef).replace('project', ''), 10);
+  if (!projectNumber) {
+    pageError.value = '当前课程未绑定项目，暂不支持直接提交作业。';
+    event.target.value = '';
+    return;
+  }
+
   homeworkUploading.value = true;
   try {
     const user = getCurrentUser();
-    const pid = parseInt(projectId.value.replace('project', '')) || 1;
     const formData = new FormData();
     formData.append('type', 'showcase');
     formData.append('title', `[${lessonId.value}] ${file.name}`);
     formData.append('studentName', user?.name || 'Anonymous Student');
     formData.append('file', file);
-    const res = await apiFetch(`/projects/${pid}/submissions`, { method: 'POST', body: formData });
-    if (!res.ok) throw new Error('Upload failed');
-    homeworkDone.value = true; homeworkName.value = file.name;
-    const key = `hw_${projectId.value}_${lessonId.value}`;
-    localStorage.setItem(key, 'true'); localStorage.setItem(`${key}_name`, file.name);
-  } catch (err) { alert(err.message); }
-  finally { homeworkUploading.value = false; e.target.value = ''; }
+    const response = await apiFetch(`/projects/${projectNumber}/submissions`, {
+      method: 'POST',
+      body: formData
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data?.error || '上传失败');
+    homeworkDone.value = true;
+    homeworkName.value = file.name;
+    localStorage.setItem(`hw_${courseId.value}_${lessonId.value}`, 'true');
+    localStorage.setItem(`hw_${courseId.value}_${lessonId.value}_name`, file.name);
+  } catch (err) {
+    pageError.value = err.message || '上传失败';
+  } finally {
+    homeworkUploading.value = false;
+    event.target.value = '';
+  }
 }
 
-onMounted(() => { loadLesson(); loadResources(); const key = `hw_${projectId.value}_${lessonId.value}`; if(localStorage.getItem(key) === 'true') { homeworkDone.value = true; homeworkName.value = localStorage.getItem(`${key}_name`); } });
-watch([projectId, lessonId], () => { loadLesson(); loadResources(); });
+function hydrateHomeworkState() {
+  const doneKey = `hw_${courseId.value}_${lessonId.value}`;
+  homeworkDone.value = localStorage.getItem(doneKey) === 'true';
+  homeworkName.value = localStorage.getItem(`${doneKey}_name`) || '';
+}
+
+onMounted(async () => {
+  const redirected = await ensureLegacyRedirect();
+  if (redirected) return;
+  window.addEventListener('keydown', handleSlideKeydown);
+  mode.value = routeMode.value;
+  hydrateHomeworkState();
+  await loadLessonPage();
+  if (mode.value === 'guide') {
+    await loadGuidebook();
+  }
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleSlideKeydown);
+});
+
+watch([courseId, lessonId], async () => {
+  currentSlideIndex.value = 0;
+  guideLoaded.value = false;
+  guideHtml.value = '<p class="text-slate-500">正在准备讲义内容...</p>';
+  hydrateHomeworkState();
+  await loadLessonPage();
+  if (mode.value === 'guide') {
+    await loadGuidebook();
+  }
+});
+
+watch(lessonSlides, slides => {
+  if (currentSlideIndex.value >= slides.length) {
+    currentSlideIndex.value = Math.max(slides.length - 1, 0);
+  }
+});
+
+watch(routeMode, async value => {
+  mode.value = value;
+  if (value === 'guide' && course.value) {
+    await loadGuidebook();
+  }
+});
 </script>
 
 <style scoped>
-.premium-card { @apply rounded-[40px] border border-slate-200/60 p-8 shadow-sm; }
-.animate-reveal { animation: reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-@keyframes reveal { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-.prose h1, .prose h2 { @apply font-black text-slate-900 tracking-tight; }
-.prose p { @apply my-6 text-slate-600 leading-relaxed; }
+.study-page {
+  background:
+    radial-gradient(circle at top left, rgba(99, 102, 241, 0.08), transparent 30%),
+    radial-gradient(circle at top right, rgba(56, 189, 248, 0.05), transparent 30%),
+    #f8fafc;
+  min-height: 100vh;
+}
+
+.assignment-input {
+  width: 100%;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.82);
+  padding: 0.9rem 1rem;
+  color: #0f172a;
+  font-size: 0.9rem;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.assignment-input:focus {
+  border-color: #6366f1;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.08);
+}
+</style>
+
+<style scoped>
+.prose :deep(h1),
+.prose :deep(h2),
+.prose :deep(h3) {
+  @apply font-black tracking-tight text-slate-900;
+}
+
+.prose :deep(p) {
+  @apply leading-8 text-slate-600;
+}
+
+.prose :deep(ul) {
+  @apply leading-8 text-slate-600;
+}
+
 </style>

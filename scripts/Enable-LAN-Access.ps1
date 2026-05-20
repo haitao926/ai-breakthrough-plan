@@ -23,8 +23,8 @@ Write-Host "正在停止现有服务�?.." -ForegroundColor Yellow
 Get-Process node -ErrorAction SilentlyContinue | Where-Object {$_.ProcessName -eq "node"} | Stop-Process -Force
 
 # 配置防火�?Write-Host "正在配置防火墙规�?.." -ForegroundColor Yellow
-Remove-NetFirewallRule -DisplayName "HAI Tech Lab Server" -ErrorAction SilentlyContinue
-New-NetFirewallRule -DisplayName "HAI Tech Lab Server" -Direction Inbound -Protocol TCP -LocalPort 8080 -Action Allow | Out-Null
+Remove-NetFirewallRule -DisplayName "SASU AI Lab Server" -ErrorAction SilentlyContinue
+New-NetFirewallRule -DisplayName "SASU AI Lab Server" -Direction Inbound -Protocol TCP -LocalPort 8080 -Action Allow | Out-Null
 
 Write-Host "[✓] 防火墙规则已添加" -ForegroundColor Green
 

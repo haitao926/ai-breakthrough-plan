@@ -14,7 +14,7 @@
 
 ## 目录结构
 ```
-HAI Tech Lab/
+SASU AI Lab/
 ├── apps/
 │   ├── web/                 # 前端页面（学生/老师）
 │   └── api/                 # 后端 API

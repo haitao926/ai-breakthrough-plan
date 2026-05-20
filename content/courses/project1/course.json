@@ -1,0 +1,65 @@
+{
+  "id": "project1",
+  "title": "Vibe Coding 体感编程",
+  "direction": "engineering",
+  "teacherName": "陈老师",
+  "summary": "从视觉识别到交互实现，完成第一门 AI 感知式编程课程。",
+  "description": "课程以计算机视觉和体感交互为主线，帮助学生在最短时间内建立“AI 感知输入 -> 前端交互输出”的完整理解。老师可以围绕视觉原理、代码生成和互动作品创作持续迭代这门课。",
+  "audience": "适合零基础编程学习者，以及对体感互动和创意编程感兴趣的学生。",
+  "pace": "4 课时，适合每周 1 次持续推进。",
+  "status": "published",
+  "materialsRoot": "project1",
+  "relatedProjects": [
+    "project1"
+  ],
+  "positioning": "视觉识别 / 交互编程",
+  "courseType": "工程实践",
+  "guidePath": "项目1-VibeCoding.md",
+  "learningObjectives": [
+    "理解计算机视觉中手势识别和关键点检测的基本概念。",
+    "能够借助 AI 助手生成并调试前端交互代码。",
+    "完成一个具备体感输入能力的简单互动作品原型。"
+  ],
+  "materials": [
+    {
+      "id": "project1-guide-1",
+      "courseId": "project1",
+      "section": "课程导学",
+      "title": "项目 1 课程导学",
+      "path": "项目1-VibeCoding.md",
+      "kind": "markdown"
+    },
+    {
+      "id": "project1-guide-2",
+      "courseId": "project1",
+      "section": "课程导学",
+      "title": "课程设计：AI Coding 入门到实战",
+      "path": "课程设计-AICoding入门到实战.md",
+      "kind": "markdown"
+    },
+    {
+      "id": "project1-teacher-1",
+      "courseId": "project1",
+      "section": "教师资料",
+      "title": "教师手册",
+      "path": "TEACHING_MANUAL.md",
+      "kind": "markdown"
+    },
+    {
+      "id": "project1-teacher-2",
+      "courseId": "project1",
+      "section": "教师资料",
+      "title": "课堂配套课件",
+      "path": "ycaistartup2025.ppt",
+      "kind": "presentation"
+    },
+    {
+      "id": "project1-student-1",
+      "courseId": "project1",
+      "section": "学生资料",
+      "title": "趣味版讲义",
+      "path": "项目1-体感互动游戏-趣味版.md",
+      "kind": "markdown"
+    }
+  ]
+}

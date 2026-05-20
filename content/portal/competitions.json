@@ -1,0 +1,136 @@
+[
+  {
+    "title": "全国青少年机器人创新挑战赛",
+    "slug": "national-robotics-innovation-challenge",
+    "tagline": "白名单机器人赛事",
+    "tier": "白名单赛事",
+    "discipline": ["机器人", "工程实践"],
+    "schoolStage": ["初中", "高中"],
+    "status": "报名中",
+    "dateRange": "2026.04 - 2026.07",
+    "fitSummary": "适合有编程或机器人搭建基础、愿意做长期项目的学生团队。",
+    "whyJoin": "含金量高，能系统训练项目迭代、现场答辩和工程表达能力。",
+    "prepAdvice": "建议先完成项目 5 的硬件实践，再补足项目 6 的整合展示训练。",
+    "externalLink": "https://example.edu.cn/robotics",
+    "attachments": [
+      {
+        "label": "赛事章程",
+        "url": "https://example.edu.cn/robotics/rules.pdf"
+      }
+    ],
+    "relatedCourseIds": ["project5", "project6"],
+    "featuredFlags": ["banner", "home", "interpretation"],
+    "host": "全国青少年科技教育联盟",
+    "location": "上海赛区"
+  },
+  {
+    "title": "上海市青少年人工智能创意实践活动",
+    "slug": "shanghai-ai-creative-practice",
+    "tagline": "上海市 AI 创新实践",
+    "tier": "上海市赛事",
+    "discipline": ["科创类", "人工智能"],
+    "schoolStage": ["小学", "初中", "高中"],
+    "status": "即将开始",
+    "dateRange": "2026.05 - 2026.08",
+    "fitSummary": "适合对 AI 应用、创意表达和生活问题改造有兴趣的学生。",
+    "whyJoin": "更看重创意与真实场景价值，适合学校形成特色项目矩阵。",
+    "prepAdvice": "先从项目 1 和项目 2 打底，再补一轮方案表达和展示海报。",
+    "externalLink": "https://example.edu.cn/ai-creative",
+    "attachments": [
+      {
+        "label": "活动通知",
+        "url": "https://example.edu.cn/ai-creative/notice.pdf"
+      }
+    ],
+    "relatedCourseIds": ["project1", "project2", "project6"],
+    "featuredFlags": ["banner", "home"],
+    "host": "上海市青少年活动中心",
+    "location": "上海"
+  },
+  {
+    "title": "区级创客马拉松",
+    "slug": "district-maker-marathon",
+    "tagline": "短周期创客实战",
+    "tier": "区赛",
+    "discipline": ["创客类", "工程设计"],
+    "schoolStage": ["初中", "高中"],
+    "status": "长期征集",
+    "dateRange": "全年滚动",
+    "fitSummary": "适合喜欢动手做原型、愿意快速试错的小组。",
+    "whyJoin": "周期短、反馈快，适合作为校队或兴趣小组的训练型赛事。",
+    "prepAdvice": "建议从项目 3 或项目 5 中选择一个方向，先做出能演示的 MVP。",
+    "externalLink": "https://example.edu.cn/maker",
+    "attachments": [],
+    "relatedCourseIds": ["project3", "project5"],
+    "featuredFlags": ["home", "interpretation"],
+    "host": "区青少年活动中心",
+    "location": "浦东新区"
+  },
+  {
+    "title": "校园智慧城市想象力计划",
+    "slug": "campus-smart-city-lab",
+    "tagline": "校内主题项目季",
+    "tier": "校内活动",
+    "discipline": ["科创类", "项目制学习"],
+    "schoolStage": ["小学", "初中", "高中"],
+    "status": "进行中",
+    "dateRange": "2026 春季学期",
+    "fitSummary": "适合第一次接触项目制学习的学生，也适合班级或年级组整体参与。",
+    "whyJoin": "门槛低、协作空间大，适合把课程学习和校园真实问题连接起来。",
+    "prepAdvice": "可以从项目 2 的问题洞察和项目 6 的整合表达先做准备。",
+    "externalLink": "https://example.edu.cn/campus-lab",
+    "attachments": [],
+    "relatedCourseIds": ["project2", "project6"],
+    "featuredFlags": ["banner", "home"],
+    "host": "SASU 科创中心",
+    "location": "校内"
+  },
+  {
+    "title": "青少年数据智能应用展示",
+    "slug": "youth-data-intelligence-showcase",
+    "tagline": "数据与 AI 融合表达",
+    "tier": "上海市赛事",
+    "discipline": ["人工智能", "数据应用"],
+    "schoolStage": ["初中", "高中"],
+    "status": "报名中",
+    "dateRange": "2026.04 - 2026.06",
+    "fitSummary": "适合有一定数据处理或编程基础、想把分析结果做成作品的学生。",
+    "whyJoin": "兼顾技术与表达，适合走 AI 科创和研究型学习路线。",
+    "prepAdvice": "建议先完成项目 4 的算法理解，再结合项目 3 做展示页面或交互呈现。",
+    "externalLink": "https://example.edu.cn/data-ai",
+    "attachments": [
+      {
+        "label": "赛题说明",
+        "url": "https://example.edu.cn/data-ai/brief.pdf"
+      }
+    ],
+    "relatedCourseIds": ["project3", "project4"],
+    "featuredFlags": ["interpretation"],
+    "host": "上海市信息技术教育协会",
+    "location": "上海"
+  },
+  {
+    "title": "第二十一届宋庆龄少年儿童发明奖上海地区选拔活动",
+    "slug": "song-ching-ling-invention-award-shanghai-2026",
+    "tagline": "全国发明奖选拔",
+    "tier": "白名单赛事",
+    "discipline": ["科创类", "人工智能", "工程设计"],
+    "schoolStage": ["小学", "初中", "高中"],
+    "status": "进行中",
+    "dateRange": "2026.03 - 2026.08",
+    "fitSummary": "适合有发明、AI 编程、创意设计或科技绘画作品基础的学生。",
+    "whyJoin": "覆盖发明、人工智能和创意作品，能训练真实问题发现、原型制作与答辩表达。",
+    "prepAdvice": "建议先用项目 2 梳理问题与方案，再结合项目 4、项目 5 或项目 6 打磨作品。",
+    "externalLink": "http://www.cwikids.org/zgflhsng/zx/content/f65a464e-e2f5-4bb1-bacc-639ee1b38a43.html",
+    "attachments": [
+      {
+        "label": "公益性推荐承诺书",
+        "url": "http://www.cwikids.org/zgflhsng/upload/081d6135-04f2-4edd-afe3-869bd940106c.docx"
+      }
+    ],
+    "relatedCourseIds": ["project2", "project4", "project5", "project6"],
+    "featuredFlags": ["interpretation"],
+    "host": "中国福利会少年宫",
+    "location": "上海"
+  }
+]

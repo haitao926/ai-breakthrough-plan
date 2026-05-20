@@ -1,340 +1,432 @@
 <template>
-  <div class="downloads-page text-slate-900 selection:bg-indigo-100 selection:text-indigo-900 min-h-screen bg-[#f8fafc]">
-    <!-- 动态背景层 -->
-    <div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
-      <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-200/20 blur-[120px] rounded-full"></div>
-      <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-200/20 blur-[120px] rounded-full"></div>
-    </div>
+  <div class="downloads-page text-gray-800">
+    <SiteNav active="downloads" />
 
-    <!-- 导航栏 -->
-    <nav class="fixed w-full z-50 glass-nav transition-all duration-500 py-4">
-      <div class="max-w-7xl mx-auto px-6 lg:px-12">
-        <div class="flex justify-between items-center h-16">
-          <div class="flex items-center gap-4 shrink-0">
-            <RouterLink to="/" class="flex items-center gap-3 transition-transform hover:scale-105 active:scale-95 group">
-              <div class="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-500/30">
-                <i class="fas fa-cube text-lg"></i>
+    <PublicPageHeader
+      eyebrow="Courses"
+      title="课程库"
+      description="课程、讲义、代码与资料集中在这里。"
+      :meta="`${visibleCourseCount} 门内容`"
+    />
+
+    <main class="max-w-[1320px] mx-auto px-5 sm:px-6 lg:px-8 py-3 min-h-screen space-y-5">
+      <CategorySearchBar
+        :meta="`${visibleCourseCount} 门匹配`"
+        :category="activeFilter"
+        :search="searchTerm"
+        :options="courseCategoryOptions"
+        :placeholder="courseSearchPlaceholder"
+        :clear-disabled="!searchTerm && activeFilter === 'all'"
+        @update:category="setActiveFilter"
+        @update:search="searchTerm = $event"
+        @clear="resetCourseSearch"
+      />
+
+      <section ref="courseListRef" class="scroll-anchor">
+        <template v-if="loading">
+          <div class="text-center py-16 text-gray-400">
+            <i class="fas fa-spinner fa-spin text-2xl mb-2"></i><br />
+            加载课程中...
+          </div>
+        </template>
+
+        <template v-else-if="error">
+          <div class="text-center py-16 text-red-500">{{ error }}</div>
+        </template>
+
+        <template v-else>
+          <section v-for="section in visibleSections" :key="section.id" class="mb-10">
+            <div class="course-section-heading">
+              <div>
+                <p>{{ section.label }}</p>
+                <h2>{{ section.title }}</h2>
               </div>
-              <div class="flex flex-col">
-                <span class="font-black text-xl tracking-tight leading-none text-slate-900">AI 破壁计划</span>
-                <span class="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mt-0.5">Resources Hub</span>
-              </div>
-            </RouterLink>
-          </div>
+              <span>{{ section.desc }}</span>
+            </div>
 
-          <div class="hidden lg:flex items-center space-x-1 bg-slate-100/50 p-1 rounded-2xl border border-slate-200/50">
-            <RouterLink to="/knowledge" class="px-5 py-2 rounded-xl text-sm font-bold text-slate-600 hover:text-indigo-600 hover:bg-white transition-all flex items-center gap-2">
-              <i class="fas fa-book-reader text-xs opacity-70"></i>创新库
-            </RouterLink>
-            <RouterLink to="/competencies" class="px-5 py-2 rounded-xl text-sm font-bold text-slate-600 hover:text-indigo-600 hover:bg-white transition-all flex items-center gap-2">
-              <i class="fas fa-graduation-cap text-xs opacity-70"></i>学术指导
-            </RouterLink>
-            <RouterLink to="/projects" class="px-5 py-2 rounded-xl text-sm font-bold text-slate-600 hover:text-indigo-600 hover:bg-white transition-all flex items-center gap-2">
-              <i class="fas fa-layer-group text-xs opacity-70"></i>项目库
-            </RouterLink>
-            <RouterLink to="/downloads" class="px-5 py-2 rounded-xl text-sm font-bold bg-white text-indigo-600 shadow-sm transition-all flex items-center gap-2">
-              <i class="fas fa-folder-open text-xs opacity-70"></i>资料中心
-            </RouterLink>
-          </div>
-
-          <div class="flex gap-4 items-center shrink-0">
-             <RouterLink to="/workspace" class="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-black uppercase tracking-widest shadow-lg shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all">
-               进入工作台
-             </RouterLink>
-          </div>
-        </div>
-      </div>
-    </nav>
-
-    <!-- Header -->
-    <header class="relative pt-44 pb-20 overflow-hidden z-10">
-      <div class="max-w-7xl mx-auto px-6 lg:px-12 text-center lg:text-left">
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 text-[10px] font-black uppercase tracking-[0.2em] mb-6 shadow-sm">
-           <i class="fas fa-cloud-download-alt"></i> Download Center
-        </div>
-        <h1 class="text-4xl md:text-6xl font-black text-slate-900 tracking-tight mb-6 leading-tight">
-          全栈科创<br><span class="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-blue-500">数字资源库</span>
-        </h1>
-        <p class="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">
-          这里有你进行 PBL 探究所需的所有“弹药”：完整的讲义、开箱即用的代码库、专业的数据集，以及各领域的学术规范模板。
-        </p>
-      </div>
-    </header>
-
-    <main class="max-w-7xl mx-auto px-6 lg:px-12 py-12 relative z-10">
-      <!-- View 1: Course Gallery -->
-      <div v-show="view === 'gallery'" id="view-gallery" class="space-y-24 animate-reveal">
-        <section v-for="(group, gIdx) in groupedCourses" :key="gIdx" class="space-y-10">
-          <div class="flex items-center gap-4">
-             <div class="w-1.5 h-8 bg-indigo-600 rounded-full"></div>
-             <h2 class="text-2xl font-black text-slate-900 tracking-tight">{{ group.title }}</h2>
-             <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest border-l border-slate-200 pl-4">{{ group.desc }}</span>
-          </div>
-          
-          <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div v-for="course in group.items" :key="course.id" 
-              class="premium-card group overflow-hidden cursor-pointer !p-0 !border-none !bg-white shadow-xl hover:!shadow-2xl transition-all duration-500"
-              @click="openCourse(course.id)"
-            >
-              <div :class="course.bg" class="h-40 relative flex items-center justify-center overflow-hidden">
-                 <div class="absolute inset-0 bg-[radial-gradient(#fff_1px,transparent_1px)] bg-[size:16px:16px] opacity-10"></div>
-                 <i :class="course.icon" class="text-6xl text-white opacity-20 transform -rotate-12 transition-all group-hover:rotate-0 group-hover:scale-125 duration-700"></i>
-                 <div class="absolute bottom-6 left-8 text-white">
-                    <span class="text-[10px] font-black bg-white/20 px-2 py-1 rounded-lg backdrop-blur-md uppercase tracking-widest border border-white/10">{{ course.tag }}</span>
-                    <h3 class="text-2xl font-black mt-2 tracking-tight">{{ course.title }}</h3>
-                 </div>
-              </div>
-              <div class="p-8 space-y-6">
-                <p class="text-sm font-medium text-slate-500 leading-relaxed min-h-[4rem]">{{ course.description }}</p>
-                <div class="flex items-center justify-between pt-6 border-t border-slate-50">
-                  <div class="flex items-center gap-2 group-hover:translate-x-2 transition-transform duration-500">
-                    <span class="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em]">进入课程</span>
-                    <i class="fas fa-arrow-right text-[10px] text-indigo-400"></i>
+            <div v-if="section.items.length" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div
+                v-for="course in section.items"
+                :key="course.id"
+                class="course-card rounded-2xl overflow-hidden cursor-pointer group"
+                :class="`course-card--${section.id}`"
+                @click="openCourse(course.id)"
+              >
+                <div class="course-track-label">{{ section.label }} Track</div>
+                <div class="h-32 relative" :class="sectionGradient(section.id)">
+                  <i class="fas absolute -bottom-4 -right-4 text-8xl text-white opacity-10 transform rotate-12 group-hover:rotate-0 transition duration-500" :class="sectionIcon(section.id)"></i>
+                  <div class="absolute bottom-4 left-6 text-white">
+                    <span class="text-xs font-bold bg-white/20 px-2 py-1 rounded backdrop-blur">{{ course.courseType || section.label }}</span>
+                    <h3 class="text-xl font-bold mt-1">{{ course.title }}</h3>
                   </div>
-                  <div class="flex -space-x-2">
-                    <div v-for="i in 3" :key="i" class="w-6 h-6 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center shadow-sm">
-                      <i class="fas fa-file text-[8px] text-slate-400"></i>
-                    </div>
+                </div>
+                <div class="p-6">
+                  <p class="text-sm text-gray-500 mb-4 h-12 overflow-hidden">{{ course.summary }}</p>
+                  <div class="course-entry-grid">
+                    <span
+                      v-for="step in pathwaySteps"
+                      :key="`${course.id}-${step.id}`"
+                      class="course-entry-chip"
+                      :class="{ 'is-active': activeStep === step.id }"
+                    >
+                      {{ step.label }}
+                    </span>
+                  </div>
+                  <div class="flex items-center justify-between text-xs font-bold border-t border-gray-100 pt-4" :class="sectionText(section.id)">
+                    <span><i class="fas" :class="stepActionIcon(activeStep)"></i> {{ stepActionLabel(activeStep) }}</span>
+                    <i class="fas fa-arrow-right group-hover:translate-x-1 transition"></i>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        </section>
-      </div>
 
-      <!-- View 2: File Browser -->
-      <div v-show="view === 'files'" id="view-files" class="animate-reveal">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
-          <div class="flex items-center gap-4">
-            <button @click="showGallery" class="w-12 h-12 rounded-2xl bg-white border border-slate-200 text-slate-400 flex items-center justify-center hover:bg-indigo-50 hover:text-indigo-600 transition-all shadow-sm">
-              <i class="fas fa-arrow-left"></i>
-            </button>
-            <div>
-               <h3 class="text-2xl font-black text-slate-900 tracking-tight">{{ projectNames[currentProject] }}</h3>
-               <div class="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                  <span class="cursor-pointer hover:text-indigo-600" @click="loadFiles(currentProject, '')">ROOT</span>
-                  <template v-for="(part, idx) in breadcrumbParts" :key="part">
-                    <span class="text-slate-200">/</span>
-                    <span v-if="idx < breadcrumbParts.length - 1" class="cursor-pointer hover:text-indigo-600" @click="loadFiles(currentProject, breadcrumbPaths[idx])">{{ part }}</span>
-                    <span v-else class="text-slate-900">{{ part }}</span>
-                  </template>
-               </div>
-            </div>
-          </div>
-          
-          <div class="relative w-full md:w-80 group">
-             <i class="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors"></i>
-             <input v-model="searchTerm" type="text" placeholder="在课程资源中速搜..." 
-               class="w-full pl-14 pr-6 py-4 rounded-[20px] bg-white border border-slate-100 shadow-sm focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all text-sm font-medium">
-          </div>
-        </div>
-
-        <div class="premium-card !bg-white min-h-[600px] shadow-2xl shadow-indigo-500/5 !p-10">
-          <div v-if="loading" class="flex flex-col items-center justify-center py-40 text-slate-300">
-            <i class="fas fa-spinner fa-spin text-4xl mb-6"></i>
-            <span class="text-xs font-black uppercase tracking-widest">Synchronizing Library...</span>
-          </div>
-
-          <div v-else-if="filteredFiles.length === 0" class="flex flex-col items-center justify-center py-40 text-slate-300">
-            <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6">
-              <i class="fas fa-folder-open text-3xl"></i>
-            </div>
-            <span class="text-xs font-black uppercase tracking-widest">No Documents Found</span>
-          </div>
-
-          <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div v-for="file in filteredFiles" :key="file.path" 
-               class="p-6 rounded-[28px] border border-slate-100 transition-all duration-300 group cursor-pointer relative overflow-hidden"
-               :class="file.isDirectory ? 'bg-indigo-50/30 hover:bg-indigo-50 hover:border-indigo-200' : 'bg-white hover:shadow-xl hover:shadow-indigo-500/10 hover:border-indigo-100'"
-               @click="openFile(file)"
-            >
-               <div class="flex items-start justify-between mb-8">
-                  <div class="w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner transition-transform group-hover:scale-110 group-hover:rotate-3"
-                    :class="file.isDirectory ? 'bg-white text-indigo-600 border border-indigo-100' : 'bg-slate-50 text-slate-400'">
-                     <i class="fas text-xl" :class="resourceIcon(file)"></i>
-                  </div>
-                  <i v-if="!file.isDirectory" class="fas fa-arrow-down-long text-slate-200 opacity-0 group-hover:opacity-100 transition-all transform -translate-y-2 group-hover:translate-y-0"></i>
-               </div>
-               
-               <div class="space-y-2">
-                 <h4 class="text-sm font-black text-slate-900 truncate" :title="file.name">{{ file.name }}</h4>
-                 <div class="flex items-center justify-between">
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ file.isDirectory ? 'Directory' : formatBytes(file.size) }}</span>
-                    <span v-if="file.isDirectory" class="text-[9px] font-black text-indigo-500 bg-white px-2 py-0.5 rounded-full border border-indigo-50">EXPLORE</span>
-                 </div>
-               </div>
-            </div>
-          </div>
-        </div>
-      </div>
+            <div v-else class="text-gray-400 text-sm">这一方向的课程正在整理中。</div>
+          </section>
+        </template>
+      </section>
     </main>
 
-    <footer class="py-20 border-t border-slate-100 relative z-10 text-center">
-       <div class="flex items-center justify-center gap-3 mb-6">
-          <div class="w-8 h-8 rounded-xl bg-slate-900 flex items-center justify-center text-white">
-             <i class="fas fa-cube text-xs"></i>
-          </div>
-          <span class="text-xs font-black text-slate-900 uppercase tracking-widest">HAI Tech Lab <span class="text-slate-300 mx-2">|</span> 2026 Resource Archive</span>
-       </div>
-       <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">Igniting creativity through structured knowledge.</p>
-    </footer>
+    <PortalFooter />
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { apiFetch } from '@/api/client';
+import { apiFetch, readJsonResponse } from '@/api/client';
+import SiteNav from '@/components/SiteNav.vue';
+import PortalFooter from '@/components/portal/PortalFooter.vue';
+import PublicPageHeader from '@/components/PublicPageHeader.vue';
+import CategorySearchBar from '@/components/CategorySearchBar.vue';
+import { courseFilters, courseSections, getCourseSection, getCourseVisual } from '@/utils/courseMeta';
 
 const route = useRoute();
 const router = useRouter();
 
-const view = ref('gallery');
-const currentProject = ref('');
-const currentPath = ref('');
-const allFiles = ref([]);
-const loading = ref(false);
+const loading = ref(true);
+const error = ref('');
+const activeFilter = ref('all');
+const activeStep = ref(resolveStep(route.query.step));
 const searchTerm = ref('');
+const courses = ref([]);
+const courseListRef = ref(null);
 
-const projectNames = {
-  common: '通识与学术方法论',
-  project1: 'Vibe Coding 体感编程',
-  project2: '产品设计与交互体验',
-  project3: '全栈式 Web 开发',
-  project4: 'AI 机器学习与神经网络',
-  project5: '开源硬件与物联网系统',
-  project6: '综合创业实战'
-};
-
-const groupedCourses = [
-  {
-    title: '学术基础 (Mandatory)',
-    desc: 'The Methodology Foundation',
-    items: [
-      { id: 'common', tag: '学术 00', title: '通识与方法论', description: '学术写作、研究设计与创新工具包。', icon: 'fas fa-graduation-cap', bg: 'bg-slate-900' }
-    ]
-  },
-  {
-    title: '核心工程项目 (Tracks)',
-    desc: 'Build Real Things',
-    items: [
-      { id: 'project1', tag: '工程 01', title: 'Vibe Coding', description: '基于视觉识别的交互游戏开发。', icon: 'fas fa-gamepad', bg: 'bg-blue-600' },
-      { id: 'project2', tag: '设计 02', title: '产品设计', description: '从用户洞察到高保真原型实现。', icon: 'fas fa-palette', bg: 'bg-purple-600' },
-      { id: 'project3', tag: '全栈 03', title: '全栈开发', description: '构建复杂的现代 Web 应用程序。', icon: 'fas fa-terminal', bg: 'bg-emerald-600' },
-      { id: 'project4', tag: '算法 04', title: 'AI 机器学习', description: '深度学习入门与专属模型训练。', icon: 'fas fa-brain', bg: 'bg-rose-600' },
-      { id: 'project5', tag: '硬件 05', title: '智能硬件', description: '传感器融合与 IOT 远程控制。', icon: 'fas fa-microchip', bg: 'bg-amber-500' }
-    ]
-  },
-  {
-    title: '终极结题 (Capstone)',
-    desc: 'Launch Your Startup',
-    items: [
-      { id: 'project6', tag: '结题', title: '综合创业实战', description: '集成所学技能，孵化可落地的商业原型。', icon: 'fas fa-rocket', bg: 'bg-indigo-900' }
-    ]
-  }
+const pathwaySteps = [
+  { id: 'guide', label: '导学', icon: 'fa-graduation-cap' },
+  { id: 'lessons', label: '课时', icon: 'fa-layer-group' },
+  { id: 'materials', label: '资料', icon: 'fa-folder-open' },
+  { id: 'practice', label: '实践', icon: 'fa-screwdriver-wrench' }
 ];
 
-const breadcrumbParts = computed(() => currentPath.value.split('/').filter(Boolean));
-const breadcrumbPaths = computed(() => {
-  const parts = breadcrumbParts.value;
-  const paths = [];
-  parts.reduce((acc, part) => {
-    const next = acc ? `${acc}/${part}` : part;
-    paths.push(next);
-    return next;
-  }, '');
-  return paths;
-});
-
-const filteredFiles = computed(() => {
-  if (!searchTerm.value) return allFiles.value;
-  const keyword = searchTerm.value.toLowerCase();
-  return allFiles.value.filter(file => file.name.toLowerCase().includes(keyword));
-});
-
-function showGallery() {
-  view.value = 'gallery';
+function resolveStep(value) {
+  return ['guide', 'lessons', 'materials', 'practice'].includes(String(value || ''))
+    ? String(value)
+    : 'guide';
 }
 
-function openCourse(projectId) {
-  // Option 1: Jump to file browser
-  loadFiles(projectId, '');
-  // Option 2: router.push({ path: '/study', query: { project: projectId } });
+const visibleSections = computed(() => {
+  const sectionIds = activeFilter.value === 'all'
+    ? courseSections.map(section => section.id)
+    : [activeFilter.value];
+
+  return sectionIds.map(sectionId => {
+    const meta = getCourseSection(sectionId);
+    return {
+      ...meta,
+      items: courses.value
+        .filter(course => course.direction === sectionId)
+        .filter(matchesCourseSearch)
+    };
+  });
+});
+
+const visibleCourseCount = computed(() =>
+  visibleSections.value.reduce((total, section) => total + section.items.length, 0)
+);
+
+const courseCategoryOptions = computed(() => courseFilters.map(filter => ({
+  value: filter.id,
+  label: filter.id === 'all' ? '全部课程' : filter.label
+})));
+
+const courseSearchPlaceholder = computed(() => {
+  const label = courseFilters.find(item => item.id === activeFilter.value)?.label || '课程';
+  return activeFilter.value === 'all'
+    ? '搜索课程标题、简介或方向'
+    : `在${label}中搜索课程标题或简介`;
+});
+
+function matchesCourseSearch(course) {
+  const keyword = searchTerm.value.trim().toLowerCase();
+  if (!keyword) return true;
+  return [
+    course.title,
+    course.summary,
+    course.description,
+    course.courseType,
+    getCourseSection(course.direction).label
+  ].filter(Boolean).join(' ').toLowerCase().includes(keyword);
 }
 
-async function loadFiles(project, path) {
-  if (!project) return;
-  view.value = 'files';
-  currentProject.value = project;
-  currentPath.value = path || '';
+function sectionGradient(id) {
+  return {
+    foundation: 'bg-gradient-to-br from-slate-700 to-slate-900',
+    science: 'bg-gradient-to-br from-emerald-600 to-teal-500',
+    engineering: 'bg-gradient-to-br from-blue-600 to-cyan-500',
+    social: 'bg-gradient-to-br from-purple-600 to-pink-500',
+    humanities: 'bg-gradient-to-br from-amber-500 to-orange-400',
+    capstone: 'bg-gradient-to-br from-indigo-900 to-blue-900'
+  }[id] || 'bg-gradient-to-br from-indigo-600 to-blue-500';
+}
+
+function sectionIcon(id) {
+  return {
+    foundation: 'fa-graduation-cap',
+    science: 'fa-flask',
+    engineering: 'fa-microchip',
+    social: 'fa-comments',
+    humanities: 'fa-feather-pointed',
+    capstone: 'fa-flag-checkered'
+  }[id] || 'fa-folder-open';
+}
+
+function sectionText(id) {
+  return {
+    foundation: 'text-slate-700',
+    science: 'text-emerald-600',
+    engineering: 'text-blue-600',
+    social: 'text-purple-600',
+    humanities: 'text-amber-600',
+    capstone: 'text-indigo-400'
+  }[id] || 'text-indigo-600';
+}
+
+function stepActionLabel(step) {
+  return {
+    guide: '查看导学',
+    lessons: '浏览课时',
+    materials: '查看讲义 / 代码',
+    practice: '进入实践'
+  }[step] || '进入课程';
+}
+
+function stepActionIcon(step) {
+  return {
+    guide: 'fa-compass',
+    lessons: 'fa-layer-group',
+    materials: 'fa-folder-open',
+    practice: 'fa-screwdriver-wrench'
+  }[step] || 'fa-folder-open';
+}
+
+function scrollToCourseList() {
+  nextTick(() => {
+    courseListRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
+function setActiveStep(step, { scroll = false } = {}) {
+  activeStep.value = resolveStep(step);
+  router.replace({
+    query: {
+      ...route.query,
+      step: activeStep.value
+    }
+  }).catch(() => {});
+  if (scroll) scrollToCourseList();
+}
+
+function setActiveFilter(direction, { scroll = false } = {}) {
+  activeFilter.value = courseFilters.some(item => item.id === direction) ? direction : 'all';
+  const query = { ...route.query };
+  if (activeFilter.value === 'all') delete query.direction;
+  else query.direction = activeFilter.value;
+  router.replace({ query }).catch(() => {});
+  if (scroll) scrollToCourseList();
+}
+
+function resetCourseSearch() {
+  searchTerm.value = '';
+  setActiveFilter('all');
+}
+
+function openCourse(courseId) {
+  router.push({
+    path: `/courses/${courseId}`,
+    query: {
+      entry: activeStep.value
+    }
+  });
+}
+
+async function loadCourses() {
   loading.value = true;
+  error.value = '';
   try {
-    const safePath = encodeURIComponent(currentPath.value);
-    const res = await apiFetch(`/files/${project}?path=${safePath}`);
-    const data = await res.json();
-    allFiles.value = data.files || [];
+    const response = await apiFetch('/courses');
+    const data = await readJsonResponse(response, 'courses');
+    if (!response.ok) throw new Error(data?.error || '课程目录加载失败');
+    courses.value = data.courses || [];
   } catch (err) {
-    console.error(err);
-    allFiles.value = [];
+    if (err.message === 'courses_returned_html') {
+      error.value = '课程接口返回了页面内容而不是 JSON。请确认后端服务运行在 http://localhost:8090。';
+    } else {
+      error.value = err.message || '课程目录加载失败';
+    }
+    courses.value = [];
   } finally {
     loading.value = false;
   }
 }
 
-function openFile(file) {
-  if (file.isDirectory) {
-    loadFiles(currentProject.value, file.path);
-    return;
+onMounted(async () => {
+  const direction = String(route.query.direction || '');
+  if (courseFilters.some(item => item.id === direction)) {
+    activeFilter.value = direction;
   }
-  const url = `/api/v1/download/${currentProject.value}/${encodeURIComponent(file.path)}`;
-  window.open(url, '_blank');
-}
+  searchTerm.value = String(route.query.q || '');
+  await loadCourses();
+});
 
-function resourceIcon(file) {
-  if (file.isDirectory) return 'fa-folder';
-  const ext = file.name.split('.').pop().toLowerCase();
-  const map = {
-    pdf: 'fa-file-pdf',
-    doc: 'fa-file-word',
-    docx: 'fa-file-word',
-    ppt: 'fa-file-powerpoint',
-    pptx: 'fa-file-powerpoint',
-    xls: 'fa-file-excel',
-    xlsx: 'fa-file-excel',
-    zip: 'fa-file-archive',
-    py: 'fa-file-code',
-    js: 'fa-file-code',
-    html: 'fa-file-code',
-    png: 'fa-file-image',
-    jpg: 'fa-file-image'
-  };
-  return map[ext] || 'fa-file';
-}
+watch(() => route.query.step, value => {
+  activeStep.value = resolveStep(value);
+}, { immediate: true });
 
-function formatBytes(bytes) {
-  if (!+bytes) return '0B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))}${sizes[i]}`;
-}
+watch(() => route.query.q, value => {
+  const next = String(value || '');
+  if (next !== searchTerm.value) searchTerm.value = next;
+});
 
-onMounted(() => {
-  if (route.query.project) {
-    const path = route.query.path ? decodeURIComponent(route.query.path) : '';
-    loadFiles(String(route.query.project), path);
-  }
+watch(() => route.query.direction, value => {
+  const next = String(value || '');
+  if (courseFilters.some(item => item.id === next)) activeFilter.value = next;
+  else activeFilter.value = 'all';
+});
+
+watch(searchTerm, value => {
+  const query = { ...route.query };
+  const q = value.trim();
+  if (q) query.q = q;
+  else delete query.q;
+  router.replace({ query }).catch(() => {});
 });
 </script>
 
 <style scoped>
-.glass-nav {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+.downloads-page {
+  background:
+    linear-gradient(180deg, rgba(238, 242, 255, 0.9), rgba(248, 250, 252, 0.2) 320px),
+    #f8fafc;
+  min-height: 100vh;
 }
-.premium-card { @apply rounded-[40px] border border-slate-200/60 p-8 shadow-sm; }
-.animate-reveal { animation: reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-@keyframes reveal { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+.course-section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  border-left: 5px solid #4f46e5;
+  padding-left: 14px;
+}
+
+.course-section-heading p {
+  margin: 0;
+  color: #4f46e5;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.course-section-heading h2 {
+  margin: 4px 0 0;
+  color: #111827;
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.course-section-heading span {
+  color: #64748b;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.course-card {
+  position: relative;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.02);
+}
+
+.course-track-label {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #334155;
+  padding: 4px 9px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  backdrop-filter: blur(12px);
+}
+
+.course-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(99, 102, 241, 0.25);
+  box-shadow: 0 20px 40px rgba(99, 102, 241, 0.08);
+}
+
+
+.course-entry-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  margin-bottom: 14px;
+}
+
+.course-entry-chip {
+  min-height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: #f8fafc;
+  padding: 0 4px;
+  color: #64748b;
+  font-size: 0.66rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.course-entry-chip.is-active {
+  border-color: #cbd5e1;
+  background: #fff;
+  color: #0f172a;
+}
+
+.course-card--foundation { border-color: #cbd5e1; }
+.course-card--science { border-color: #bbf7d0; }
+.course-card--engineering { border-color: #bfdbfe; }
+.course-card--social { border-color: #fecdd3; }
+.course-card--humanities { border-color: #fde68a; }
+.course-card--capstone { border-color: #ddd6fe; }
+
+.scroll-anchor {
+  scroll-margin-top: 112px;
+}
+
+@media (max-width: 860px) {
+  .course-section-heading {
+    align-items: start;
+    flex-direction: column;
+  }
+}
 </style>

@@ -1,4 +1,4 @@
-# HAI Tech Lab
+# SASU AI Lab
 
 ## 🚀 快速启动
 

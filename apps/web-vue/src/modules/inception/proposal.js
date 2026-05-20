@@ -183,50 +183,56 @@ export function buildProposalStatus(projectId, projectDetail) {
   const items = [
     {
       key: 'charter',
-      label: '完成立项书梳理',
-      desc: '在立项书里填写问题、目标与技术方案',
+      label: '立项书材料',
+      desc: '需要包含问题、目标与技术方案',
       done: charterMissing.length === 0,
       detail: charterMissing.length ? `缺：${charterMissing.join('、')}` : '',
+      tip: '可先使用开题/立项模板线下填写，再上传 Word、PDF 或截图。',
       action: 'charter'
     },
     {
       key: 'research',
-      label: '完成前期调研',
-      desc: '至少选择一种调研方式并输出发现',
+      label: '前期调研材料',
+      desc: '至少说明一种调研方式与关键发现',
       done: researchMissing.length === 0,
       detail: researchMissing.length ? `缺：${researchMissing.join('、')}` : '',
+      tip: '访谈、问卷、观察记录可以作为附件提交，不要求全部在平台内录入。',
       action: 'pre_research'
     },
     {
       key: 'literature',
-      label: '完成文献阅读',
-      desc: '记录主题与关键文献',
+      label: '文献阅读材料',
+      desc: '记录主题与关键文献或阅读笔记',
       done: literatureMissing.length === 0,
       detail: literatureMissing.length ? `缺：${literatureMissing.join('、')}` : '',
+      tip: '可上传阅读笔记、摘录表或老师提供的文献模板。',
       action: 'literature'
     },
     {
       key: 'innovation',
-      label: '创新点梳理',
+      label: '创新点说明',
       desc: '明确创新点与验证方式',
       done: innovationMissing.length === 0,
       detail: innovationMissing.length ? `缺：${innovationMissing.join('、')}` : '',
+      tip: '可以用模板写清“和已有方案不同在哪里、如何验证”。',
       action: 'innovation'
     },
     {
       key: 'approach',
-      label: '技术路线明确',
-      desc: '在立项书里补充技术方案',
+      label: '技术路线说明',
+      desc: '说明准备怎么做、用什么方法',
       done: approachMissing.length === 0,
       detail: approachMissing.length ? `缺：${approachMissing.join('、')}` : '',
+      tip: '技术路线可以在开题模板中完成，也可以在平台辅助工具中整理。',
       action: 'charter'
     },
     {
       key: 'team',
       label: '团队成员确认',
-      desc: '项目成员已完善',
+      desc: '提交材料中需要写清成员与分工',
       done: teamMissing.length === 0,
       detail: teamMissing.length ? `缺：${teamMissing.join('、')}` : '',
+      tip: '如果成员分工已写在上传模板里，可在项目成员处补充归档。',
       action: 'projects'
     }
   ];

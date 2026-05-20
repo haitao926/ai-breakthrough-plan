@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==========================================
-# AI破壁计划 - 智能启动脚本 (v2.1)
+# SASU AI Lab - 智能启动脚本 (v2.1)
 # ==========================================
 
 # 获取脚本绝对路径
@@ -71,6 +71,30 @@ fi
 # 3.1 构建 Vue 前端（如存在）
 if [ -d "$WEB_VUE_DIR" ]; then
     echo "🧩 检查 Vue 前端..."
+    get_latest_mtime() {
+        local latest=0
+        while IFS= read -r -d '' file; do
+            local mtime
+            mtime=$(stat -f "%m" "$file" 2>/dev/null || echo 0)
+            if [ "$mtime" -gt "$latest" ]; then
+                latest=$mtime
+            fi
+        done < <(find "$WEB_VUE_DIR/src" "$WEB_VUE_DIR/public" \
+                 "$WEB_VUE_DIR/index.html" "$WEB_VUE_DIR/vite.config.js" \
+                 "$WEB_VUE_DIR/tailwind.config.js" "$WEB_VUE_DIR/postcss.config.js" \
+                 "$WEB_VUE_DIR/package.json" "$WEB_VUE_DIR/package-lock.json" \
+                 -type f -print0 2>/dev/null)
+        echo "$latest"
+    }
+
+    dist_mtime() {
+        if [ -f "$WEB_VUE_DIST/index.html" ]; then
+            stat -f "%m" "$WEB_VUE_DIST/index.html" 2>/dev/null || echo 0
+        else
+            echo 0
+        fi
+    }
+
     if [ ! -d "$WEB_VUE_DIR/node_modules" ]; then
         echo "📦 正在安装 Vue 前端依赖..."
         (cd "$WEB_VUE_DIR" && npm install --silent)
@@ -78,6 +102,15 @@ if [ -d "$WEB_VUE_DIR" ]; then
     if [ ! -d "$WEB_VUE_DIST" ] || [ "$FORCE_WEB_BUILD" = "1" ]; then
         echo "🏗️  正在构建 Vue 前端..."
         (cd "$WEB_VUE_DIR" && npm run build --silent)
+    else
+        SRC_TS=$(get_latest_mtime)
+        DIST_TS=$(dist_mtime)
+        if [ "$SRC_TS" -gt "$DIST_TS" ]; then
+            echo "🏗️  检测到前端更新，正在重新构建..."
+            (cd "$WEB_VUE_DIR" && npm run build --silent)
+        else
+            echo "✅ Vue 前端无变更，跳过构建"
+        fi
     fi
     if [ -d "$WEB_VUE_DIST" ]; then
         export WEB_ROOT="$WEB_VUE_DIST"

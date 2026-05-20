@@ -1,0 +1,57 @@
+{
+  "id": "project6",
+  "title": "综合创业实战",
+  "direction": "capstone",
+  "teacherName": "联合导师组",
+  "summary": "整合前置课程成果，进入真实场景的综合实践与项目孵化。",
+  "description": "综合创业实战不是单一技术课，而是一门常设综合实践课程。学生将在这里把前面课程学到的研究、设计、开发和表达能力组织成一个完整项目，并持续迭代到展示阶段。",
+  "audience": "适合完成若干前置课程、准备进入综合项目实践的学生团队。",
+  "pace": "项目制推进，可按周或阶段组织。",
+  "status": "published",
+  "materialsRoot": "project6",
+  "relatedProjects": [
+    "project6"
+  ],
+  "positioning": "整合创作 / 项目孵化",
+  "courseType": "综合实践",
+  "guidePath": "项目6-综合实践周.md",
+  "learningObjectives": [
+    "整合前置课程中的研究、设计、开发与表达能力。",
+    "能够围绕真实场景组织一个阶段性项目推进计划。",
+    "形成成果展示、协作复盘与项目表达的综合能力。"
+  ],
+  "materials": [
+    {
+      "id": "project6-guide-1",
+      "courseId": "project6",
+      "section": "课程导学",
+      "title": "综合实践周课程导学",
+      "path": "项目6-综合实践周.md",
+      "kind": "markdown"
+    },
+    {
+      "id": "project6-teacher-1",
+      "courseId": "project6",
+      "section": "教师资料",
+      "title": "项目启动课件",
+      "path": "project_kickoff_slides.html",
+      "kind": "html"
+    },
+    {
+      "id": "project6-student-1",
+      "courseId": "project6",
+      "section": "学生资料",
+      "title": "趣味版讲义",
+      "path": "项目6-综合实践周-趣味版.md",
+      "kind": "markdown"
+    },
+    {
+      "id": "project6-extra-1",
+      "courseId": "project6",
+      "section": "补充资料",
+      "title": "Git 协同开发指南",
+      "path": "Git协同开发指南.md",
+      "kind": "markdown"
+    }
+  ]
+}

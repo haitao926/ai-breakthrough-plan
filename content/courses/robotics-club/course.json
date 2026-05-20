@@ -1,0 +1,49 @@
+{
+  "id": "robotics-club",
+  "title": "自主移动机器人社团课",
+  "direction": "engineering",
+  "teacherName": "机器人社团导师组",
+  "summary": "围绕底盘、传感器与自主控制，完成可演示的移动机器人社团项目。",
+  "description": "这门社团课强调动手搭建与任务挑战。学生将从认识底盘和传感器开始，逐步完成手动调试、自动避障、任务设计与成果展示，形成一个可以在校园场景中演示的自主移动机器人作品。",
+  "audience": "适合对机器人、竞赛和工程挑战感兴趣的初中至高中学生。",
+  "pace": "4 个核心模块，可扩展为 8-12 次社团活动。",
+  "status": "published",
+  "materialsRoot": "robotics-club",
+  "relatedProjects": [
+    "robotics-club"
+  ],
+  "positioning": "机器人底盘 / 自主控制 / 社团挑战",
+  "courseType": "社团课程",
+  "guidePath": "课程导学.md",
+  "learningObjectives": [
+    "理解自主移动机器人的基本组成，包括底盘、供电、传感器与控制器。",
+    "能够完成机器人基础调试，并根据任务目标设计运动与避障逻辑。",
+    "能够围绕真实校园场景提出机器人任务，并完成团队展示。"
+  ],
+  "materials": [
+    {
+      "id": "robotics-club-guide",
+      "courseId": "robotics-club",
+      "section": "课程导学",
+      "title": "课程导学",
+      "path": "课程导学.md",
+      "kind": "markdown"
+    },
+    {
+      "id": "robotics-club-teacher",
+      "courseId": "robotics-club",
+      "section": "教师资料",
+      "title": "教师手册",
+      "path": "TEACHING_MANUAL.md",
+      "kind": "markdown"
+    },
+    {
+      "id": "robotics-club-student",
+      "courseId": "robotics-club",
+      "section": "学生资料",
+      "title": "学生任务单",
+      "path": "学生任务单.md",
+      "kind": "markdown"
+    }
+  ]
+}

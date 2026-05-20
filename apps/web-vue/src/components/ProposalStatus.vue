@@ -15,8 +15,8 @@
 
     <div class="status-card">
       <div class="status-card__header">
-        <h3>任务完成清单</h3>
-        <span class="muted">完成即可自动生成开题</span>
+        <h3>阶段准备清单</h3>
+        <span class="muted">模板填写后可上传，也可在平台补充</span>
       </div>
       <div class="status-list">
         <div v-for="item in items" :key="item.key" class="status-item">
@@ -29,6 +29,7 @@
             <div v-if="item.detail" class="status-item__detail" :class="item.done ? 'muted' : 'danger'">
               {{ item.detail }}
             </div>
+            <div v-if="!item.done && item.tip" class="status-item__tip">{{ item.tip }}</div>
           </div>
           <div class="status-item__meta">
             <span class="badge" :class="item.done ? 'badge--done' : 'badge--pending'">
@@ -43,10 +44,10 @@
 
     <div class="status-card">
       <div class="status-card__header">
-        <h3>任务规划清单</h3>
-        <span class="muted">将作为看板初始任务</span>
+        <h3>看板任务建议</h3>
+        <span class="muted">可作为项目看板参考</span>
       </div>
-      <div v-if="!wbsTasks.length" class="muted">尚未完成任务规划，去任务规划页面添加任务。</div>
+      <div v-if="!wbsTasks.length" class="muted">可以先在模板中整理任务，之后再录入看板。</div>
       <div v-else class="wbs-list">
         <div v-for="(task, idx) in wbsTasks" :key="idx" class="wbs-item">
           <span class="pill" :class="`pill--${task.phase}`">{{ phaseLabel(task.phase) }}</span>
@@ -58,7 +59,7 @@
     <div class="status-card">
       <h3>提交说明</h3>
       <div class="muted" :class="ready ? 'success' : ''">
-        {{ ready ? '已满足开题条件，可提交开题报告。' : '完成清单中的必做项后即可提交开题。' }}
+        {{ ready ? '已满足阶段提交条件，可上传或提交对应材料。' : '先按模板准备材料，再补齐需要的平台内容。' }}
       </div>
     </div>
   </section>
@@ -160,6 +161,16 @@ function phaseLabel(phase) {
 .status-item__detail {
   font-size: 0.8rem;
   margin-top: 6px;
+}
+.status-item__tip {
+  font-size: 0.78rem;
+  margin-top: 6px;
+  color: #0f172a;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  line-height: 1.5;
 }
 .status-item__meta {
   display: flex;

@@ -1,0 +1,21 @@
+{
+  "slug": "youth-data-intelligence-showcase",
+  "overview": "用数据分析、可视化和 AI 模型解释现实问题，形成有说服力的展示作品。",
+  "tracks": ["数据故事", "AI 分析", "交互可视化"],
+  "timeline": [
+    {"label": "报名与选题", "date": "4 月"},
+    {"label": "数据处理", "date": "5 月"},
+    {"label": "作品提交", "date": "6 月"}
+  ],
+  "participation": {
+    "mode": "线上提交",
+    "contact": "数据智能导师组",
+    "notes": "适合中高年级学生，建议以真实数据集或校园数据为题。"
+  },
+  "resources": [
+    {"label": "赛题说明", "url": "https://example.edu.cn/data-ai/brief.pdf"}
+  ],
+  "faq": [
+    {"q": "不会做可视化怎么办？", "a": "可以先用项目 3 中的网页表达方式做简洁呈现，不需要复杂技术。"}
+  ]
+}

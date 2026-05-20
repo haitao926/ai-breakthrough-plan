@@ -12,7 +12,7 @@
         :view-mode="viewMode"
         :current-tool="currentTool"
         :active-stage="activeStage"
-        class="w-72 flex-shrink-0"
+        class="w-60 flex-shrink-0"
         @toggle-project-menu="showProjectMenu = !showProjectMenu"
         @switch-project="switchProject"
         @toggle-group="toggleGroup"
@@ -28,6 +28,7 @@
           :current-tool="currentTool"
           :active-stage="activeStage"
           :proposal-ready="proposalStatus.ready"
+          :next-step-label="nextStepLabel"
           @set-submission-view="setSubmissionView"
           @set-tool-view="setToolView"
           @clear-draft="clearCurrentDraft"
@@ -35,77 +36,123 @@
 
         <main class="flex-1 overflow-y-auto custom-scrollbar relative">
           <template v-if="viewMode === 'tool'">
-            <div v-if="currentTool === 'inception'" class="p-8 lg:p-12 max-w-7xl mx-auto space-y-12">
-              <div class="bg-slate-900 p-12 lg:p-20 rounded-[48px] text-white shadow-2xl relative overflow-hidden">
-                <div class="flex items-center justify-between relative z-10">
-                  <div>
-                    <h2 class="text-4xl lg:text-5xl font-black mb-4">立项导航中心</h2>
-                    <p class="text-lg text-slate-300 font-medium italic">伟大的创新源于严谨的学术规划。完成核心任务，系统将为生成开题报告。</p>
-                  </div>
-                  <button @click="openFirstMissing" class="px-8 py-4 bg-white text-slate-900 rounded-2xl font-black shadow-xl hover:bg-slate-50 transition-all active:scale-95">
-                    立即开始学术规划
-                  </button>
-                </div>
-              </div>
-
-              <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div class="premium-card lg:col-span-2 !bg-white">
-                  <div class="flex items-center justify-between mb-8">
-                    <div>
-                      <h3 class="text-sm font-black text-slate-900 uppercase tracking-widest mb-1">关键里程碑</h3>
-                      <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">Inception Milestones</p>
-                    </div>
-                    <div class="text-right">
-                      <div class="text-2xl font-black text-indigo-600 leading-none">{{ inceptionPercent }}%</div>
-                      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Overall Progress</div>
-                    </div>
-                  </div>
-                  <div class="relative h-4 bg-slate-100 rounded-full overflow-hidden mb-10 shadow-inner">
-                    <div class="absolute inset-y-0 left-0 bg-gradient-to-r from-indigo-600 to-indigo-400 transition-all duration-1000 ease-out" :style="{ width: inceptionPercent + '%' }">
-                      <div class="absolute inset-0 bg-[linear-gradient(45deg,rgba(255,255,255,.1)_25%,transparent_25%,transparent_50%,rgba(255,255,255,.1)_50%,rgba(255,255,255,.1)_75%,transparent_75%,transparent)] bg-[length:20px_20px] animate-[progress-stripe_2s_linear_infinite]"></div>
-                    </div>
-                  </div>
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div v-for="(item, idx) in inceptionItems" :key="item.key" 
-                      class="flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 group cursor-pointer"
-                      :class="item.done ? 'bg-emerald-50/30 border-emerald-100' : 'bg-slate-50/50 border-slate-100 hover:border-indigo-200 hover:bg-white hover:shadow-lg hover:shadow-indigo-500/5'"
-                      @click="openInceptionItem(item)"
-                    >
-                      <div class="flex items-center gap-4">
-                        <div class="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black transition-all duration-500"
-                          :class="item.done ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'bg-white text-slate-400 border border-slate-100 group-hover:text-indigo-600'">
-                          <i v-if="item.done" class="fas fa-check"></i>
-                          <span v-else>{{ idx + 1 }}</span>
-                        </div>
-                        <span class="text-xs font-bold transition-colors" :class="item.done ? 'text-emerald-700' : 'text-slate-600 group-hover:text-slate-900'">{{ item.label }}</span>
-                      </div>
-                      <i v-if="!item.done" class="fas fa-arrow-right text-[10px] text-slate-300 group-hover:text-indigo-600 transform group-hover:translate-x-1 transition-all"></i>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="premium-card !bg-white space-y-8">
-                  <h3 class="text-sm font-black text-slate-900 uppercase tracking-widest border-b border-slate-100 pb-4">评审状态</h3>
-                  <div class="text-center py-6">
-                    <div class="w-20 h-20 rounded-[24px] mx-auto mb-6 flex items-center justify-center transition-all duration-700"
-                      :class="proposalStatus.ready ? 'bg-emerald-500 text-white shadow-2xl shadow-emerald-500/40 rotate-12 scale-110' : 'bg-slate-100 text-slate-300'">
-                      <i class="fas text-3xl" :class="proposalStatus.ready ? 'fa-check-double' : 'fa-lock'"></i>
-                    </div>
-                    <div class="text-lg font-black text-slate-900 mb-2">{{ proposalStatus.ready ? '一切就绪' : '尚在筹备中' }}</div>
-                    <p class="text-xs text-slate-400 font-medium leading-relaxed">
-                      {{ proposalStatus.ready ? '你已经完成了所有核心规划任务，快去提交评审吧！' : '由于立项关键任务尚未全部完成，开题报告提交通路暂时锁定。' }}
+            <div v-if="currentTool === 'inception'" class="p-6 lg:p-10 max-w-5xl mx-auto space-y-6">
+              <section class="bg-white/70 backdrop-blur-xl border border-white/40 rounded-3xl p-6 lg:p-8 shadow-sm">
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+                  <div class="min-w-0">
+                    <div class="text-xs font-black uppercase tracking-wider text-slate-400 mb-2">项目工作台</div>
+                    <h2 class="text-2xl lg:text-3xl font-black text-slate-900 tracking-tight mb-2">看板推进，按节点交材料</h2>
+                    <p class="text-sm text-slate-500 leading-relaxed font-medium">
+                      日常推进看项目看板；到开题、中期、结题节点时，在这里上传对应材料。模板可以线下填写后再提交。
                     </p>
                   </div>
-                  <button 
-                    class="w-full py-4 rounded-2xl text-xs font-black tracking-widest uppercase transition-all shadow-xl flex items-center justify-center gap-3 disabled:opacity-50 disabled:shadow-none"
-                    :class="proposalStatus.ready ? 'bg-slate-900 text-white hover:bg-black hover:shadow-slate-400' : 'bg-slate-100 text-slate-400'"
-                    :disabled="!proposalStatus.ready" 
-                    @click="setSubmissionView('proposal')"
+                  <button
+                    class="shrink-0 px-6 py-3.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all active:scale-95 bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-600/20"
+                    @click="setToolView('kanban')"
                   >
-                    <i class="fas fa-paper-plane"></i> 提交评审申请
+                    打开项目看板
                   </button>
                 </div>
-              </div>
+              </section>
+
+              <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <button
+                  class="lg:col-span-1 text-left bg-gradient-to-br from-slate-900 to-indigo-950 text-white rounded-3xl p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-indigo-950/20 border border-slate-800 relative overflow-hidden group"
+                  @click="setToolView('kanban')"
+                >
+                  <div class="absolute top-0 right-0 p-4 opacity-10 transition-transform group-hover:scale-1.1">
+                    <i class="fas fa-tasks text-6xl"></i>
+                  </div>
+                  <div class="text-[9px] font-black uppercase tracking-[0.2em] text-indigo-300 mb-1">项目看板</div>
+                  <h3 class="text-2xl font-black tracking-tight mb-4">今天做什么</h3>
+                  <div class="grid grid-cols-3 gap-3 text-center">
+                    <div>
+                      <div class="text-2xl font-black text-white">{{ milestoneCounts.todo }}</div>
+                      <div class="text-[9px] font-black uppercase tracking-wider text-slate-400 mt-1">待办</div>
+                    </div>
+                    <div>
+                      <div class="text-2xl font-black text-amber-400">{{ milestoneCounts.doing }}</div>
+                      <div class="text-[9px] font-black uppercase tracking-wider text-slate-400 mt-1">进行</div>
+                    </div>
+                    <div>
+                      <div class="text-2xl font-black text-emerald-400">{{ milestoneCounts.done }}</div>
+                      <div class="text-[9px] font-black uppercase tracking-wider text-slate-400 mt-1">完成</div>
+                    </div>
+                  </div>
+                  <div class="mt-6 text-[10px] font-black uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
+                    <span>进入项目看板</span>
+                    <i class="fas fa-arrow-right transition-transform group-hover:translate-x-1"></i>
+                  </div>
+                </button>
+
+                <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <button
+                    v-for="stage in requiredSubmissionStages"
+                    :key="stage.key"
+                    class="text-left bg-white/70 backdrop-blur-xl border border-white/40 rounded-3xl p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-indigo-200/50 hover:bg-white flex flex-col justify-between group"
+                    @click="setSubmissionView(stage.key)"
+                  >
+                    <div class="w-full">
+                      <div class="flex items-start justify-between gap-4 mb-4">
+                        <div>
+                          <div class="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-1">{{ stage.time }}</div>
+                          <h3 class="text-lg font-black text-slate-900 tracking-tight">{{ stage.title }}</h3>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider" :class="stage.toneClass">
+                          {{ stage.statusLabel }}
+                        </span>
+                      </div>
+                      <p class="text-xs text-slate-500 leading-relaxed mb-4">{{ stage.materials }}</p>
+                    </div>
+                    <div class="text-[10px] font-black uppercase tracking-wider text-indigo-600 flex items-center gap-1">
+                      <span>提交材料</span>
+                      <i class="fas fa-chevron-right text-[8px] transition-transform group-hover:translate-x-0.5"></i>
+                    </div>
+                  </button>
+                </div>
+              </section>
+
+              <details class="bg-white/70 backdrop-blur-xl border border-white/40 rounded-3xl overflow-hidden shadow-sm">
+                <summary class="px-6 py-5 cursor-pointer list-none flex items-center justify-between hover:bg-white/80 transition-colors">
+                  <div>
+                    <h3 class="text-base font-black text-slate-900 tracking-tight">阶段提交材料准备助手</h3>
+                    <p class="text-xs text-slate-400 mt-1">服务开题、里程碑、中期、结题材料上传</p>
+                  </div>
+                  <div class="flex items-center gap-4">
+                    <div class="w-32 h-2 bg-slate-200/60 rounded-full overflow-hidden">
+                      <div class="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 transition-all duration-700" :style="{ width: inceptionPercent + '%' }"></div>
+                    </div>
+                    <span class="text-sm font-black text-slate-900">{{ inceptionPercent }}%</span>
+                  </div>
+                </summary>
+
+                <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/40 text-sm text-slate-600 leading-relaxed font-medium">
+                  这里帮助学生把阶段提交需要的材料整理清楚，不是强制在线完成。学生可以用模板或本地文档准备，再到对应提交节点上传。
+                </div>
+
+                <div class="divide-y divide-slate-100/60">
+                  <button
+                    v-for="item in visibleInceptionItems"
+                    :key="item.key"
+                    class="w-full text-left px-6 py-4 flex items-center gap-4 hover:bg-white/85 transition-colors"
+                    @click="openSubmissionGuide(item.action || item.key)"
+                  >
+                    <div
+                      class="w-7 h-7 rounded-lg flex items-center justify-center text-xs"
+                      :class="item.done ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100/80 text-slate-400'"
+                    >
+                      <i class="fas" :class="item.done ? 'fa-check' : 'fa-circle'"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="text-sm font-bold" :class="item.done ? 'text-slate-400' : 'text-slate-900'">{{ item.label }}</div>
+                      <div v-if="item.detail && !item.done" class="text-xs text-slate-500 mt-1">{{ item.detail.replace(/^缺：/, '缺少：') }}</div>
+                    </div>
+                    <span class="text-xs font-bold" :class="item.done ? 'text-emerald-600' : 'text-indigo-600'">
+                      {{ item.done ? '已完成' : '去准备' }}
+                    </span>
+                  </button>
+                </div>
+              </details>
             </div>
 
             <div v-else-if="currentTool === 'implementation'" class="p-8 lg:p-12 max-w-7xl mx-auto space-y-12 animate-reveal">
@@ -114,12 +161,12 @@
                   <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-[0.2em] mb-4">
                     <i class="fas fa-layer-group"></i> Phase 2: Implementation
                   </div>
-                  <h2 class="text-4xl font-black text-slate-900 tracking-tight mb-3">项目实施工作台</h2>
-                  <p class="text-base text-slate-500 font-medium leading-relaxed">记录每一个微小的技术突破，让创意从代码构思转化为现实成果。</p>
+                  <h2 class="text-4xl font-black text-slate-900 tracking-tight mb-3">实施记录</h2>
+                  <p class="text-base text-slate-500 font-medium leading-relaxed">记录进展，检查任务，继续推进。</p>
                 </div>
                 <div class="flex items-center gap-4 bg-white p-2 rounded-[24px] border border-slate-200 shadow-sm">
-                   <button class="px-6 py-3 rounded-2xl bg-slate-900 text-white text-[11px] font-black uppercase tracking-widest hover:bg-black transition-all active:scale-95 shadow-lg shadow-slate-200" @click="setToolView('devlog')">记录学术日志</button>
-                   <button class="px-6 py-3 rounded-2xl bg-indigo-50 text-indigo-600 text-[11px] font-black uppercase tracking-widest hover:bg-indigo-100 transition-all active:scale-95" @click="setToolView('kanban')">访问敏捷看板</button>
+                   <button class="px-6 py-3 rounded-2xl bg-slate-900 text-white text-[11px] font-black uppercase tracking-widest hover:bg-black transition-all active:scale-95 shadow-lg shadow-slate-200" @click="setToolView('devlog')">进展日志</button>
+                   <button class="px-6 py-3 rounded-2xl bg-indigo-50 text-indigo-600 text-[11px] font-black uppercase tracking-widest hover:bg-indigo-100 transition-all active:scale-95" @click="setToolView('kanban')">看板</button>
                 </div>
               </header>
 
@@ -303,51 +350,45 @@ const draftTimer = ref(null);
 // --- Nav Structure ---
 const navStructure = ref([
   {
-    id: 'overview',
-    title: '项目概览',
+    id: 'main',
+    title: '项目推进',
+    description: '看项目现在做到哪',
     items: [
-      { key: 'kanban', label: '任务规划 (Tasks)', icon: 'fas fa-tasks', action: 'tool', value: 'kanban' },
-      { key: 'gantt', label: '进度甘特', icon: 'fas fa-stream', action: 'tool', value: 'gantt' }
+      { key: 'inception', label: '工作台首页', icon: 'fas fa-table-columns', action: 'tool', value: 'inception' },
+      { key: 'kanban', label: '项目看板', icon: 'fas fa-tasks', action: 'tool', value: 'kanban' },
+      { key: 'devlog', label: '进展日志', icon: 'fas fa-pen-nib', action: 'tool', value: 'devlog' }
     ]
   },
   {
-    id: 'inception',
-    title: '阶段一：立项',
+    id: 'submissions',
+    title: '阶段提交',
+    description: '到节点上传材料',
     items: [
-      { key: 'inception', label: '立项导航', icon: 'fas fa-compass', action: 'tool', value: 'inception' },
-      { key: 'charter', label: '项目立项书', icon: 'fas fa-file-signature', action: 'tool', value: 'charter' },
-      { key: 'pre_research', label: '前期调研', icon: 'fas fa-search', action: 'tool', value: 'pre_research' },
-      { key: 'literature', label: '文献阅读', icon: 'fas fa-book-reader', action: 'tool', value: 'literature' },
-      { key: 'innovation', label: '创新点梳理', icon: 'fas fa-lightbulb', action: 'tool', value: 'innovation' },
-      { key: 'architect', label: '架构设计', icon: 'fas fa-sitemap', action: 'tool', value: 'architect' },
-      { key: 'proposal_sub', label: '提交开题', icon: 'fas fa-clipboard-list', action: 'stage', value: 'proposal', isSubmission: true }
+      { key: 'proposal_sub', label: '开题', icon: 'fas fa-file-signature', action: 'stage', value: 'proposal', isSubmission: true },
+      { key: 'm1_sub', label: '里程碑 1', icon: 'fas fa-flag', action: 'stage', value: 'milestone_1', isSubmission: true },
+      { key: 'midterm_sub', label: '中期', icon: 'fas fa-clipboard-check', action: 'stage', value: 'midterm', isSubmission: true },
+      { key: 'm2_sub', label: '里程碑 2', icon: 'fas fa-flag', action: 'stage', value: 'milestone_2', isSubmission: true },
+      { key: 'final_sub', label: '结题', icon: 'fas fa-trophy', action: 'stage', value: 'final', isSubmission: true }
     ]
   },
   {
-    id: 'implementation',
-    title: '阶段二：实施',
+    id: 'more',
+    title: '材料准备',
+    description: '辅助上方提交材料',
     items: [
-      { key: 'implementation', label: '实施导航', icon: 'fas fa-route', action: 'tool', value: 'implementation' },
-      { key: 'devlog', label: '实施日志', icon: 'fas fa-pen-nib', action: 'tool', value: 'devlog' },
-      { key: 'm1_sub', label: '提交里程碑1', icon: 'fas fa-flag', action: 'stage', value: 'milestone_1', isSubmission: true },
-      { key: 'midterm_sub', label: '提交中期检查', icon: 'fas fa-clipboard-check', action: 'stage', value: 'midterm', isSubmission: true },
-      { key: 'm2_sub', label: '提交里程碑2', icon: 'fas fa-flag', action: 'stage', value: 'milestone_2', isSubmission: true }
-    ]
-  },
-  {
-    id: 'conclusion',
-    title: '阶段三：结题',
-    items: [
-      { key: 'final_sub', label: '结题答辩', icon: 'fas fa-trophy', action: 'stage', value: 'final', isSubmission: true }
+      { key: 'charter', label: '立项书模板', icon: 'fas fa-file-signature', action: 'tool', value: 'charter', badge: { label: '开题', tone: 'badge-info' } },
+      { key: 'pre_research', label: '调研记录', icon: 'fas fa-search', action: 'tool', value: 'pre_research', badge: { label: '开题', tone: 'badge-info' } },
+      { key: 'innovation', label: '创新点说明', icon: 'fas fa-lightbulb', action: 'tool', value: 'innovation', badge: { label: '开题', tone: 'badge-info' } },
+      { key: 'literature', label: '文献阅读', icon: 'fas fa-book-reader', action: 'tool', value: 'literature', badge: { label: '附件', tone: 'badge-warn' } },
+      { key: 'architect', label: '架构图/BOM', icon: 'fas fa-sitemap', action: 'tool', value: 'architect', badge: { label: '附件', tone: 'badge-warn' } }
     ]
   }
 ]);
 
 const collapsedGroups = reactive({
-  overview: false,
-  inception: false,
-  implementation: false,
-  conclusion: false
+  main: false,
+  submissions: false,
+  more: true
 });
 
 function toggleGroup(id) {
@@ -460,6 +501,30 @@ const stageConfig = computed(() => getStageConfig(activeStage.value));
 
 const latestSubmission = computed(() => submissionIndex.value[activeStage.value] || null);
 
+const requiredSubmissionStages = computed(() => [
+  {
+    key: 'proposal',
+    title: '开题',
+    time: '立项后提交',
+    materials: '开题报告、调研记录、创新点说明、技术路线或方案。',
+    ...submissionStageMeta('proposal')
+  },
+  {
+    key: 'midterm',
+    title: '中期',
+    time: '项目中段提交',
+    materials: '中期检查表、当前进度、问题调整、阶段证据或演示链接。',
+    ...submissionStageMeta('midterm')
+  },
+  {
+    key: 'final',
+    title: '结题',
+    time: '项目结束前提交',
+    materials: '结题报告、成果包、演示视频或链接、反思与验证材料。',
+    ...submissionStageMeta('final')
+  }
+]);
+
 const proposalStatus = computed(() => {
   statusVersion.value;
   return applyToolActions(buildProposalStatus(projectId.value, projectDetail.value));
@@ -470,6 +535,17 @@ const inceptionDoneCount = computed(() => inceptionItems.value.filter(item => it
 const inceptionTotalCount = computed(() => Math.max(inceptionItems.value.length, 1));
 const inceptionPercent = computed(() => Math.round((inceptionDoneCount.value / inceptionTotalCount.value) * 100));
 const nextStep = computed(() => inceptionItems.value.find(item => !item.done) || null);
+const nextStepTitle = computed(() => nextStep.value?.label || '查看阶段提交要求');
+const nextStepLabel = computed(() => {
+  if (proposalStatus.value?.ready) return '开题材料已基本齐全，可进入开题提交页上传或确认材料。';
+  if (nextStep.value?.detail) return nextStep.value.detail.replace(/^缺：/, '建议准备：');
+  if (nextStep.value?.label) return `建议先准备：${nextStep.value.label}`;
+  return '平台用于提醒阶段节点、归档材料，不要求所有内容都在平台里完成。';
+});
+const visibleInceptionItems = computed(() => {
+  const missing = inceptionItems.value.filter(item => !item.done);
+  return missing.length ? missing : inceptionItems.value;
+});
 const deliverableType = computed(() => proposalStatus.value?.details?.deliverableType || 'engineering');
 const wbsPreview = computed(() => (proposalStatus.value?.wbsTasks || []).slice(0, 6));
 const repoUrl = computed(() => projectDetail.value?.project?.gitea_repo_url || getLastRepo());
@@ -513,9 +589,8 @@ const currentPhaseIndex = computed(() => {
    if (currentTool.value === 'implementation' || currentTool.value === 'kanban' || currentTool.value === 'devlog') return 1;
    
    // Check open group if tool not specific
-   if (!collapsedGroups.inception) return 0;
-   if (!collapsedGroups.implementation) return 1;
-   if (!collapsedGroups.conclusion) return 2;
+   if (!collapsedGroups.main) return 0;
+   if (!collapsedGroups.more) return 2;
    return 0; 
 });
 
@@ -629,6 +704,23 @@ function openInceptionItem(item) {
   }
 }
 
+function openSubmissionGuide(target) {
+  const key = typeof target === 'string' ? target : target?.actionKey || target?.action;
+  if (key === 'proposal') {
+    setSubmissionView('proposal');
+    return;
+  }
+  if (key === 'projects') {
+    router.push('/projects');
+    return;
+  }
+  if (key) {
+    setToolView(key);
+    return;
+  }
+  openFirstMissing();
+}
+
 function openFirstMissing() {
   if (proposalStatus.value?.ready) {
     setSubmissionView('proposal');
@@ -706,6 +798,25 @@ function projectStatusLabel(status) {
   return STATUS_LABELS[status] || status || '进行中';
 }
 
+function submissionStageMeta(stageKey) {
+  const latest = submissionIndex.value?.[stageKey];
+  const draft = draftMap.value?.[stageKey];
+  if (latest) {
+    const statusKey = mapSubmissionStatus(latest.status);
+    if (statusKey === 'reviewed') {
+      return { statusLabel: '已评审', toneClass: 'bg-emerald-50 text-emerald-700' };
+    }
+    if (statusKey === 'needs_changes') {
+      return { statusLabel: '需修改', toneClass: 'bg-rose-50 text-rose-700' };
+    }
+    return { statusLabel: '已提交', toneClass: 'bg-indigo-50 text-indigo-700' };
+  }
+  if (draft) {
+    return { statusLabel: '草稿', toneClass: 'bg-amber-50 text-amber-700' };
+  }
+  return { statusLabel: '待提交', toneClass: 'bg-slate-100 text-slate-500' };
+}
+
 function formatSize(bytes) {
   if (!bytes) return '0B';
   const units = ['B', 'KB', 'MB', 'GB'];
@@ -738,12 +849,9 @@ function applyDefaultTool() {
   currentTool.value = hasProposal ? 'kanban' : 'inception';
   // Auto-expand relevant group
   if (hasProposal) {
-    collapsedGroups.overview = false;
-    collapsedGroups.implementation = false;
-    collapsedGroups.inception = true;
+    collapsedGroups.main = false;
   } else {
-    collapsedGroups.inception = false;
-    collapsedGroups.implementation = true;
+    collapsedGroups.main = false;
   }
 }
 
@@ -874,9 +982,15 @@ async function submitStage() {
     details = {
       ...proposalStatus.value.details,
       wbs: proposalStatus.value.wbsTasks || [],
-      plan: proposalStatus.value.planText || ''
+      plan: proposalStatus.value.planText || '',
+      templateRef: formDetails.templateRef || '',
+      notes: formDetails.notes || ''
     };
     content = buildProposalMarkdown(details, details.wbs || []);
+  }
+
+  if (files.value.length) {
+    details.uploadedMaterials = true;
   }
 
   const validationError = validateStageDetails(stageKey, details, proposalStatus.value);

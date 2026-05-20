@@ -22,6 +22,13 @@
             >
               <i class="fas fa-list mr-1"></i> 规划视图 (Plan)
             </button>
+            <button 
+              class="px-3 py-1 rounded-md transition-all flex items-center"
+              :class="viewMode === 'gantt' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+              @click="viewMode = 'gantt'"
+            >
+              <i class="fas fa-stream mr-1"></i> 进度甘特
+            </button>
           </div>
         </div>
         <div class="flex items-center gap-3">
@@ -184,7 +191,7 @@
       </div>
 
       <!-- VIEW B: Global Plan (Brief + Grouped List) -->
-      <div v-else class="h-full overflow-y-auto p-8 custom-scrollbar">
+      <div v-else-if="viewMode === 'plan'" class="h-full overflow-y-auto p-8 custom-scrollbar">
         <div class="max-w-4xl mx-auto space-y-6">
           
           <!-- Project Brief & AI Generation (Collapsible) -->
@@ -337,6 +344,11 @@
         </div>
       </div>
 
+      <!-- VIEW C: Gantt Timeline -->
+      <div v-else class="h-full p-6 overflow-hidden">
+        <GanttChart :project-id="projectId" />
+      </div>
+
       <datalist id="assignee-options">
         <option v-for="member in assigneeOptions" :key="member" :value="member" />
       </datalist>
@@ -349,13 +361,14 @@ import { ref, reactive, computed, onMounted, nextTick, watch } from 'vue';
 import dayjs from 'dayjs';
 import { useRoute, useRouter } from 'vue-router';
 import { apiFetch } from '@/api/client';
+import GanttChart from '@/components/GanttChart.vue';
 
 const route = useRoute();
 const router = useRouter();
 const projectId = computed(() => route.query.project);
 
 // --- State ---
-const viewMode = ref('board'); // 'board' | 'plan'
+const viewMode = ref('board'); // 'board' | 'plan' | 'gantt'
 const currentPhase = ref('m1');
 const tasks = ref([]);
 const saving = ref(false);
@@ -998,3 +1011,32 @@ watch(() => projectId.value, () => {
   loadMembers();
 }, { immediate: true });
 </script>
+
+<style scoped>
+.h-full {
+  background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.03), transparent 30%);
+}
+.bg-white {
+  background: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: blur(20px);
+}
+.bg-slate-100\/50 {
+  background: rgba(255, 255, 255, 0.4) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+  border-radius: 24px !important;
+}
+.bg-white.p-4 {
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.7) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02) !important;
+  border-radius: 18px !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.bg-white.p-4:hover {
+  transform: translateY(-3px) scale(1.01);
+  border-color: rgba(99, 102, 241, 0.3) !important;
+  box-shadow: 0 15px 30px rgba(99, 102, 241, 0.06) !important;
+}
+</style>

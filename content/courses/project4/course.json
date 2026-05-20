@@ -1,0 +1,65 @@
+{
+  "id": "project4",
+  "title": "AI 机器学习与神经网络",
+  "direction": "science",
+  "teacherName": "何老师",
+  "summary": "从论文、模型到实验，建立学生对机器学习的第一性理解。",
+  "description": "课程从学术论文阅读切入，引导学生理解机器学习的核心概念、神经网络的基本逻辑与实验探索路径。它强调理科式的模型理解，而不仅是调用工具。",
+  "audience": "适合对数学、算法、模型机制和 AI 研究感兴趣的学生。",
+  "pace": "4 课时，适合专题式学习。",
+  "status": "published",
+  "materialsRoot": "project4",
+  "relatedProjects": [
+    "project4"
+  ],
+  "positioning": "模型理解 / 算法实验",
+  "courseType": "学科专题",
+  "guidePath": "项目4-算法工程师.md",
+  "learningObjectives": [
+    "建立对论文阅读、模型理解与学术调研的基本方法。",
+    "理解神经网络、卷积和实验验证等关键概念。",
+    "能够输出结构化的调研笔记与初步算法观察。"
+  ],
+  "materials": [
+    {
+      "id": "project4-guide-1",
+      "courseId": "project4",
+      "section": "课程导学",
+      "title": "项目 4 课程导学",
+      "path": "项目4-算法工程师.md",
+      "kind": "markdown"
+    },
+    {
+      "id": "project4-teacher-1",
+      "courseId": "project4",
+      "section": "教师资料",
+      "title": "教师手册",
+      "path": "TEACHING_MANUAL.md",
+      "kind": "markdown"
+    },
+    {
+      "id": "project4-student-1",
+      "courseId": "project4",
+      "section": "学生资料",
+      "title": "趣味版讲义",
+      "path": "项目4-算法工程师-趣味版.md",
+      "kind": "markdown"
+    },
+    {
+      "id": "project4-extra-1",
+      "courseId": "project4",
+      "section": "补充资料",
+      "title": "何凯明人物资料",
+      "path": "何凯明.md",
+      "kind": "markdown"
+    },
+    {
+      "id": "project4-extra-2",
+      "courseId": "project4",
+      "section": "补充资料",
+      "title": "深度学习 Bootcamp 视频",
+      "path": "何恺明MIT第一课：深度学习卷积神经网络 Deep Learning Bootcamp_ Kaiming He.mp4",
+      "kind": "video"
+    }
+  ]
+}

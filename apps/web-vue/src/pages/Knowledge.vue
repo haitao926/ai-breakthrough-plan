@@ -1,278 +1,454 @@
 <template>
-  <div class="knowledge-page text-slate-900 selection:bg-indigo-100 selection:text-indigo-900 min-h-screen bg-[#f8fafc]">
-    <!-- 动态背景层 -->
-    <div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
-      <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-200/20 blur-[120px] rounded-full"></div>
-      <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-200/20 blur-[120px] rounded-full"></div>
-    </div>
+  <div class="knowledge-page text-slate-800">
+    <SiteNav active="knowledge" />
 
-    <!-- 导航栏 -->
-    <nav class="fixed w-full z-50 glass-nav transition-all duration-500 py-4">
-      <div class="max-w-7xl mx-auto px-6 lg:px-12">
-        <div class="flex justify-between items-center h-16">
-          <div class="flex items-center gap-4 shrink-0">
-            <RouterLink to="/" class="flex items-center gap-3 transition-transform hover:scale-105 active:scale-95 group">
-              <div class="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-500/30">
-                <i class="fas fa-cube text-lg"></i>
-              </div>
-              <div class="flex flex-col">
-                <span class="font-black text-xl tracking-tight leading-none text-slate-900">AI 破壁计划</span>
-                <span class="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mt-0.5">Knowledge Base</span>
-              </div>
-            </RouterLink>
-          </div>
+    <PublicPageHeader
+      eyebrow="Knowledge"
+      title="创新知识库"
+      description="按学科视角进入，再往下看研究方向和研究问题。"
+      :meta="headerMeta"
+    />
 
-          <div class="hidden lg:flex items-center space-x-1 bg-slate-100/50 p-1 rounded-2xl border border-slate-200/50">
-            <RouterLink to="/knowledge" class="px-5 py-2 rounded-xl text-sm font-bold bg-white text-indigo-600 shadow-sm transition-all flex items-center gap-2">创新库</RouterLink>
-            <RouterLink to="/competencies" class="px-5 py-2 rounded-xl text-sm font-bold text-slate-600 hover:text-indigo-600 hover:bg-white transition-all flex items-center gap-2">学术指导</RouterLink>
-            <RouterLink to="/projects" class="px-5 py-2 rounded-xl text-sm font-bold text-slate-600 hover:text-indigo-600 hover:bg-white transition-all flex items-center gap-2">项目库</RouterLink>
-            <RouterLink to="/downloads" class="px-5 py-2 rounded-xl text-sm font-bold text-slate-600 hover:text-indigo-600 hover:bg-white transition-all flex items-center gap-2">资料中心</RouterLink>
-          </div>
+    <main class="max-w-[1320px] mx-auto px-5 sm:px-6 lg:px-8 py-4 min-h-screen">
+      <CategorySearchBar
+        :meta="headerMeta"
+        :category="filter"
+        :search="searchTerm"
+        :options="knowledgeCategoryOptions"
+        :placeholder="knowledgeSearchPlaceholder"
+        :clear-disabled="!searchTerm && filter === 'all'"
+        @update:category="applyFilter"
+        @update:search="searchTerm = $event"
+        @clear="resetKnowledgeSearch"
+      />
 
-          <div class="flex gap-4 items-center shrink-0">
-             <RouterLink to="/workspace" class="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-black uppercase tracking-widest shadow-lg shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all">
-               进入工作台
-             </RouterLink>
-          </div>
-        </div>
-      </div>
-    </nav>
-
-    <!-- Header -->
-    <header class="relative pt-44 pb-20 overflow-hidden z-10">
-      <div class="max-w-7xl mx-auto px-6 lg:px-12">
-        <label class="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-6 block">Inspiration Library</label>
-        <h1 class="text-4xl md:text-7xl font-black text-slate-900 mb-8 tracking-tighter leading-tight">
-          找寻你的<br><span class="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-blue-500">创新锚点</span>
-        </h1>
-        <p class="text-xl text-slate-500 max-w-2xl leading-relaxed font-medium">
-          这里汇集了 20+ 个核心学科的入门指引，旨在帮助你在复杂的现实世界中找到那个值得被解决的“真问题”。
-        </p>
-      </div>
-    </header>
-
-    <main class="max-w-7xl mx-auto px-6 lg:px-12 py-12 relative z-10 min-h-screen">
-      <section class="space-y-16">
-        <div class="flex flex-col md:flex-row md:items-end justify-between gap-8 animate-reveal">
-           <div class="space-y-2">
-              <h2 class="text-3xl font-black text-slate-900 tracking-tight">学科百科 (Disciplines)</h2>
-              <p class="text-sm font-medium text-slate-400 uppercase tracking-widest italic">Cross-disciplinary academic guide</p>
-           </div>
-           <!-- Filter Buttons -->
-           <div class="flex flex-wrap gap-2 bg-slate-100/50 p-1.5 rounded-[22px] border border-slate-200/40">
-             <button v-for="k in ['all', 'stem', 'social', 'humanities']" :key="k"
-               class="px-6 py-2.5 rounded-[18px] text-[10px] font-black uppercase tracking-widest transition-all"
-               :class="filter === k ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-900'"
-               @click="filter = k">
-               {{ k === 'all' ? '全部' : k === 'stem' ? '理工科' : k === 'social' ? '社科' : '人文' }}
-             </button>
-           </div>
-        </div>
-
-        <!-- Cards Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 animate-reveal">
+      <section ref="catalogRef" class="scroll-anchor">
+        <div class="grid gap-7 md:grid-cols-2 lg:grid-cols-4">
           <div
             v-for="field in filteredFields"
             :key="field.id"
-            class="premium-card group !p-0 overflow-hidden !bg-white border-none shadow-xl hover:!shadow-2xl transition-all duration-500 flex flex-col cursor-pointer"
+            class="knowledge-card group"
+            :style="{ '--field-color': field.colorText, '--field-bg': field.colorBg }"
             @click="openField(field)"
           >
-            <!-- Card Image -->
-            <div class="h-52 overflow-hidden relative">
-              <img :src="field.image" :alt="field.name" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
-              <div class="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent opacity-60"></div>
-              <div class="absolute top-6 left-6 w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-xl text-white shadow-lg transition-transform group-hover:scale-110 group-hover:rotate-6">
+            <div class="knowledge-cover">
+              <img v-if="field.image" :src="field.image" :alt="field.name" class="knowledge-cover-image" />
+              <div v-else class="knowledge-cover-fallback" :style="{ backgroundColor: field.colorBg, color: field.colorText }">
                 <i class="fas" :class="field.icon"></i>
               </div>
-              <div class="absolute bottom-6 left-8 text-white">
-                 <span class="text-[9px] font-black uppercase tracking-widest bg-white/20 px-2 py-0.5 rounded-lg border border-white/10">{{ field.cat }}</span>
-                 <h3 class="text-2xl font-black tracking-tight mt-2">{{ field.name }}</h3>
-              </div>
             </div>
-
-            <!-- Card Content -->
-            <div class="p-8 flex-1 flex flex-col space-y-6">
-              <div class="space-y-4">
-                 <p class="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{{ field.en }}</p>
-                 <p class="text-sm text-slate-500 leading-relaxed font-medium line-clamp-3">{{ field.desc }}</p>
+            <div class="p-5">
+              <div class="knowledge-node">
+                <span>{{ categoryLabel(categoryKey(field)) }} · 研究方向</span>
+                <strong>{{ field.research_questions?.length || 0 }} 个研究问题</strong>
               </div>
-              
-              <div class="pt-8 border-t border-slate-50 mt-auto flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                   <div class="flex -space-x-2">
-                      <div v-for="i in 3" :key="i" class="w-6 h-6 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center">
-                         <i class="fas fa-lightbulb text-[6px] text-slate-300"></i>
-                      </div>
-                   </div>
-                   <span class="text-[9px] font-black text-slate-400 uppercase tracking-tighter">12+ Reference Items</span>
-                </div>
-                <span class="text-[9px] font-black text-indigo-600 uppercase tracking-[0.2em] group-hover:translate-x-1 transition-transform">
-                  Explore <i class="fas fa-arrow-right ml-1"></i>
-                </span>
+              <div class="knowledge-icon" :style="{ backgroundColor: field.colorBg, color: field.colorText }">
+                <i class="fas" :class="field.icon"></i>
               </div>
+              <h3 class="font-bold text-slate-900 mt-4 group-hover:text-indigo-600 transition-colors">{{ field.name }}</h3>
+              <p class="text-xs text-slate-400">{{ field.en }}</p>
+              <p class="text-xs text-slate-500 mt-3 leading-relaxed">{{ field.tagline || compactDefinition(field.definition) }}</p>
+              <span class="inline-flex items-center text-xs font-bold text-indigo-600 mt-4 opacity-80 group-hover:opacity-100 transition-opacity">
+                查看研究问题 <i class="fas fa-arrow-right ml-2 text-[10px]"></i>
+              </span>
             </div>
           </div>
         </div>
       </section>
     </main>
 
-    <!-- Detailed Modal -->
-    <div v-if="activeField" class="fixed inset-0 z-[100] flex items-center justify-center p-6">
-      <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" @click="closeField"></div>
-      <div class="relative bg-white w-full max-w-2xl rounded-[48px] p-12 shadow-2xl overflow-hidden animate-reveal">
-        <div class="absolute top-0 right-0 p-8">
-           <button class="w-12 h-12 rounded-full border border-slate-100 flex items-center justify-center text-slate-400 hover:bg-slate-50 transition-all" @click="closeField">
-             <i class="fas fa-times"></i>
-           </button>
+    <div v-if="activeField" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" @click="closeField"></div>
+      <div class="relative bg-white w-full max-w-3xl rounded-2xl p-8 shadow-2xl knowledge-modal">
+        <button class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition" @click="closeField">
+          <i class="fas fa-times"></i>
+        </button>
+        <div class="knowledge-modal__header">
+          <div>
+            <div class="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full inline-flex border border-indigo-100">
+              {{ categoryLabel(categoryKey(activeField)) }}视角
+            </div>
+            <h3 class="text-2xl font-bold text-slate-900 mt-4">{{ activeField.name }}</h3>
+            <p class="text-sm text-slate-500 font-medium">{{ activeField.en }}</p>
+            <p class="text-base text-slate-600 mt-5 leading-relaxed">{{ activeField.definition }}</p>
+          </div>
+          <div class="knowledge-modal__summary">
+            <p class="knowledge-modal__summary-kicker">下一步会看到</p>
+            <strong>{{ activeField.research_questions?.length || 0 }} 个研究问题</strong>
+            <span>先从问题判断你是否值得继续投入，再决定要不要往课程或项目里延展。</span>
+          </div>
         </div>
-        <div class="space-y-12">
-           <div class="flex items-center gap-6">
-              <div class="w-16 h-16 rounded-[24px] bg-slate-900 flex items-center justify-center text-2xl text-white shadow-xl shadow-slate-900/20">
-                 <i class="fas" :class="activeField.icon"></i>
-              </div>
-              <div>
-                 <span class="text-[10px] font-black text-indigo-600 uppercase tracking-widest px-3 py-1 bg-indigo-50 rounded-full">{{ activeField.cat }} Domain</span>
-                 <h3 class="text-3xl font-black text-slate-900 mt-2 tracking-tight">{{ activeField.name }}</h3>
-              </div>
-           </div>
-           
-           <div class="space-y-6">
-              <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Introduction</h4>
-              <p class="text-lg text-slate-600 leading-relaxed font-medium">{{ activeField.desc }}</p>
-           </div>
-           
-           <div class="p-8 rounded-[32px] bg-indigo-600 text-white shadow-xl relative overflow-hidden group">
-              <div class="absolute top-0 right-0 p-8 opacity-10"><i class="fas fa-lightbulb text-6xl"></i></div>
-              <div class="relative z-10 space-y-4">
-                 <h4 class="text-[10px] font-black uppercase tracking-widest opacity-60">Project Inspiration</h4>
-                 <p class="text-lg font-bold leading-relaxed">{{ activeField.inspiration }}</p>
-              </div>
-           </div>
-           
-           <div class="flex gap-4">
-              <button @click="closeField" class="flex-1 py-4 bg-slate-100 text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all">Dismiss</button>
-              <RouterLink :to="{ path: '/projects', query: { category: activeField.cat } }" class="flex-[2] py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest text-center shadow-lg hover:shadow-slate-400 transition-all">
-                Find Related Projects <i class="fas fa-arrow-right ml-2"></i>
-              </RouterLink>
-           </div>
+
+        <div v-if="activeField.research_questions?.length" class="mt-8">
+          <div class="text-sm font-bold text-slate-800 mb-3">研究问题</div>
+          <div class="space-y-3">
+            <div v-for="item in activeField.research_questions" :key="item.q" class="rounded-xl border border-slate-100 bg-white px-4 py-4">
+              <div class="font-bold text-slate-900 text-sm">{{ item.q }}</div>
+              <p class="text-sm text-slate-500 mt-2 leading-6">{{ item.context }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-8 bg-slate-50 rounded-xl p-5 border border-slate-100">
+          <div class="flex items-center gap-2 text-sm font-bold text-slate-800 mb-2">
+            <i class="fas fa-lightbulb text-yellow-500"></i> 为什么值得做
+          </div>
+          <p class="text-sm text-slate-600 leading-relaxed">{{ activeField.why_matters || activeField.tagline || '从真实问题中寻找研究与实践切口。' }}</p>
         </div>
       </div>
     </div>
 
-    <footer class="py-24 border-t border-slate-100 relative z-10 text-center">
-       <div class="flex items-center justify-center gap-3 mb-6">
-          <div class="w-8 h-8 rounded-xl bg-slate-900 flex items-center justify-center text-white">
-             <i class="fas fa-cube text-xs"></i>
-          </div>
-          <span class="text-xs font-black text-slate-900 uppercase tracking-widest">HAI Tech Lab <span class="text-slate-300 mx-2">|</span> 2026 Innovation Archive</span>
-       </div>
-       <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">Curiosities are the seeds of great engineering.</p>
-    </footer>
+    <PortalFooter />
   </div>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import SiteNav from '@/components/SiteNav.vue';
+import PortalFooter from '@/components/portal/PortalFooter.vue';
+import PublicPageHeader from '@/components/PublicPageHeader.vue';
+import CategorySearchBar from '@/components/CategorySearchBar.vue';
+import { apiFetch, readJsonResponse } from '@/api/client';
 
+const route = useRoute();
+const router = useRouter();
 const filter = ref('all');
+const searchTerm = ref('');
 const activeField = ref(null);
+const fieldsData = ref([]);
+const catalogRef = ref(null);
 
-const fieldsData = [
-  {
-    id: 'tech',
-    name: '科技与工程',
-    en: 'Technology & Engineering',
-    cat: 'stem',
-    icon: 'fa-microchip',
-    image: '/Users/apple/.gemini/antigravity/brain/0e8ab5fd-5c6a-4e28-bd6a-d6b91a5b276b/knowledge_stem_tech_1775053306726.png',
-    desc: '科技与工程让科学脱离纸面，触手可及。它带给我们便利、更多机会和无限可能。在这里你可以探索从极简代码到物理世界的万物互联。',
-    inspiration: '研究基于计算机视觉的校园安全系统，或设计一套属于你的智能家居控制原型。'
-  },
-  {
-    id: 'cs',
-    name: '计算机科学',
-    en: 'Computer Science',
-    cat: 'stem',
-    icon: 'fa-laptop-code',
-    image: '/Users/apple/.gemini/antigravity/brain/0e8ab5fd-5c6a-4e28-bd6a-d6b91a5b276b/knowledge_cs_coding_1775091665013.png',
-    desc: '计算机科学不仅关乎代码，更关乎逻辑思维与解决问题的能力。通过 Python 体验“用代码驱动世界”的全新视角。',
-    inspiration: '研究人工智能交互伦理，或尝试开发一个辅助视障人士实时识别环境中障碍物的应用。'
-  },
-  {
-    id: 'env',
-    name: '环境科学',
-    en: 'Environmental Science',
-    cat: 'stem',
-    icon: 'fa-leaf',
-    image: '/Users/apple/.gemini/antigravity/brain/0e8ab5fd-5c6a-4e28-bd6a-d6b91a5b276b/knowledge_env_science_1775091679064.png',
-    desc: '研究气候变化、生态保护与资源循环利用。在这个模块，我们将环境痛点转化为技术落点，寻找可持续发展的未来。',
-    inspiration: '调查校园碳足迹并设计一套自动化的节能控制系统，或开发社区智能垃圾分类激励小程序。'
-  },
-  {
-    id: 'soc',
-    name: '社会与人类学',
-    en: 'Sociology & Anthropology',
-    cat: 'social',
-    icon: 'fa-users',
-    image: '/Users/apple/.gemini/antigravity/brain/0e8ab5fd-5c6a-4e28-bd6a-d6b91a5b276b/knowledge_social_science_v2_1775053348027.png',
-    desc: '观察群体行为与社会关系，反思我们的生活方式。从田野调查中发现未被关注的弱势需求，通过行动产生真实的社会价值。',
-    inspiration: '记录并分析正在消失的校园方言片段，或发起一场利用社交媒体推动社区资源互助的公益项目。'
-  },
-  {
-    id: 'psych',
-    name: '心理与认知',
-    en: 'Psychology & Cognition',
-    cat: 'social',
-    icon: 'fa-brain',
-    image: '/Users/apple/.gemini/antigravity/brain/0e8ab5fd-5c6a-4e28-bd6a-d6b91a5b276b/knowledge_psychology_brain_1775091711415.png',
-    desc: '探索认知、情绪与人格。跨越数据与共情的鸿沟，利用 AI 技术辅助压力调节或专注力提升，让科技更具温情。',
-    inspiration: '研究不同环境色温下学生的专注力差异，或设计一款基于情绪识别的青少年心理互助 AI 助手原型。'
-  },
-  {
-    id: 'econ',
-    name: '经济与商业模型',
-    en: 'Economics & Business',
-    cat: 'social',
-    icon: 'fa-chart-pie',
-    image: '/Users/apple/.gemini/antigravity/brain/0e8ab5fd-5c6a-4e28-bd6a-d6b91a5b276b/knowledge_economics_graph_1775091725443.png',
-    desc: '研究资源优化配置。从盲盒经济到共享循环，通过实证分析理解消费决策背后的底层逻辑，构建可持续的商业方案。',
-    inspiration: '针对校园二手流转设计一套基于区块链思想的信用评估模型，或调查盲盒消费对青少年消费决策的影响。'
-  },
-  {
-    id: 'arch',
-    name: '建筑与城市',
-    en: 'Urban & Architecture',
-    cat: 'humanities',
-    icon: 'fa-city',
-    image: '/Users/apple/.gemini/antigravity/brain/0e8ab5fd-5c6a-4e28-bd6a-d6b91a5b276b/knowledge_urban_architecture_1775091740036.png',
-    desc: '城市不仅是冰冷的建筑，更是活生生的空间正义。从校园微更新到适老化设计，重新定义我们生活与相遇的场所。',
-    inspiration: '调研校园中的“消极空间”并提出基于多学科视角的微景观改造方案，或设计针对高层老旧社区的智慧撤桶方案建议。'
-  },
-  {
-    id: 'culture',
-    name: '跨文化沟通',
-    en: 'Intercultural Studies',
-    cat: 'humanities',
-    icon: 'fa-comments',
-    image: '/Users/apple/.gemini/antigravity/brain/0e8ab5fd-5c6a-4e28-bd6a-d6b91a5b276b/knowledge_humanities_art_1775091646552.png',
-    desc: '在全球化视野中理解差异。研究不同文化背景下的共识构建。',
-    inspiration: '通过 AI 辅助的同理心训练系统，帮助青少年理解不同文化语境下的非言语沟通信号。'
-  }
+const palette = {
+  science: { bg: '#eff6ff', text: '#2563eb', icon: 'fa-flask' },
+  engineering: { bg: '#eef2ff', text: '#4f46e5', icon: 'fa-microchip' },
+  social: { bg: '#ecfeff', text: '#0891b2', icon: 'fa-users' },
+  humanities: { bg: '#fff7ed', text: '#ea580c', icon: 'fa-feather-pointed' },
+  all: { bg: '#f3f4f6', text: '#4b5563', icon: 'fa-book' }
+};
 
-];
+function categoryKey(field) {
+  if (!field) return 'all';
+  const c = String(field.cat || '').toLowerCase();
+  if (c === 'science') return 'science';
+  if (c === 'engineering' || c === 'stem') return 'engineering';
+  if (c === 'social') return 'social';
+  if (c === 'humanities') return 'humanities';
+  const id = String(field.id || '').toLowerCase();
+  if (['env', 'physics', 'math', 'bio', 'medicine'].includes(id)) return 'science';
+  if (['tech', 'cs', 'ai', 'robotics', 'materials', 'hci'].includes(id)) return 'engineering';
+  if (['soc', 'psych', 'econ', 'edu', 'public_health', 'comm'].includes(id)) return 'social';
+  return 'humanities';
+}
+
+function categoryLabel(key) {
+  return {
+    all: '全部',
+    science: '理科',
+    engineering: '工科',
+    social: '社科',
+    humanities: '人文'
+  }[key] || key;
+}
+
+function compactDefinition(value) {
+  const text = String(value || '').trim();
+  if (!text) return '这个方向主要研究真实问题背后的学科逻辑。';
+  return text.length > 46 ? `${text.slice(0, 46)}...` : text;
+}
+
+const normalizedFields = computed(() =>
+  fieldsData.value.map(field => {
+    const category = categoryKey(field);
+    return {
+      ...field,
+      colorBg: palette[category]?.bg || palette.all.bg,
+      colorText: palette[category]?.text || palette.all.text,
+      icon: field.icon || palette[category]?.icon || palette.all.icon
+    };
+  })
+);
 
 const filteredFields = computed(() => {
-  if (filter.value === 'all') return fieldsData;
-  return fieldsData.filter(field => field.cat === filter.value);
+  return normalizedFields.value
+    .filter(field => filter.value === 'all' || categoryKey(field) === filter.value)
+    .filter(matchesFieldSearch);
 });
 
-function openField(field) { activeField.value = field; }
-function closeField() { activeField.value = null; }
+const headerMeta = computed(() => (
+  filter.value === 'all'
+    ? `${normalizedFields.value.length} 个研究方向`
+    : `${categoryLabel(filter.value)} · ${filteredFields.value.length} 个研究方向`
+));
+
+const knowledgeCategoryOptions = [
+  { value: 'all', label: '全部学科' },
+  { value: 'science', label: '理科' },
+  { value: 'engineering', label: '工科' },
+  { value: 'social', label: '社科' },
+  { value: 'humanities', label: '人文' }
+];
+
+const knowledgeSearchPlaceholder = computed(() => {
+  const label = categoryLabel(filter.value);
+  return filter.value === 'all'
+    ? '搜索研究方向、问题或关键词'
+    : `在${label}视角中搜索方向或研究问题`;
+});
+
+function openField(field) {
+  activeField.value = field;
+  document.body.style.overflow = 'hidden';
+  router.replace({
+    query: {
+      ...route.query,
+      focus: field.id,
+      filter: categoryKey(field)
+    }
+  }).catch(() => {});
+}
+
+function closeField() {
+  activeField.value = null;
+  document.body.style.overflow = '';
+  const query = { ...route.query };
+  delete query.focus;
+  router.replace({ query }).catch(() => {});
+}
+
+function scrollToCatalog() {
+  nextTick(() => {
+    catalogRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
+function applyFilter(key, { scroll = false } = {}) {
+  filter.value = key;
+  activeField.value = null;
+  document.body.style.overflow = '';
+  const query = { ...route.query };
+  if (key === 'all') delete query.filter;
+  else query.filter = key;
+  delete query.focus;
+  router.replace({ query }).catch(() => {});
+  if (scroll) scrollToCatalog();
+}
+
+function matchesFieldSearch(field) {
+  const keyword = searchTerm.value.trim().toLowerCase();
+  if (!keyword) return true;
+  return [
+    field.name,
+    field.en,
+    field.definition,
+    field.tagline,
+    field.why_matters,
+    ...(field.research_questions || []).flatMap(item => [item.q, item.context])
+  ].filter(Boolean).join(' ').toLowerCase().includes(keyword);
+}
+
+function resetKnowledgeSearch() {
+  searchTerm.value = '';
+  applyFilter('all');
+}
+
+function syncFromRoute() {
+  const nextFilter = ['all', 'science', 'engineering', 'social', 'humanities'].includes(String(route.query.filter || ''))
+    ? String(route.query.filter)
+    : 'all';
+
+  filter.value = nextFilter;
+
+  const focusId = String(route.query.focus || '');
+  if (!focusId || !normalizedFields.value.length) {
+    if (activeField.value) {
+      activeField.value = null;
+      document.body.style.overflow = '';
+    }
+    return;
+  }
+
+  const match = normalizedFields.value.find(field => String(field.id) === focusId);
+  if (match) {
+    activeField.value = match;
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+watch([() => route.query.filter, () => route.query.focus, normalizedFields], () => {
+  syncFromRoute();
+}, { immediate: true });
+
+watch(() => route.query.q, value => {
+  const next = String(value || '');
+  if (next !== searchTerm.value) searchTerm.value = next;
+});
+
+watch(searchTerm, value => {
+  const query = { ...route.query };
+  const q = value.trim();
+  if (q) query.q = q;
+  else delete query.q;
+  router.replace({ query }).catch(() => {});
+});
+
+onMounted(async () => {
+  try {
+    searchTerm.value = String(route.query.q || '');
+    const res = await apiFetch('/knowledge/disciplines');
+    const data = await readJsonResponse(res, 'knowledge_disciplines');
+    if (!res.ok) throw new Error(data?.error || 'knowledge_disciplines_failed');
+    fieldsData.value = data.disciplines || [];
+  } catch (err) {
+    console.error(err);
+    fieldsData.value = [];
+  }
+});
 </script>
 
 <style scoped>
-.glass-nav { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(24px); border-bottom: 1px solid rgba(226, 232, 240, 0.4); }
-.premium-card { @apply bg-white rounded-[40px] border border-slate-200/60 transition-all duration-500 shadow-sm; }
-.animate-reveal { animation: reveal 1s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-@keyframes reveal { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+.knowledge-page {
+  background:
+    linear-gradient(90deg, rgba(15, 23, 42, 0.025) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.025) 1px, transparent 1px),
+    radial-gradient(circle at top left, rgba(99, 102, 241, 0.08), transparent 30%),
+    #f8fafc;
+  background-size: 42px 42px, 42px 42px, 100% 100%, 100% 100%;
+  min-height: 100vh;
+}
+
+.knowledge-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.02);
+}
+
+.knowledge-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--field-color);
+  opacity: 0.75;
+}
+
+.knowledge-card:hover {
+  border-color: var(--field-color);
+  box-shadow: 0 20px 40px rgba(99, 102, 241, 0.08);
+  transform: translateY(-4px);
+}
+
+
+.knowledge-cover {
+  height: 142px;
+  background:
+    linear-gradient(135deg, var(--field-bg), #ffffff),
+    repeating-linear-gradient(0deg, rgba(15, 23, 42, 0.05) 0 1px, transparent 1px 14px);
+  overflow: hidden;
+}
+
+.knowledge-cover-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.knowledge-cover-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
+
+.knowledge-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+.knowledge-node {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  border-bottom: 1px dashed #dbeafe;
+  padding-bottom: 10px;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.knowledge-node strong {
+  color: var(--field-color);
+  font-weight: 800;
+}
+
+.knowledge-modal {
+  max-height: min(88vh, 860px);
+  overflow-y: auto;
+}
+
+.knowledge-modal__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 240px;
+  gap: 18px;
+  align-items: start;
+}
+
+.knowledge-modal__summary {
+  border: 1px solid #dbeafe;
+  border-radius: 18px;
+  background: #eff6ff;
+  padding: 16px;
+}
+
+.knowledge-modal__summary-kicker {
+  margin: 0;
+  color: #2563eb;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.knowledge-modal__summary strong {
+  display: block;
+  margin-top: 10px;
+  color: #0f172a;
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+.knowledge-modal__summary span {
+  display: block;
+  margin-top: 10px;
+  color: #475569;
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+
+.scroll-anchor {
+  scroll-margin-top: 110px;
+}
+
+@media (max-width: 980px) {
+  .knowledge-modal__header {
+    grid-template-columns: 1fr;
+  }
+}
+
 </style>

@@ -11,7 +11,7 @@
             <span class="w-2.5 h-7 bg-indigo-600 rounded-full mr-3 shadow-lg shadow-indigo-600/20"></span>
             创新点梳理
           </h1>
-          <p class="text-[10px] font-black text-indigo-500 uppercase tracking-widest mt-0.5">Innovation Matrix & USP</p>
+          <p class="text-[10px] font-black text-indigo-500 tracking-tight mt-0.5">用于整理开题/结题提交中的创新点说明</p>
         </div>
       </div>
       <div class="flex items-center gap-4">
@@ -33,7 +33,7 @@
         </div>
         <h2 class="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter mb-6 uppercase">Define Your Unique<br><span class="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-blue-500">Differentiation</span></h2>
         <p class="text-lg text-slate-500 font-medium max-w-2xl mx-auto leading-relaxed">
-          创新不一定是颠覆性的发明，它可以是更优的代码逻辑、更贴心的交互或者是更低成本的实现方案。写清楚你的“不同之处”。
+          把“新在哪里、和已有方案相比好在哪里、如何验证”整理成可提交段落，方便放入开题报告、结题报告或答辩材料。
         </p>
       </header>
 

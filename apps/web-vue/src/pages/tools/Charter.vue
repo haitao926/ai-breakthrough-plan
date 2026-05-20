@@ -9,7 +9,7 @@
           </div>
           <div>
             <h1 class="text-sm font-black text-slate-900 uppercase tracking-widest">项目立项书</h1>
-            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter italic">Phase 1: Project Charter</p>
+            <p class="text-[10px] font-bold text-slate-400 tracking-tight">用于整理开题提交中的立项书内容</p>
           </div>
         </div>
 
@@ -103,7 +103,7 @@
           <div class="space-y-4">
              <h4 class="text-lg font-black text-slate-900 uppercase tracking-widest">立项导师的深度建议</h4>
              <p class="text-sm text-slate-500 font-medium leading-relaxed max-w-3xl">
-               立项书是你项目的“DNA”，不仅是写给评委看，更是为了理清你自己的思路。
+               立项书模板用于帮助你准备开题材料，不要求必须在平台内写完；整理好后可导出或作为附件上传。
                <br>• <span class="text-indigo-600 font-bold">工程产品类</span>项：请像产品经理一样思考，明确“谁在什么时间、什么地点”会使用你的东西。
                <br>• <span class="text-blue-600 font-bold">课题探究类</span>：你的研究变量必须是可观测、可量化的。
                <br>• <span class="text-rose-600 font-bold">电梯演讲</span>：应能在 30 秒内向不了解你的人解释清楚核心价值。
@@ -266,7 +266,7 @@ onMounted(loadData);
 
 @media print {
   nav { display: none !important; }
-  .bg-[#f8fafc] { background: white !important; }
+  .charter-tool { background: white !important; }
   .premium-card { border: 1px solid #eee !important; box-shadow: none !important; border-radius: 20px !important; margin-bottom: 20px; page-break-inside: avoid; }
   .bg-slate-900 { background: #333 !important; color: white !important; -webkit-print-color-adjust: exact; }
   textarea { height: auto !important; }

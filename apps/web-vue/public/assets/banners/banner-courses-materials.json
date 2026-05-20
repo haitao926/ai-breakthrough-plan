@@ -1,0 +1,10 @@
+{
+  "success": true,
+  "model": "gpt-image-1.5-all",
+  "prompt": "为中学AI创新教育平台绘制一张高品质网站横幅主视觉，主题是资料索引，不要人物。统一使用高级 3D paper relief archive 风格，横向宽幅。画面像一个课程资料中枢：文件夹、讲义夹、U盘、数据图形卡、代码块形状、参考资料堆叠和下载包图标被整齐排布。所有页面和屏幕只保留抽象条块、图表和几何线条，不出现字母、数字、表格、logo、水印。",
+  "original_prompt": "为中学AI创新教育平台绘制一张高品质网站横幅主视觉，主题是资料索引，不要人物。统一使用高级 3D paper relief archive 风格，横向宽幅。画面像一个课程资料中枢：文件夹、讲义夹、U盘、数据图形卡、代码块形状、参考资料堆叠和下载包图标被整齐排布。所有页面和屏幕只保留抽象条块、图表和几何线条，不出现字母、数字、表格、logo、水印。",
+  "optimized_prompt": null,
+  "image_url": "https://pro.filesystem.site/cdn/20260413/dffd69121f670c75c0baf45eb50df5.png",
+  "output_path": "/Users/apple/Library/CloudStorage/OneDrive-个人/1_Course/2025-2026/《AI破壁计划》/apps/web-vue/public/assets/banners/banner-courses-materials.png",
+  "via": "direct"
+}

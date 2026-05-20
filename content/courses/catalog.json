@@ -1,0 +1,177 @@
+[
+  {
+    "id": "common",
+    "title": "通识与学术方法",
+    "direction": "foundation",
+    "teacherName": "平台教研组",
+    "summary": "帮助学生建立研究方法、协作规范与课程学习共同语言。",
+    "description": "面向所有课程的共同基础模块，覆盖学术表达、项目协作、文档规范与平台使用方法。",
+    "audience": "面向全体学生",
+    "pace": "模块式学习",
+    "status": "published",
+    "materialsRoot": "common",
+    "relatedProjects": [
+      "project1",
+      "project2",
+      "project3",
+      "project4",
+      "project5",
+      "project6"
+    ],
+    "positioning": "研究方法 / 协作规范",
+    "courseType": "基础课程"
+  },
+  {
+    "id": "project1",
+    "title": "Vibe Coding 体感编程",
+    "direction": "engineering",
+    "teacherName": "陈老师",
+    "summary": "从视觉识别到交互实现，完成第一门 AI 感知式编程课程。",
+    "description": "以手势识别和交互游戏为切口，帮助学生理解视觉输入、AI 代码生成与前端交互的基本流程。",
+    "audience": "零基础开发者",
+    "pace": "4 课时",
+    "status": "published",
+    "materialsRoot": "project1",
+    "relatedProjects": [
+      "project1"
+    ],
+    "positioning": "视觉识别 / 交互编程",
+    "courseType": "工程实践"
+  },
+  {
+    "id": "project2",
+    "title": "产品设计与交互体验",
+    "direction": "social",
+    "teacherName": "李老师",
+    "summary": "用产品思维拆解真实问题，训练用户洞察与方案表达能力。",
+    "description": "围绕用户痛点、访谈洞察与方案设计展开，让学生理解产品经理与项目经理的核心工作方式。",
+    "audience": "产品与设计初学者",
+    "pace": "4 课时",
+    "status": "published",
+    "materialsRoot": "project2",
+    "relatedProjects": [
+      "project2"
+    ],
+    "positioning": "用户洞察 / 产品方案",
+    "courseType": "专题课程"
+  },
+  {
+    "id": "project3",
+    "title": "全栈式 Web 开发",
+    "direction": "engineering",
+    "teacherName": "周老师",
+    "summary": "从界面原型到前后端协作，完整体验现代 Web 开发流程。",
+    "description": "通过错题本等实战案例，帮助学生理解前端页面、后端接口与系统联调的基本方法。",
+    "audience": "有一定编程基础",
+    "pace": "4 课时",
+    "status": "published",
+    "materialsRoot": "project3",
+    "relatedProjects": [
+      "project3"
+    ],
+    "positioning": "前后端协作 / Web 系统",
+    "courseType": "工程实践"
+  },
+  {
+    "id": "project4",
+    "title": "AI 机器学习与神经网络",
+    "direction": "science",
+    "teacherName": "何老师",
+    "summary": "从论文、模型到实验，建立学生对机器学习的第一性理解。",
+    "description": "围绕经典论文与机器学习实验组织课程内容，引导学生理解模型原理、训练逻辑与学术表达。",
+    "audience": "对算法感兴趣的学生",
+    "pace": "4 课时",
+    "status": "published",
+    "materialsRoot": "project4",
+    "relatedProjects": [
+      "project4"
+    ],
+    "positioning": "模型理解 / 算法实验",
+    "courseType": "学科专题"
+  },
+  {
+    "id": "project5",
+    "title": "开源硬件与物联网系统",
+    "direction": "engineering",
+    "teacherName": "王老师",
+    "summary": "用传感器、控制器与边缘计算搭建可感知的智能系统。",
+    "description": "帮助学生理解树莓派、GPIO、传感器与智能硬件的基本工作方式，建立软硬结合能力。",
+    "audience": "喜欢动手搭建的学生",
+    "pace": "4 课时",
+    "status": "published",
+    "materialsRoot": "project5",
+    "relatedProjects": [
+      "project5"
+    ],
+    "positioning": "硬件连接 / 智能控制",
+    "courseType": "工程实践"
+  },
+  {
+    "id": "robotics-club",
+    "title": "自主移动机器人社团课",
+    "direction": "engineering",
+    "teacherName": "机器人社团导师组",
+    "summary": "围绕底盘、传感器与自主控制，完成可演示的移动机器人社团项目。",
+    "description": "课程以社团制推进为主，帮助学生理解自主移动机器人的机械结构、传感系统、控制逻辑与任务设计，并通过挑战赛形式完成展示。",
+    "audience": "对机器人搭建与竞赛感兴趣的初中至高中学生",
+    "pace": "4 个核心模块，可扩展为 8-12 次社团活动",
+    "status": "published",
+    "materialsRoot": "robotics-club",
+    "relatedProjects": [
+      "robotics-club"
+    ],
+    "positioning": "机器人底盘 / 自主控制 / 社团挑战",
+    "courseType": "社团课程"
+  },
+  {
+    "id": "maker-camp",
+    "title": "创客新星营",
+    "direction": "engineering",
+    "teacherName": "创客课程导师组",
+    "summary": "从问题发现到原型表达，完成一门适合入门学生的创客实践课程。",
+    "description": "课程结合创客思维、结构搭建、基础电路和交互原型制作，帮助学生在较短周期内完成一个有主题、有功能、有展示的作品。",
+    "audience": "创客课程入门学生与校内创新营学员",
+    "pace": "4 个主题课时，适合营队式集中推进",
+    "status": "published",
+    "materialsRoot": "maker-camp",
+    "relatedProjects": [
+      "maker-camp"
+    ],
+    "positioning": "创意发现 / 快速原型 / 展示表达",
+    "courseType": "创客课程"
+  },
+  {
+    "id": "ros2-training-robot",
+    "title": "ROS2 训练机器人课程",
+    "direction": "engineering",
+    "teacherName": "ROS2 实训导师组",
+    "summary": "面向训练机器人平台，系统建立 ROS2 节点通信、控制与任务编排能力。",
+    "description": "课程围绕 ROS2 常见开发流展开，结合训练机器人完成节点、话题、传感器、底盘控制和任务调度的实训项目。",
+    "audience": "有 Python 或机器人基础的进阶学习者",
+    "pace": "4 个实训单元，适合周课或集训制",
+    "status": "published",
+    "materialsRoot": "ros2-training-robot",
+    "relatedProjects": [
+      "ros2-training-robot"
+    ],
+    "positioning": "ROS2 通信 / 机器人控制 / 实训任务",
+    "courseType": "进阶工程课程"
+  },
+  {
+    "id": "project6",
+    "title": "综合创业实战",
+    "direction": "capstone",
+    "teacherName": "联合导师组",
+    "summary": "整合前置课程成果，进入真实场景的综合实践与项目孵化。",
+    "description": "作为综合实践课程，承接前面多门课程的能力成果，组织学生进行方案整合、项目推进与展示表达。",
+    "audience": "完成前置课程的学习者",
+    "pace": "项目制推进",
+    "status": "published",
+    "materialsRoot": "project6",
+    "relatedProjects": [
+      "project6"
+    ],
+    "positioning": "整合创作 / 项目孵化",
+    "courseType": "综合实践"
+  }
+]

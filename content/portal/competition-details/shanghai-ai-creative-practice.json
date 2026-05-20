@@ -1,0 +1,23 @@
+{
+  "slug": "shanghai-ai-creative-practice",
+  "overview": "从校园、社区和日常生活中找问题，用 AI 应用或互动原型提出自己的解决方案。",
+  "tracks": ["创意方案", "AI 互动作品", "问题研究与表达"],
+  "timeline": [
+    {"label": "主题发布", "date": "5 月初"},
+    {"label": "方案打磨", "date": "5-6 月"},
+    {"label": "提交作品", "date": "7 月"},
+    {"label": "展示交流", "date": "8 月"}
+  ],
+  "participation": {
+    "mode": "线上提交 + 现场交流",
+    "contact": "SASU AI Lab 导师组",
+    "notes": "个人或小组均可，重点是问题真实、表达清楚。"
+  },
+  "resources": [
+    {"label": "官方通知", "url": "https://example.edu.cn/ai-creative/notice.pdf"}
+  ],
+  "faq": [
+    {"q": "小学生可以参加吗？", "a": "可以，建议从创意和生活观察切入，作品复杂度不必过高。"},
+    {"q": "一定要训练模型吗？", "a": "不一定，更重要的是会使用 AI 解决问题并讲清楚自己的思路。"}
+  ]
+}

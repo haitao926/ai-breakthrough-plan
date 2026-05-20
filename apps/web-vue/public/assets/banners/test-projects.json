@@ -1,0 +1,10 @@
+{
+  "success": true,
+  "model": "gpt-image-1.5-all",
+  "prompt": "为中学AI创新教育平台绘制一张网站首页横幅插图：几位中国中学生站在项目展示墙前讨论机器人与创客作品，桌面上有移动机器人、小型机械臂、原型模型与平板，空间像明亮的未来教室与创客实验室结合体，画面专业、真实、温暖、有行动感，主色调使用靛蓝、深蓝、青蓝与少量暖橙点缀，适合教育平台品牌，不要出现任何文字、logo、水印，构图适合作为16:9网页banner。",
+  "original_prompt": "为中学AI创新教育平台绘制一张网站首页横幅插图：几位中国中学生站在项目展示墙前讨论机器人与创客作品，桌面上有移动机器人、小型机械臂、原型模型与平板，空间像明亮的未来教室与创客实验室结合体，画面专业、真实、温暖、有行动感，主色调使用靛蓝、深蓝、青蓝与少量暖橙点缀，适合教育平台品牌，不要出现任何文字、logo、水印，构图适合作为16:9网页banner。",
+  "optimized_prompt": null,
+  "image_url": "https://pro.filesystem.site/cdn/20260412/c359bf30436964d6035a3aae0f25e4.png",
+  "output_path": "/Users/apple/Library/CloudStorage/OneDrive-个人/1_Course/2025-2026/《AI破壁计划》/apps/web-vue/public/assets/banners/test-projects.png",
+  "via": "direct"
+}

@@ -1,13 +1,13 @@
 <template>
   <aside class="sidebar selection:bg-indigo-100 selection:text-indigo-900 border-r border-slate-200/60 bg-white flex flex-col z-30 overflow-hidden shadow-[1px_0_10px_rgba(0,0,0,0.02)]">
-    <div class="h-[var(--header-h)] flex items-center justify-between px-6 border-b border-slate-100 bg-white/50 backdrop-blur-sm">
+    <div class="h-[var(--header-h)] flex items-center justify-between px-6 border-b border-slate-200/60 bg-white/80 backdrop-blur-xl">
       <div class="flex items-center gap-3">
         <div class="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
           <i class="fas fa-cube text-xs"></i>
         </div>
         <div class="flex flex-col">
           <span class="text-sm font-black text-slate-900 leading-none">科创工作台</span>
-          <span class="text-[9px] font-bold text-indigo-500 uppercase tracking-widest mt-1">Workspace v2.0</span>
+          <span class="text-[9px] font-bold text-indigo-500 uppercase tracking-widest mt-1">Next step first</span>
         </div>
       </div>
       <RouterLink to="/" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all duration-300">
@@ -56,7 +56,7 @@
           </div>
           <div class="mt-2 p-1 border-t border-slate-100">
             <RouterLink to="/projects" class="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl border-2 border-dashed border-slate-200 text-slate-400 hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all font-bold text-[11px] uppercase tracking-wider">
-              <i class="fas fa-plus-circle"></i> 管理项目广场
+              <i class="fas fa-plus-circle"></i> 去项目广场
             </RouterLink>
           </div>
         </div>
@@ -67,11 +67,14 @@
     <nav class="flex-1 overflow-y-auto custom-scrollbar px-4 pb-10">
       <div v-for="group in navStructure" :key="group.id" class="mb-4">
         <div 
-          class="flex items-center justify-between px-3 py-2 cursor-pointer group select-none"
+          class="flex items-start justify-between gap-2 px-3 py-2 cursor-pointer group select-none"
           @click="$emit('toggle-group', group.id)"
         >
-          <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest group-hover:text-slate-600 transition-colors">{{ group.title }}</span>
-          <i class="fas fa-chevron-right text-[8px] text-slate-300 transition-transform duration-300" :class="{ 'rotate-90': !collapsedGroups[group.id] }"></i>
+          <div class="min-w-0">
+            <span class="block text-[10px] font-black text-slate-400 uppercase tracking-widest group-hover:text-slate-600 transition-colors">{{ group.title }}</span>
+            <span v-if="group.description" class="mt-1 block text-[10px] font-bold text-slate-300 leading-snug normal-case tracking-normal">{{ group.description }}</span>
+          </div>
+          <i class="fas fa-chevron-right text-[8px] text-slate-300 transition-transform duration-300 mt-1" :class="{ 'rotate-90': !collapsedGroups[group.id] }"></i>
         </div>
         
         <transition 
@@ -182,4 +185,3 @@ function getBadgeClass(badge) {
   background: #cbd5e1;
 }
 </style>
-

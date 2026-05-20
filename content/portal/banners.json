@@ -1,0 +1,34 @@
+[
+  {
+    "type": "competition",
+    "title": "全国青少年机器人创新挑战赛",
+    "image": "/assets/portal/banner-robotics.svg",
+    "tag": "白名单赛事",
+    "targetUrl": "/competitions/national-robotics-innovation-challenge",
+    "priority": 1
+  },
+  {
+    "type": "story",
+    "title": "从课堂项目走到市级展示",
+    "image": "/assets/portal/banner-story.svg",
+    "tag": "学生成果",
+    "targetUrl": "/showcase",
+    "priority": 2
+  },
+  {
+    "type": "path",
+    "title": "先学什么，再去打什么比赛",
+    "image": "/assets/portal/banner-path.svg",
+    "tag": "成长路径",
+    "targetUrl": "/projects",
+    "priority": 3
+  },
+  {
+    "type": "competition",
+    "title": "上海市青少年人工智能创意实践活动",
+    "image": "/assets/portal/banner-ai.svg",
+    "tag": "上海市赛事",
+    "targetUrl": "/competitions/shanghai-ai-creative-practice",
+    "priority": 4
+  }
+]

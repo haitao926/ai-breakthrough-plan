@@ -1,0 +1,10 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="720" rx="48" fill="#F5FBF8"/>
+  <path d="M105 589C272 418 389 373 510 390C649 409 756 571 1050 185" stroke="#0F172A" stroke-width="24" stroke-linecap="round"/>
+  <circle cx="198" cy="516" r="52" fill="#10B981"/>
+  <circle cx="525" cy="410" r="58" fill="#111827"/>
+  <circle cx="1014" cy="210" r="76" fill="#F59E0B"/>
+  <text x="108" y="170" fill="#0F172A" font-size="72" font-family="Arial, sans-serif" font-weight="700">看见赛事</text>
+  <text x="108" y="250" fill="#0F172A" font-size="72" font-family="Arial, sans-serif" font-weight="700">也看见路径</text>
+  <text x="108" y="320" fill="#475569" font-size="28" font-family="Arial, sans-serif">课程准备 / 项目实践 / 成果表达</text>
+</svg>

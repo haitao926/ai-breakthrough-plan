@@ -1,5 +1,5 @@
 @echo off
-echo Starting HAI Tech Lab legacy platform...
+echo Starting SASU AI Lab legacy platform...
 
 set "BASE_DIR=%~dp0.."
 

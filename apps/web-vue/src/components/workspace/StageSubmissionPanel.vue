@@ -43,6 +43,13 @@
 
       <!-- 开题报告专用布局 -->
       <div v-if="activeStage === 'proposal'" class="space-y-8 animate-reveal">
+        <div class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+          <h3 class="text-base font-black text-slate-900 mb-2">材料可以先在线下完成</h3>
+          <p class="text-sm text-slate-500 leading-relaxed">
+            平台用于提醒节点和归档材料。学生可以先按开题模板在 Word / Markdown / PDF 中填写，再上传文件；平台内的整理工具只是辅助。
+          </p>
+        </div>
+
         <ProposalStatus
           :items="proposalStatus.items"
           :missing="proposalStatus.missing"
@@ -51,15 +58,69 @@
           @refresh="$emit('refresh-status')"
           @open-item="$emit('open-item', $event)"
         />
+
+        <div class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm space-y-5">
+          <div>
+            <h3 class="text-base font-black text-slate-900 mb-1">上传开题材料</h3>
+            <p class="text-sm text-slate-500">已填写的开题模板、调研记录、图片或 PDF 都可以作为附件提交。</p>
+          </div>
+          <div v-for="field in stageConfig.fields" :key="field.name" class="group">
+            <label class="block mb-2">
+              <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                {{ field.label }}
+              </span>
+            </label>
+            <textarea
+              v-if="field.type === 'textarea'"
+              v-model="formDetails[field.name]"
+              class="w-full min-h-[110px] bg-white border border-slate-200 rounded-[16px] p-4 text-sm font-medium text-slate-900 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all placeholder:text-slate-300 resize-none"
+              :placeholder="field.placeholder || '可补充说明上传材料的内容...'"
+            ></textarea>
+            <input
+              v-else
+              v-model="formDetails[field.name]"
+              class="w-full bg-white border border-slate-200 rounded-2xl px-5 py-4 text-sm font-medium text-slate-900 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all placeholder:text-slate-300"
+              :placeholder="field.placeholder || ''"
+            />
+          </div>
+          <div class="p-6 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 hover:border-indigo-300 hover:bg-indigo-50/20 transition-all group relative cursor-pointer">
+            <input
+              :key="fileInputKey"
+              type="file"
+              multiple
+              class="absolute inset-0 opacity-0 cursor-pointer z-10"
+              @change="$emit('file-change', $event)"
+            />
+            <div class="text-center">
+              <div class="w-12 h-12 bg-white rounded-xl flex items-center justify-center mx-auto mb-3 text-slate-400 group-hover:text-indigo-600 transition-colors">
+                <i class="fas fa-cloud-upload-alt text-xl"></i>
+              </div>
+              <h4 class="text-sm font-black text-slate-900 mb-1">上传已填写模板或附件</h4>
+              <p class="text-xs text-slate-400 font-bold">支持 Word、PDF、图片、压缩包等材料</p>
+            </div>
+          </div>
+          <div v-if="files.length" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div v-for="file in files" :key="file.name" class="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-100 shadow-sm">
+              <div class="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 text-sm">
+                <i class="fas fa-file-alt"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-xs font-bold text-slate-900 truncate">{{ file.name }}</div>
+                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ formatSize(file.size) }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="flex justify-center pt-4">
           <button 
             class="group relative inline-flex items-center justify-center gap-3 px-10 py-4 bg-indigo-600 rounded-[22px] text-white font-black text-sm tracking-widest uppercase overflow-hidden shadow-xl shadow-indigo-600/30 hover:shadow-indigo-600/50 hover:-translate-y-1 transition-all disabled:opacity-50 disabled:grayscale disabled:hover:translate-y-0"
-            :disabled="!proposalStatus.ready || submitting" 
+            :disabled="(!proposalStatus.ready && !files.length && !formDetails.templateRef && !formDetails.notes) || submitting" 
             @click="$emit('submit-stage')"
           >
             <div class="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
             <i class="fas" :class="submitting ? 'fa-circle-notch animate-spin' : 'fa-paper-plane'"></i>
-            <span>{{ submitting ? '正在建立安全连接...' : '确认并递交开题报告' }}</span>
+            <span>{{ submitting ? '正在提交...' : '上传 / 提交开题材料' }}</span>
           </button>
         </div>
       </div>
@@ -102,7 +163,7 @@
             <div class="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-500">
               <i class="fas fa-cloud-upload-alt text-2xl"></i>
             </div>
-            <h4 class="text-sm font-black text-slate-900 uppercase tracking-widest mb-1">拖拽附件至此处</h4>
+            <h4 class="text-sm font-black text-slate-900 uppercase tracking-widest mb-1">上传已填写模板或附件</h4>
             <p class="text-xs text-slate-400 font-bold uppercase tracking-tighter">支持多选，最大限制 50MB 每文件</p>
           </div>
         </div>
@@ -134,7 +195,7 @@
             :disabled="submitting"
           >
             <i class="fas" :class="submitting ? 'fa-spinner animate-spin' : 'fa-rocket'"></i>
-            <span>{{ submitting ? '正在建立安全连接...' : '发送评审请求' }}</span>
+            <span>{{ submitting ? '正在提交...' : '上传 / 提交材料' }}</span>
           </button>
         </div>
       </form>
@@ -196,4 +257,3 @@ function getIconClass(cls) {
   border-radius: 10px;
 }
 </style>
-

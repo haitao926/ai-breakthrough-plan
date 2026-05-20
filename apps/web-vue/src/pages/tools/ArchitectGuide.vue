@@ -58,7 +58,7 @@
           <i class="fas fa-info-circle mr-1"></i> 提示
         </p>
         <p class="text-sm text-gray-600">
-          点击按钮将跳转到专业绘图工具 <strong>Draw.io (ReopenInnoLab 版)</strong>。<br>
+          点击按钮将跳转到专业绘图工具 <strong>Draw.io</strong>。<br>
           绘制完成后，请导出为 <strong>PNG</strong> 图片，并在“提交开题报告”或“里程碑”时上传。
         </p>
       </div>

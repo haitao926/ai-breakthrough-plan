@@ -10,7 +10,7 @@
             <span class="w-2 h-6 bg-indigo-600 rounded-full mr-3"></span>
             前期调研与需求验证
           </h1>
-          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Pre-research & Verification</p>
+          <p class="text-[10px] font-bold text-slate-400 tracking-tight mt-0.5">用于整理开题/中期提交中的调研依据</p>
         </div>
       </div>
       <div class="flex items-center gap-6">
@@ -30,7 +30,7 @@
           <i class="fas fa-microscope"></i> Discovery Phase
         </div>
         <h2 class="text-4xl font-black text-slate-900 tracking-tight mb-4">先验证，再动手</h2>
-        <p class="text-slate-500 font-medium max-w-2xl mx-auto">伟大的产品往往诞生于对用户痛点的深刻洞察。通过真实的访谈与调研，确保你的创意能够解决真实存在的问题。</p>
+        <p class="text-slate-500 font-medium max-w-2xl mx-auto">把访谈、问卷、观察或案例调研整理成可上传的依据材料，提交开题或中期时可以作为附件说明项目方向。</p>
       </header>
 
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -353,4 +353,3 @@ onMounted(() => {
   color: #3730a3;
 }
 </style>
-

@@ -1,208 +1,586 @@
 <template>
-  <div class="showcase-page text-slate-900 selection:bg-indigo-100 selection:text-indigo-900 min-h-screen bg-[#f8fafc]">
-    <!-- 动态背景层 -->
-    <div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
-      <div class="absolute top-[-10%] sm:top-[-20%] left-[-10%] w-[60%] sm:w-[40%] h-[60%] sm:h-[40%] bg-indigo-200/20 blur-[120px] rounded-full"></div>
-      <div class="absolute bottom-[-10%] sm:bottom-[-20%] right-[-10%] w-[60%] sm:w-[40%] h-[60%] sm:h-[40%] bg-blue-200/20 blur-[120px] rounded-full"></div>
-    </div>
+  <div class="portal-page">
+    <SiteNav active="showcase" />
 
-    <!-- 导航栏 -->
-    <nav class="fixed w-full z-50 glass-nav transition-all duration-500 py-4">
-      <div class="max-w-7xl mx-auto px-6 lg:px-12">
-        <div class="flex justify-between items-center h-16">
-          <div class="flex items-center gap-4 shrink-0">
-            <RouterLink to="/" class="flex items-center gap-3 transition-transform hover:scale-105 active:scale-95 group">
-              <div class="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-500/30">
-                <i class="fas fa-cube text-lg"></i>
+    <main class="portal-shell portal-main">
+      <section v-if="featuredStory" class="story-hero">
+        <img :src="featuredStory.cover" :alt="featuredStory.title" class="story-hero-cover" />
+        <div class="story-hero-copy">
+          <p class="poster-eyebrow">Featured Story</p>
+          <h1>{{ featuredStory.title }}</h1>
+          <p>学生成果页负责证明“课程和项目真的能产出作品”，因此保留案例陈列，并与大模型深度协同创作。</p>
+          <div class="meta-row">
+            <span class="route-pill">{{ featuredStory.result }}</span>
+            <span class="route-pill muted">{{ featuredStory.studentLabel }}</span>
+            <span class="ai-badge"><i class="fas fa-magic"></i> HAI Co-Created</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 优秀成果案例 -->
+      <section class="portal-section">
+        <div class="section-heading">
+          <p class="poster-eyebrow">Gallery</p>
+          <h2>成果案例</h2>
+        </div>
+        <div class="story-grid">
+          <article v-for="story in stories" :key="story.slug" class="story-card">
+            <div class="story-cover-wrap">
+              <img :src="story.cover" :alt="story.title" class="story-cover" />
+            </div>
+            <div class="story-copy">
+              <div class="meta-row">
+                <span class="route-pill">{{ story.result }}</span>
+                <span class="route-pill muted">{{ story.studentLabel }}</span>
+                <span class="ai-badge"><i class="fas fa-magic"></i> HAI Co-Created</span>
               </div>
-              <div class="flex flex-col">
-                <span class="font-black text-xl tracking-tight leading-none text-slate-900">AI 破壁计划</span>
-                <span class="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mt-0.5">Showcase Gallery</span>
+              <h3>{{ story.title }}</h3>
+              <p>{{ story.summary }}</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- 学生课题展示台 (Student Project Showcase Wall) -->
+      <section class="portal-section" style="margin-top: 56px;">
+        <div class="section-heading-row">
+          <div class="section-heading">
+            <p class="poster-eyebrow">Showcase Wall</p>
+            <h2>学生优秀项目展示</h2>
+          </div>
+          
+          <div class="search-control">
+            <div class="search-box">
+              <i class="fas fa-search"></i>
+              <input 
+                v-model="searchTerm" 
+                type="text" 
+                placeholder="搜索项目标题、简介或学生姓名..." 
+              />
+              <button v-if="searchTerm" class="clear-btn" @click="searchTerm = ''">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="showcaseLoading" class="showcase-loading">
+          <i class="fas fa-spinner fa-spin"></i>
+          <span>正在加载学生作品...</span>
+        </div>
+
+        <div v-else-if="filteredShowcase.length === 0" class="showcase-empty">
+          <i class="fas fa-folder-open"></i>
+          <span>暂无符合条件的学生项目展示</span>
+        </div>
+
+        <div v-else class="showcase-grid">
+          <article v-for="item in filteredShowcase" :key="item.id" class="showcase-card">
+            <div class="showcase-cover-wrap">
+              <img
+                v-if="item.coverUrl"
+                :src="item.coverUrl"
+                :alt="item.projectTitle"
+                class="showcase-cover"
+              />
+              <div v-else class="showcase-cover-placeholder">
+                <i class="fas fa-cubes"></i>
+                <span>HAI TECH LAB</span>
               </div>
-            </RouterLink>
-          </div>
-
-          <div class="hidden lg:flex items-center space-x-1 bg-slate-100/50 p-1 rounded-2xl border border-slate-200/50">
-            <RouterLink to="/knowledge" class="px-5 py-2 rounded-xl text-sm font-bold text-slate-600 hover:text-indigo-600 hover:bg-white transition-all">创新知识库</RouterLink>
-            <RouterLink to="/competencies" class="px-5 py-2 rounded-xl text-sm font-bold text-slate-600 hover:text-indigo-600 hover:bg-white transition-all">学术指导</RouterLink>
-            <RouterLink to="/projects" class="px-5 py-2 rounded-xl text-sm font-bold text-slate-600 hover:text-indigo-600 hover:bg-white transition-all">项目库</RouterLink>
-            <RouterLink to="/downloads" class="px-5 py-2 rounded-xl text-sm font-bold text-slate-600 hover:text-indigo-600 hover:bg-white transition-all">资料下载</RouterLink>
-          </div>
-
-          <div class="flex gap-4 items-center shrink-0">
-             <RouterLink to="/workspace" class="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-black uppercase tracking-widest shadow-lg shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all">
-               进入工作台
-             </RouterLink>
-          </div>
-        </div>
-      </div>
-    </nav>
-
-    <!-- Header -->
-    <header class="relative pt-44 pb-20 overflow-hidden z-10">
-      <div class="max-w-7xl mx-auto px-6 lg:px-12 text-center lg:text-left">
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 text-[10px] font-black uppercase tracking-[0.2em] mb-6 shadow-sm">
-           <i class="fas fa-magic"></i> Project Inspiration
-        </div>
-        <h1 class="text-4xl md:text-6xl font-black text-slate-900 tracking-tight mb-6 leading-tight">
-          看见未来的<br><span class="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-blue-500">创新成果</span>
-        </h1>
-        <p class="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">
-          在这里，每一个创意都留下了痕迹。从 Vibe Coding 的灵动到智能硬件的严谨，浏览往届学长的代表作品，连接真实的创新世界。
-        </p>
-      </div>
-    </header>
-
-    <main class="max-w-7xl mx-auto px-6 lg:px-12 py-12 relative z-10">
-      <!-- Filter Chips -->
-      <div class="flex items-center gap-3 overflow-x-auto pb-8 mb-12 scroll-none animate-reveal">
-        <button
-          v-for="item in showcaseFilters"
-          :key="item.key"
-          class="px-6 py-3 rounded-2xl text-[11px] font-black tracking-widest uppercase transition-all whitespace-nowrap"
-          :class="filterKey === item.key ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/20' : 'bg-white border border-slate-200 text-slate-500 hover:border-indigo-400 hover:text-indigo-600'"
-          @click="filterKey = item.key"
-        >
-          {{ item.label }}
-        </button>
-      </div>
-
-      <!-- Grid -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10 animate-reveal">
-        <div v-if="loading" class="col-span-full flex flex-col items-center justify-center py-40 text-slate-300">
-          <i class="fas fa-spinner fa-spin text-4xl mb-6"></i>
-          <span class="text-xs font-black uppercase tracking-widest">Collecting Excellence...</span>
-        </div>
-        
-        <div v-else-if="filteredShowcase.length === 0" class="col-span-full flex flex-col items-center justify-center py-40 text-slate-300">
-           <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6">
-              <i class="fas fa-ghost text-3xl"></i>
-           </div>
-           <span class="text-xs font-black uppercase tracking-widest">No entries found yet</span>
-        </div>
-
-        <div v-else v-for="item in filteredShowcase" :key="item.url" 
-          class="group relative premium-card !p-0 overflow-hidden !bg-white border-none shadow-xl hover:!shadow-2xl transition-all duration-500"
-        >
-          <div class="h-64 bg-slate-100 relative overflow-hidden">
-            <img
-              v-if="isImage(item.url)"
-              :src="item.url"
-              class="w-full h-full object-cover transition duration-700 group-hover:scale-110"
-              :alt="item.title"
-            />
-            <div v-else class="w-full h-full flex flex-col items-center justify-center text-slate-200 bg-slate-900">
-              <i class="fas fa-file-invoice text-5xl mb-4 opacity-20"></i>
-              <span class="text-[9px] font-black uppercase tracking-widest opacity-40">Document Archive</span>
+              <span class="badge-tag primary">优秀项目</span>
+              <span v-if="item.className" class="badge-tag class-label">{{ item.className }}</span>
             </div>
-            
-            <!-- Type Badge -->
-            <div class="absolute top-6 left-6 px-3 py-1 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg text-[9px] font-black text-white uppercase tracking-widest">
-               {{ item.projectLabel || 'Project' }}
-            </div>
-            
-            <!-- Overlay Mask -->
-            <div class="absolute inset-0 bg-indigo-900/60 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-center justify-center">
-               <a :href="item.url" target="_blank" class="w-14 h-14 bg-white rounded-full flex items-center justify-center text-indigo-600 shadow-2xl transform translate-y-4 group-hover:translate-y-0 transition-all duration-500 hover:scale-110">
-                  <i class="fas fa-expand-alt"></i>
-               </a>
-            </div>
-          </div>
 
-          <div class="p-8 space-y-6">
-            <div>
-               <h4 class="text-xl font-black text-slate-900 tracking-tight min-h-[3rem] line-clamp-2" :title="item.title">{{ item.title }}</h4>
-               <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Submission Details</p>
+            <div class="showcase-card-body">
+              <h3>{{ item.projectTitle }}</h3>
+              <p class="summary">{{ item.projectSummary }}</p>
+              
+              <div class="showcase-card-footer">
+                <span class="student-author">
+                  <i class="fas fa-user-friends"></i>
+                  {{ item.studentName }}
+                </span>
+                
+                <div class="action-links">
+                  <template v-if="item.attachments && item.attachments.length">
+                    <a
+                      v-for="att in item.attachments"
+                      :key="att.url"
+                      :href="att.url"
+                      target="_blank"
+                      rel="noreferrer"
+                      class="view-artifact-btn"
+                    >
+                      <i class="fas fa-paperclip"></i>
+                      查看成果
+                    </a>
+                  </template>
+                  <span v-else class="no-attachment">无附件</span>
+                </div>
+              </div>
             </div>
-            
-            <div class="flex items-center justify-between pt-6 border-t border-slate-50">
-               <div class="flex items-center gap-3">
-                  <div class="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 font-black text-[10px]">
-                     {{ (item.studentName || 'Student').charAt(0).toUpperCase() }}
-                  </div>
-                  <span class="text-xs font-black text-slate-600 uppercase tracking-tight">{{ item.studentName || 'AI Explorer' }}</span>
-               </div>
-               <a :href="item.url" target="_blank" class="flex items-center gap-2 group/btn">
-                  <span class="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] group-hover/btn:translate-x-1 transition-transform">View</span>
-                  <i class="fas fa-chevron-right text-[9px] text-indigo-400"></i>
-               </a>
-            </div>
-          </div>
+          </article>
         </div>
-      </div>
+      </section>
     </main>
 
-    <footer class="py-20 border-t border-slate-100 relative z-10 text-center">
-       <div class="flex items-center justify-center gap-3 mb-6">
-          <div class="w-8 h-8 rounded-xl bg-slate-900 flex items-center justify-center text-white">
-             <i class="fas fa-cube text-xs"></i>
-          </div>
-          <span class="text-xs font-black text-slate-900 uppercase tracking-widest">HAI Tech Lab <span class="text-slate-300 mx-2">|</span> 2026 Innovation Board</span>
-       </div>
-       <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">Celebrating the spirit of "Make with Code".</p>
-    </footer>
+    <PortalFooter />
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, ref } from 'vue';
-import { apiFetch } from '@/api/client';
+import SiteNav from '@/components/SiteNav.vue';
+import PortalFooter from '@/components/portal/PortalFooter.vue';
+import { fetchStories } from '@/api/portal';
+import { apiFetch, readJsonResponse } from '@/api/client';
 
+const stories = ref([]);
 const showcaseItems = ref([]);
-const filterKey = ref('all');
-const loading = ref(true);
+const showcaseLoading = ref(true);
+const searchTerm = ref('');
 
-const showcaseFilters = [
-  { key: 'all', label: '全部作品' },
-  { key: 'project1', label: 'Vibe Coding' },
-  { key: 'project2', label: '产品设计' },
-  { key: 'project3', label: 'Web 开发' },
-  { key: 'project5', label: '智能硬件' }
-];
+const featuredStory = computed(() => stories.value.find(item => item.featured) || stories.value[0] || null);
 
 const filteredShowcase = computed(() => {
-  if (filterKey.value === 'all') return showcaseItems.value;
-  return showcaseItems.value.filter(item => item.project === filterKey.value);
+  const items = showcaseItems.value;
+  const q = searchTerm.value.trim().toLowerCase();
+  if (!q) return items;
+  return items.filter(item => {
+    const haystack = [
+      item.projectTitle,
+      item.projectSummary,
+      item.studentName,
+      item.className
+    ].filter(Boolean).map(v => String(v).toLowerCase()).join(' ');
+    return haystack.includes(q);
+  });
 });
 
-function isImage(url) {
-  return /\.(png|jpe?g|gif|webp)$/i.test(url);
+function isImage(filename) {
+  return /\.(png|jpe?g|webp|gif)$/i.test(filename || '');
 }
 
 async function loadShowcase() {
+  showcaseLoading.value = true;
   try {
     const res = await apiFetch('/showcase');
-    const data = await res.json();
+    const data = await readJsonResponse(res, 'showcase');
+    if (!res.ok) throw new Error(data?.error || 'showcase_failed');
     const items = data.items || [];
-    showcaseItems.value = items.flatMap(item => {
-      const pid = `project${item.project?.id || ''}`;
-      return (item.showcase?.attachments || []).map(att => ({
-        project: pid,
-        projectLabel: item.project?.title?.split(' ')[0] || 'Inno Project',
-        filename: att.name,
-        url: att.url,
-        title: item.title || item.project?.title || att.name,
-        studentName: item.studentName || item.project?.team_members || 'AI Student'
-      }));
+    showcaseItems.value = items.map(item => {
+      const coverAttachment = (item.showcase?.attachments || []).find(att => isImage(att.name));
+      return {
+        id: item.showcase?.id || item.project?.id,
+        projectTitle: item.project?.title || item.showcase?.title,
+        projectSummary: item.project?.summary || item.showcase?.content || '暂无项目介绍。',
+        className: item.project?.class_name || '',
+        studentName: item.showcase?.details?.studentName || item.project?.team_members || '匿名',
+        coverUrl: coverAttachment ? coverAttachment.url : null,
+        attachments: item.showcase?.attachments || []
+      };
     });
   } catch (err) {
     console.error(err);
+    showcaseItems.value = [];
   } finally {
-    loading.value = false;
+    showcaseLoading.value = false;
   }
 }
 
-onMounted(loadShowcase);
+onMounted(async () => {
+  try {
+    const data = await fetchStories();
+    stories.value = data || [];
+  } catch (e) {
+    console.error(e);
+  }
+  await loadShowcase();
+});
 </script>
 
 <style scoped>
-.glass-nav {
-  background: rgba(255, 255, 255, 0.85);
+.story-hero {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 32px;
+  background: rgba(255, 255, 255, 0.72);
   backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 36px;
+  padding: 32px;
+  margin-bottom: 40px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.02);
+  align-items: center;
 }
-.premium-card { @apply rounded-[40px] border border-slate-200/60 p-8 shadow-sm; }
-.animate-reveal { animation: reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-@keyframes reveal { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-.scroll-none::-webkit-scrollbar { display: none; }
+
+.story-hero-cover {
+  width: 100%;
+  height: 380px;
+  object-fit: cover;
+  border-radius: 24px;
+  transition: transform 0.5s ease;
+}
+
+.story-hero:hover .story-hero-cover {
+  transform: scale(1.01);
+}
+
+.story-hero-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 16px;
+}
+
+.story-hero-copy h1 {
+  font-size: 2.8rem;
+  line-height: 1.1;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  background: linear-gradient(135deg, #1e1b4b 0%, #4338ca 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.story-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+.story-card {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.02);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.story-card:hover {
+  transform: translateY(-6px) scale(1.01);
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 0 25px 50px rgba(99, 102, 241, 0.08);
+}
+
+.story-cover-wrap {
+  overflow: hidden;
+  height: 240px;
+}
+
+.story-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.story-card:hover .story-cover {
+  transform: scale(1.06);
+}
+
+.story-copy {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex-grow: 1;
+}
+
+.story-copy h3 {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.story-copy p {
+  font-size: 0.9rem;
+  color: #64748b;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 99px;
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(99, 102, 241, 0.1));
+  border: 1px solid rgba(6, 182, 212, 0.25);
+  color: #0891b2;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.05);
+}
+
+/* Student Showcase Wall styles */
+.section-heading-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 20px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.search-control {
+  min-width: 320px;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 99px;
+  padding: 0 16px;
+  min-height: 44px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+  transition: all 0.3s ease;
+}
+
+.search-box:focus-within {
+  border-color: rgba(99, 102, 241, 0.4);
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.08);
+  background: #fff;
+}
+
+.search-box i {
+  color: #94a3b8;
+  font-size: 0.88rem;
+}
+
+.search-box input {
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 0.88rem;
+  color: #0f172a;
+  width: 100%;
+}
+
+.clear-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: #94a3b8;
+}
+
+.clear-btn:hover {
+  color: #64748b;
+}
+
+.showcase-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+.showcase-card {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.02);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.showcase-card:hover {
+  transform: translateY(-6px) scale(1.01);
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 0 25px 50px rgba(99, 102, 241, 0.08);
+}
+
+.showcase-cover-wrap {
+  position: relative;
+  height: 200px;
+  overflow: hidden;
+  background: #f8fafc;
+}
+
+.showcase-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.showcase-card:hover .showcase-cover {
+  transform: scale(1.06);
+}
+
+.showcase-cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(6, 182, 212, 0.05));
+  color: #818cf8;
+  gap: 8px;
+}
+
+.showcase-cover-placeholder i {
+  font-size: 2.2rem;
+  opacity: 0.6;
+}
+
+.showcase-cover-placeholder span {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  opacity: 0.6;
+}
+
+.badge-tag {
+  position: absolute;
+  top: 16px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 5px 10px;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.badge-tag.primary {
+  left: 16px;
+  background: #4f46e5;
+  color: #fff;
+}
+
+.badge-tag.class-label {
+  right: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
+  color: #475569;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.showcase-card-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex-grow: 1;
+}
+
+.showcase-card-body h3 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.showcase-card-body .summary {
+  font-size: 0.88rem;
+  color: #64748b;
+  line-height: 1.6;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex-grow: 1;
+}
+
+.showcase-card-footer {
+  margin-top: 10px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.84rem;
+}
+
+.student-author {
+  font-weight: 750;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.student-author i {
+  color: #6366f1;
+}
+
+.action-links {
+  display: flex;
+  gap: 6px;
+}
+
+.view-artifact-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: rgba(99, 102, 241, 0.06);
+  color: #4f46e5;
+  font-weight: 800;
+  text-decoration: none;
+  font-size: 0.78rem;
+  transition: all 0.2s ease;
+}
+
+.view-artifact-btn:hover {
+  background: rgba(99, 102, 241, 0.12);
+  color: #3730a3;
+}
+
+.no-attachment {
+  color: #94a3b8;
+  font-size: 0.78rem;
+}
+
+.showcase-loading,
+.showcase-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  color: #94a3b8;
+  gap: 16px;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 28px;
+  border: 1px dashed rgba(0, 0, 0, 0.08);
+}
+
+.showcase-loading i,
+.showcase-empty i {
+  font-size: 2rem;
+}
+
+.showcase-loading span,
+.showcase-empty span {
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+@media (max-width: 980px) {
+  .story-hero {
+    grid-template-columns: 1fr;
+    padding: 20px;
+  }
+  .story-hero-cover {
+    height: 260px;
+  }
+}
 </style>

@@ -1,10 +1,12 @@
 <template>
   <footer class="site-footer typo-caption-compact text-slate-400">
-    <div>© 2025 HAI Tech Lab | AI 破壁计划</div>
+    <div>© 2025 {{ footerLabel }}</div>
   </footer>
 </template>
 
-<script setup></script>
+<script setup>
+import { footerLabel } from '@/constants/brand';
+</script>
 
 <style scoped>
 .site-footer {

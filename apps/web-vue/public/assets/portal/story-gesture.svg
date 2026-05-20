@@ -1,0 +1,8 @@
+<svg width="900" height="640" viewBox="0 0 900 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="900" height="640" rx="36" fill="#FFF7ED"/>
+  <rect x="54" y="54" width="792" height="532" rx="30" fill="#111827"/>
+  <circle cx="654" cy="210" r="94" fill="#F97316"/>
+  <text x="98" y="200" fill="#F8FAFC" font-size="62" font-family="Arial, sans-serif" font-weight="700">体感互动</text>
+  <text x="98" y="272" fill="#F8FAFC" font-size="62" font-family="Arial, sans-serif" font-weight="700">走向展示台</text>
+  <text x="98" y="340" fill="#CBD5E1" font-size="24" font-family="Arial, sans-serif">课堂项目 / 创意实践 / 市级展示</text>
+</svg>

@@ -1,0 +1,24 @@
+{
+  "slug": "national-robotics-innovation-challenge",
+  "overview": "围绕真实任务场景完成机器人设计、调试和现场展示，强调工程能力与团队协作。",
+  "tracks": ["机器人结构设计", "任务编程", "现场答辩"],
+  "timeline": [
+    {"label": "校内选拔", "date": "4 月中旬"},
+    {"label": "赛前集训", "date": "5 月"},
+    {"label": "上海赛区", "date": "6 月"},
+    {"label": "全国展示", "date": "7 月"}
+  ],
+  "participation": {
+    "mode": "校内推荐 + 官方报名",
+    "contact": "科创中心机器人组",
+    "notes": "建议 2-4 人组队，配 1 名指导老师。"
+  },
+  "resources": [
+    {"label": "规则文件", "url": "https://example.edu.cn/robotics/rules.pdf"},
+    {"label": "往届视频", "url": "https://example.edu.cn/robotics/videos"}
+  ],
+  "faq": [
+    {"q": "没有竞赛经验可以参加吗？", "a": "可以，但更适合已经完成基础硬件实践或有社团训练经历的学生。"},
+    {"q": "重点看成绩还是作品？", "a": "更看完整项目表现，包括稳定性、任务完成度和现场说明。"}
+  ]
+}

@@ -10,7 +10,7 @@
             <span class="w-2 h-6 bg-indigo-600 rounded-full mr-3"></span>
             文献阅读与学术发现
           </h1>
-          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Literature Review & Insights</p>
+          <p class="text-[10px] font-bold text-slate-400 tracking-tight mt-0.5">用于整理开题/结题提交中的参考资料</p>
         </div>
       </div>
       <div class="flex items-center gap-6">
@@ -30,7 +30,7 @@
           <i class="fas fa-book-open"></i> Foundation Phase
         </div>
         <h2 class="text-4xl font-black text-slate-900 tracking-tight mb-4">站在巨人的肩膀上</h2>
-        <p class="text-slate-500 font-medium max-w-2xl mx-auto">通过梳理已有研究成果，确定你的项目在学术和市场中的独特定位，避免“重复造轮子”。</p>
+        <p class="text-slate-500 font-medium max-w-2xl mx-auto">记录参考文献、核心结论和对项目的启发，作为开题报告、结题报告或附件中的依据材料。</p>
       </header>
 
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -210,4 +210,3 @@ onMounted(() => {
   to { opacity: 1; transform: translateY(0); }
 }
 </style>
-

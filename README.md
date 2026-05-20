@@ -1,11 +1,11 @@
-# HAI Tech Lab - 学生科创一站式平台
+# SASU AI Lab - 学生科创一站式平台
 
 本仓库已统一为 Monorepo 结构，覆盖课程内容、平台应用、服务与存储。
 
 ## 目录结构
 
 ```
-HAI Tech Lab/
+SASU AI Lab/
 ├── apps/                     # 应用层
 │   ├── web/                  # 新版前端
 │   ├── api/                  # 新版后端

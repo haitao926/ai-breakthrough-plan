@@ -1,0 +1,10 @@
+{
+  "success": true,
+  "model": "gpt-image-1.5-all",
+  "prompt": "为中学AI创新教育平台绘制一张高品质网站横幅主视觉，主题是课题切口，不要人物。统一使用高级 3D paper relief infographic 风格，横向宽幅，适合网站 banner 裁切。画面是一张项目问题板：空白任务块、方向分支、模块零件、摄像头与传感器部件、移动机器人草图轮廓、箭线和节点组织成清晰的课题入口。所有面板只允许图形、线条和色块，绝对不要任何字母、数字、问号、代码、表格文字、logo、水印，不要拟人机器人。配色为靛蓝、白、蓝灰，少量橙色强调。",
+  "original_prompt": "为中学AI创新教育平台绘制一张高品质网站横幅主视觉，主题是课题切口，不要人物。统一使用高级 3D paper relief infographic 风格，横向宽幅，适合网站 banner 裁切。画面是一张项目问题板：空白任务块、方向分支、模块零件、摄像头与传感器部件、移动机器人草图轮廓、箭线和节点组织成清晰的课题入口。所有面板只允许图形、线条和色块，绝对不要任何字母、数字、问号、代码、表格文字、logo、水印，不要拟人机器人。配色为靛蓝、白、蓝灰，少量橙色强调。",
+  "optimized_prompt": null,
+  "image_url": "https://pro.filesystem.site/cdn/20260413/b9c85a148e5fb5d84f4c831b948e29.png",
+  "output_path": "/Users/apple/Library/CloudStorage/OneDrive-个人/1_Course/2025-2026/《AI破壁计划》/apps/web-vue/public/assets/banners/banner-projects-topics.png",
+  "via": "direct"
+}

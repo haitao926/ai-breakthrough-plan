@@ -31,6 +31,14 @@ function ensureColumn(db, tableName, columnName, columnDef) {
   }
 }
 
+function ensureIndex(db, indexName, tableName, columns, where = '') {
+  const safeIndex = String(indexName || '').replace(/[^a-zA-Z0-9_]/g, '');
+  const safeTable = String(tableName || '').replace(/[^a-zA-Z0-9_]/g, '');
+  const safeColumns = String(columns || '');
+  if (!safeIndex || !safeTable || !safeColumns) return;
+  db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS ${safeIndex} ON ${safeTable} (${safeColumns}) ${where}`);
+}
+
 function initSchema(db) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
@@ -220,6 +228,21 @@ function initSchema(db) {
       FOREIGN KEY(project_id) REFERENCES projects(id)
     );
 
+    CREATE TABLE IF NOT EXISTS project_tool_data (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_id INTEGER NOT NULL,
+      tool_key TEXT NOT NULL,
+      data TEXT NOT NULL,
+      created_by INTEGER,
+      updated_by INTEGER,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY(project_id) REFERENCES projects(id),
+      FOREIGN KEY(created_by) REFERENCES users(id),
+      FOREIGN KEY(updated_by) REFERENCES users(id),
+      UNIQUE(project_id, tool_key)
+    );
+
     CREATE TABLE IF NOT EXISTS project_milestones (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       project_id INTEGER NOT NULL,
@@ -233,6 +256,8 @@ function initSchema(db) {
       deadline TEXT,
       status TEXT NOT NULL, -- 'pending', 'submitted', 'approved', 'rejected'
       deliverables TEXT, -- JSON: { code_url, images: [], video_url, doc_url }
+      source TEXT,
+      source_key TEXT,
       ai_review TEXT, -- JSON: { score, comments, suggestions }
       teacher_score REAL,
       teacher_comment TEXT,
@@ -252,6 +277,76 @@ function initSchema(db) {
       created_at TEXT NOT NULL,
       FOREIGN KEY(uploaded_by) REFERENCES users(id)
     );
+
+    CREATE TABLE IF NOT EXISTS assignments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      course_id TEXT NOT NULL,
+      lesson_id TEXT,
+      title TEXT NOT NULL,
+      description TEXT,
+      requirements TEXT,
+      due_at TEXT,
+      submit_type TEXT NOT NULL,
+      rubric TEXT,
+      status TEXT NOT NULL,
+      created_by INTEGER,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY(created_by) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS assignment_submissions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      assignment_id INTEGER NOT NULL,
+      student_id INTEGER NOT NULL,
+      content TEXT,
+      link TEXT,
+      attachment_note TEXT,
+      status TEXT NOT NULL,
+      score REAL,
+      feedback TEXT,
+      reviewed_by INTEGER,
+      submitted_at TEXT NOT NULL,
+      reviewed_at TEXT,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY(assignment_id) REFERENCES assignments(id),
+      FOREIGN KEY(student_id) REFERENCES users(id),
+      FOREIGN KEY(reviewed_by) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS competition_registrations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      competition_slug TEXT NOT NULL,
+      student_id INTEGER NOT NULL,
+      team_name TEXT,
+      class_name TEXT,
+      members TEXT,
+      materials TEXT,
+      status TEXT NOT NULL,
+      note TEXT,
+      teacher_feedback TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY(student_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS project_topics (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      description TEXT,
+      background TEXT,
+      goals TEXT,
+      difficulty TEXT,
+      suggested_team_size TEXT,
+      deliverables TEXT,
+      related_course_id TEXT,
+      related_competition_slug TEXT,
+      status TEXT NOT NULL,
+      created_by INTEGER,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY(created_by) REFERENCES users(id)
+    );
   `);
 
   ensureColumn(db, 'users', 'avatar_url', 'avatar_url TEXT');
@@ -267,8 +362,27 @@ function initSchema(db) {
   ensureColumn(db, 'project_milestones', 'assignee', 'assignee TEXT');
   ensureColumn(db, 'project_milestones', 'start_date', 'start_date TEXT');
   ensureColumn(db, 'project_milestones', 'end_date', 'end_date TEXT');
+  ensureColumn(db, 'project_milestones', 'source', 'source TEXT');
+  ensureColumn(db, 'project_milestones', 'source_key', 'source_key TEXT');
   ensureColumn(db, 'assessment_files', 'title', 'title TEXT');
   ensureColumn(db, 'assessment_files', 'uploaded_by', 'uploaded_by INTEGER');
+
+  ensureColumn(db, 'assignments', 'lesson_id', 'lesson_id TEXT');
+  ensureColumn(db, 'assignments', 'rubric', 'rubric TEXT');
+  ensureColumn(db, 'assignment_submissions', 'link', 'link TEXT');
+  ensureColumn(db, 'assignment_submissions', 'attachment_note', 'attachment_note TEXT');
+  ensureColumn(db, 'competition_registrations', 'teacher_feedback', 'teacher_feedback TEXT');
+  ensureColumn(db, 'project_topics', 'related_course_id', 'related_course_id TEXT');
+  ensureColumn(db, 'project_topics', 'related_competition_slug', 'related_competition_slug TEXT');
+
+  ensureIndex(db, 'idx_project_tool_data_unique', 'project_tool_data', 'project_id, tool_key');
+  ensureIndex(
+    db,
+    'idx_project_milestones_source_unique',
+    'project_milestones',
+    'project_id, source, source_key',
+    'WHERE source IS NOT NULL AND source_key IS NOT NULL'
+  );
 }
 
 async function createDatabase(dbPath = DEFAULT_DB_PATH) {

@@ -1,0 +1,49 @@
+{
+  "id": "ros2-training-robot",
+  "title": "ROS2 训练机器人课程",
+  "direction": "engineering",
+  "teacherName": "ROS2 实训导师组",
+  "summary": "面向训练机器人平台，系统建立 ROS2 节点通信、控制与任务编排能力。",
+  "description": "课程围绕 ROS2 开发的常见工作流展开，从环境认知、节点通信、传感器接入到底盘控制与任务编排，帮助学生完成训练机器人平台上的综合实训。",
+  "audience": "适合具备 Python 或机器人基础的中高级学习者。",
+  "pace": "4 个实训单元，适合周课或集训制。",
+  "status": "published",
+  "materialsRoot": "ros2-training-robot",
+  "relatedProjects": [
+    "ros2-training-robot"
+  ],
+  "positioning": "ROS2 通信 / 机器人控制 / 实训任务",
+  "courseType": "进阶工程课程",
+  "guidePath": "课程导学.md",
+  "learningObjectives": [
+    "理解 ROS2 中节点、话题、服务和 launch 的基本关系。",
+    "能够在训练机器人上完成传感器订阅与运动控制的联调。",
+    "能够围绕任务要求设计并实现一个完整的机器人行为流程。"
+  ],
+  "materials": [
+    {
+      "id": "ros2-training-robot-guide",
+      "courseId": "ros2-training-robot",
+      "section": "课程导学",
+      "title": "课程导学",
+      "path": "课程导学.md",
+      "kind": "markdown"
+    },
+    {
+      "id": "ros2-training-robot-teacher",
+      "courseId": "ros2-training-robot",
+      "section": "教师资料",
+      "title": "教师手册",
+      "path": "TEACHING_MANUAL.md",
+      "kind": "markdown"
+    },
+    {
+      "id": "ros2-training-robot-student",
+      "courseId": "ros2-training-robot",
+      "section": "学生资料",
+      "title": "学生任务单",
+      "path": "学生任务单.md",
+      "kind": "markdown"
+    }
+  ]
+}

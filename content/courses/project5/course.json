@@ -1,0 +1,57 @@
+{
+  "id": "project5",
+  "title": "开源硬件与物联网系统",
+  "direction": "engineering",
+  "teacherName": "王老师",
+  "summary": "用传感器、控制器与边缘计算搭建可感知的智能系统。",
+  "description": "帮助学生理解树莓派、GPIO、传感器与智能硬件的基本工作方式，建立软硬结合能力。",
+  "audience": "喜欢动手搭建的学生",
+  "pace": "4 课时",
+  "status": "published",
+  "materialsRoot": "project5",
+  "relatedProjects": [
+    "project5"
+  ],
+  "positioning": "硬件连接 / 智能控制",
+  "courseType": "工程实践",
+  "guidePath": "项目5-嵌入式工程师.md",
+  "learningObjectives": [
+    "理解树莓派、GPIO 与传感器等基础硬件结构。",
+    "能够借助 AI 设计简单的硬件连接方案与控制程序。",
+    "形成软硬结合、系统联动的初步工程意识。"
+  ],
+  "materials": [
+    {
+      "id": "project5-guide-1",
+      "courseId": "project5",
+      "section": "课程导学",
+      "title": "项目 5 课程导学",
+      "path": "项目5-嵌入式工程师.md",
+      "kind": "markdown"
+    },
+    {
+      "id": "project5-teacher-1",
+      "courseId": "project5",
+      "section": "教师资料",
+      "title": "教师手册",
+      "path": "TEACHING_MANUAL.md",
+      "kind": "markdown"
+    },
+    {
+      "id": "project5-student-1",
+      "courseId": "project5",
+      "section": "学生资料",
+      "title": "趣味版讲义",
+      "path": "项目5-嵌入式工程师-趣味版.md",
+      "kind": "markdown"
+    },
+    {
+      "id": "project5-extra-1",
+      "courseId": "project5",
+      "section": "补充资料",
+      "title": "学生版 Git 提交指南",
+      "path": "学生版Git提交指南.md",
+      "kind": "markdown"
+    }
+  ]
+}

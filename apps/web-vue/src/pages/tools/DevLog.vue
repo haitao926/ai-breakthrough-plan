@@ -238,10 +238,26 @@ watch(() => projectId.value, loadLogs);
 </script>
 
 <style scoped>
-.devlog-tool { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
-.premium-card { @apply rounded-[40px] border border-slate-200/60 p-8 shadow-sm; }
+.devlog-tool {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.04), transparent 45%);
+}
+.premium-card {
+  background: rgba(255, 255, 255, 0.7) !important;
+  backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
+  box-shadow: 0 8px 32px rgba(99, 102, 241, 0.02) !important;
+  border-radius: 32px !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 32px;
+}
+.premium-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(99, 102, 241, 0.2) !important;
+  box-shadow: 0 20px 40px rgba(99, 102, 241, 0.05) !important;
+}
 .log-input {
-  @apply w-full p-6 bg-slate-50 border-none rounded-2xl outline-none text-sm font-black transition-all placeholder:text-slate-200 focus:bg-white focus:ring-4 focus:ring-indigo-500/5;
+  @apply w-full p-5 bg-slate-50/60 border border-slate-100/80 rounded-2xl outline-none text-sm font-semibold transition-all placeholder:text-slate-400 focus:bg-white focus:border-indigo-400/50 focus:ring-4 focus:ring-indigo-500/5;
 }
 .animate-reveal { animation: reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 @keyframes reveal { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }

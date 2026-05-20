@@ -1,0 +1,35 @@
+[
+  {
+    "title": "从手势互动到市级展示",
+    "slug": "gesture-play-to-city-showcase",
+    "studentLabel": "初中组 / 三人团队",
+    "summary": "从体感交互小游戏起步，最后把作品打磨成市级 AI 创意实践展示项目。",
+    "result": "市级展示入选",
+    "relatedCompetitionSlug": "shanghai-ai-creative-practice",
+    "relatedCourseIds": ["project1", "project2"],
+    "cover": "/assets/portal/story-gesture.svg",
+    "featured": true
+  },
+  {
+    "title": "会自己提醒浇水的校园花圃",
+    "slug": "smart-garden-campus-maker",
+    "studentLabel": "初中组 / 创客社团",
+    "summary": "把传感器、控制器和网页看板连起来，做成一个可展示的校园微系统。",
+    "result": "区级创客优秀项目",
+    "relatedCompetitionSlug": "district-maker-marathon",
+    "relatedCourseIds": ["project3", "project5"],
+    "cover": "/assets/portal/story-garden.svg",
+    "featured": true
+  },
+  {
+    "title": "把校园午餐数据讲成一个故事",
+    "slug": "school-lunch-data-story",
+    "studentLabel": "高中组 / 研究型学习",
+    "summary": "从问卷、数据整理到可视化和路演，一次完整的数据智能表达训练。",
+    "result": "上海市展示交流",
+    "relatedCompetitionSlug": "youth-data-intelligence-showcase",
+    "relatedCourseIds": ["project3", "project4"],
+    "cover": "/assets/portal/story-data.svg",
+    "featured": false
+  }
+]

@@ -1,0 +1,10 @@
+{
+  "success": true,
+  "model": "gpt-image-1.5-all",
+  "prompt": "为中学AI创新教育平台绘制一张高品质网站横幅主视觉，主题是活动地图，不要人物。统一使用高级 3D paper relief exhibition map 风格，横向宽幅。画面是一张活动浏览地图：展示台、挑战赛道、方向节点、徽章图标、目标圆环、连接路径和场景站点被组织成清晰的竞赛入口。只用图标、几何形和路线表达，不要任何字母、数字、名次数字、logo、水印。",
+  "original_prompt": "为中学AI创新教育平台绘制一张高品质网站横幅主视觉，主题是活动地图，不要人物。统一使用高级 3D paper relief exhibition map 风格，横向宽幅。画面是一张活动浏览地图：展示台、挑战赛道、方向节点、徽章图标、目标圆环、连接路径和场景站点被组织成清晰的竞赛入口。只用图标、几何形和路线表达，不要任何字母、数字、名次数字、logo、水印。",
+  "optimized_prompt": null,
+  "image_url": "https://pro.filesystem.site/cdn/20260413/18ed2bc8f556689ce881dec52364ba.png",
+  "output_path": "/Users/apple/Library/CloudStorage/OneDrive-个人/1_Course/2025-2026/《AI破壁计划》/apps/web-vue/public/assets/banners/banner-competitions.png",
+  "via": "direct"
+}

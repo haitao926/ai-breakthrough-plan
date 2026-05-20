@@ -1,0 +1,49 @@
+{
+  "id": "maker-camp",
+  "title": "创客新星营",
+  "direction": "engineering",
+  "teacherName": "创客课程导师组",
+  "summary": "从问题发现到原型表达，完成一门适合入门学生的创客实践课程。",
+  "description": "课程面向创客课程初学者，以营队式项目推进为主线。学生将经历问题发现、创意方案、结构搭建、基础电路与交互原型制作，最终完成一个可以展示的创客作品。",
+  "audience": "适合小学高年级至初中阶段的创客入门学习者。",
+  "pace": "4 个主题课时，适合营队式集中推进。",
+  "status": "published",
+  "materialsRoot": "maker-camp",
+  "relatedProjects": [
+    "maker-camp"
+  ],
+  "positioning": "创意发现 / 快速原型 / 展示表达",
+  "courseType": "创客课程",
+  "guidePath": "课程导学.md",
+  "learningObjectives": [
+    "学会从校园或生活场景中发现值得被改进的问题。",
+    "能够使用常见创客材料完成结构、线路和交互原型。",
+    "能够把作品打磨为可演示、可介绍、可复盘的成果。"
+  ],
+  "materials": [
+    {
+      "id": "maker-camp-guide",
+      "courseId": "maker-camp",
+      "section": "课程导学",
+      "title": "课程导学",
+      "path": "课程导学.md",
+      "kind": "markdown"
+    },
+    {
+      "id": "maker-camp-teacher",
+      "courseId": "maker-camp",
+      "section": "教师资料",
+      "title": "教师手册",
+      "path": "TEACHING_MANUAL.md",
+      "kind": "markdown"
+    },
+    {
+      "id": "maker-camp-student",
+      "courseId": "maker-camp",
+      "section": "学生资料",
+      "title": "学生任务单",
+      "path": "学生任务单.md",
+      "kind": "markdown"
+    }
+  ]
+}

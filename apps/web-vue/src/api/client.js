@@ -1,4 +1,4 @@
-import { getAuthToken, getModelKey } from './auth';
+import { clearAuth, getAuthToken, getModelKey } from './auth';
 
 const DEFAULT_CONFIG = {
   apiBase: '/api/v1',
@@ -6,6 +6,7 @@ const DEFAULT_CONFIG = {
 };
 
 let cachedConfig = null;
+let isHandlingUnauthorized = false;
 
 export async function loadConfig() {
   if (cachedConfig) return cachedConfig;
@@ -45,5 +46,37 @@ export async function apiFetch(path, options = {}) {
   if (modelKey) {
     headers.set('x-model-key', modelKey);
   }
-  return fetch(url, { ...options, headers });
+  const response = await fetch(url, { ...options, headers });
+
+  const isAuthRequest = suffix.startsWith('/auth/login') || suffix.startsWith('/auth/register');
+  if (response.status === 401 && !isAuthRequest && typeof window !== 'undefined') {
+    clearAuth();
+
+    const onAuthPage = ['/login', '/register'].includes(window.location.pathname);
+    if (!onAuthPage && !isHandlingUnauthorized) {
+      isHandlingUnauthorized = true;
+      const redirectTarget = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      window.sessionStorage.setItem('auth_redirect', redirectTarget);
+      window.location.assign('/login');
+    }
+  }
+
+  return response;
+}
+
+export async function readJsonResponse(response, label = 'api_request') {
+  const rawText = await response.text();
+  const trimmed = rawText.trim();
+
+  if (!trimmed) return {};
+
+  try {
+    return JSON.parse(trimmed);
+  } catch (error) {
+    const looksLikeHtml = trimmed.startsWith('<!doctype') || trimmed.startsWith('<html') || trimmed.startsWith('<');
+    if (looksLikeHtml) {
+      throw new Error(`${label}_returned_html`);
+    }
+    throw new Error(`${label}_invalid_json`);
+  }
 }

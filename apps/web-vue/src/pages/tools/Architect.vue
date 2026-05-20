@@ -10,7 +10,7 @@
             <span class="w-2 h-6 bg-indigo-600 rounded-full mr-3"></span>
             系统架构与设计
           </h1>
-          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Architecture & BOM Planning</p>
+          <p class="text-[10px] font-bold text-slate-400 tracking-tight mt-0.5">用于整理开题/里程碑/结题提交中的技术附件</p>
         </div>
       </div>
       <div class="flex items-center gap-6">
@@ -30,7 +30,7 @@
           <i class="fas fa-layer-group"></i> Blueprints Phase
         </div>
         <h2 class="text-4xl font-black text-slate-900 tracking-tight mb-4">描绘你的技术蓝图</h2>
-        <p class="text-slate-500 font-medium max-w-2xl">架构设计是项目的灵魂。使用流程图理清逻辑，使用架构图定义模块，并详细记录所需的软硬件资源清单。</p>
+        <p class="text-slate-500 font-medium max-w-2xl">用于准备可上传的架构图、流程图、硬件接线图和 BOM 清单，作为开题方案、里程碑记录或结题附件。</p>
       </header>
 
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -43,7 +43,7 @@
                     <i class="fas fa-project-diagram text-indigo-400"></i>
                  </div>
                  <h3 class="text-2xl font-black mb-4">可视化架构建模</h3>
-                 <p class="text-slate-400 text-sm font-medium leading-relaxed mb-8">点击上方按钮进入 Draw.io 绘制架构，完成后可将导出的图片链接或截图粘贴至项目文档中。</p>
+                 <p class="text-slate-400 text-sm font-medium leading-relaxed mb-8">点击上方按钮进入 Draw.io 绘制架构，完成后可将导出的图片或截图上传到对应阶段提交中。</p>
                  <div class="flex items-center justify-center gap-4">
                     <div class="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-[0.2em] text-white/60">逻辑流图</div>
                     <div class="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-[0.2em] text-white/60">硬件接线</div>
@@ -208,4 +208,3 @@ select {
   appearance: none;
 }
 </style>
-

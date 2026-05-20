@@ -1,0 +1,10 @@
+{
+  "success": true,
+  "model": "gpt-image-1.5-all",
+  "prompt": "为中学AI创新教育平台绘制一张高品质网站横幅主视觉，主题是报名判断，不要人物。统一使用高级 3D paper relief decision board 风格，横向宽幅。画面是一张活动匹配面板：锁定条件图标、向上路径、向下路径、通过标记、准备清单、工具图标、灯泡图标和作品预览缩略图块被整齐排列，表达先判断再决定投入。只允许抽象图标、几何形和箭头，不要任何字母、数字、问号、勾叉文本、日历数字、logo、水印。",
+  "original_prompt": "为中学AI创新教育平台绘制一张高品质网站横幅主视觉，主题是报名判断，不要人物。统一使用高级 3D paper relief decision board 风格，横向宽幅。画面是一张活动匹配面板：锁定条件图标、向上路径、向下路径、通过标记、准备清单、工具图标、灯泡图标和作品预览缩略图块被整齐排列，表达先判断再决定投入。只允许抽象图标、几何形和箭头，不要任何字母、数字、问号、勾叉文本、日历数字、logo、水印。",
+  "optimized_prompt": null,
+  "image_url": "https://pro.filesystem.site/cdn/20260413/e7b8a379d7fc6c56764b7e16f17ecc.png",
+  "output_path": "/Users/apple/Library/CloudStorage/OneDrive-个人/1_Course/2025-2026/《AI破壁计划》/apps/web-vue/public/assets/banners/banner-competitions-match.png",
+  "via": "direct"
+}

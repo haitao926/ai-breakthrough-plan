@@ -4,7 +4,7 @@
 允许重构为独立模块，避免与课程展示耦合：
 
 ```
-HAI Tech Lab/
+SASU AI Lab/
 ├── apps/
 │   ├── web/                 # 前端（学生端/老师端）
 │   └── api/                 # 后端 API

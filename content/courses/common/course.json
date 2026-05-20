@@ -1,0 +1,86 @@
+{
+  "id": "common",
+  "title": "通识与学术方法",
+  "direction": "foundation",
+  "teacherName": "平台教研组",
+  "summary": "帮助学生建立研究方法、协作规范与课程学习共同语言。",
+  "description": "这是一门面向所有学生的常设基础课程。它不强调某一条具体技术赛道，而是为后续进入创新方向、项目实践与专题课程建立共同的研究语言、协作规范与材料使用方式。",
+  "audience": "面向全体学生，尤其适合第一次进入平台学习的新生。",
+  "pace": "模块式学习，可按需穿插到其他课程之前或过程中。",
+  "status": "published",
+  "materialsRoot": "common",
+  "relatedProjects": [
+    "project1",
+    "project2",
+    "project3",
+    "project4",
+    "project5",
+    "project6"
+  ],
+  "positioning": "研究方法 / 协作规范",
+  "courseType": "基础课程",
+  "guidePath": "课程总体设计.md",
+  "learningObjectives": [
+    "理解平台课程、项目与资料的基本组织方式。",
+    "掌握课程学习中常用的文档规范、协作方法与项目节奏。",
+    "建立进入后续专题课程前的共同方法论基础。"
+  ],
+  "materials": [
+    {
+      "id": "common-guide",
+      "courseId": "common",
+      "section": "课程导学",
+      "title": "课程总体设计",
+      "path": "课程总体设计.md",
+      "kind": "markdown"
+    },
+    {
+      "id": "common-teacher-manual",
+      "courseId": "common",
+      "section": "教师资料",
+      "title": "教学实施指南",
+      "path": "教学实施指南.md",
+      "kind": "markdown"
+    },
+    {
+      "id": "common-student-skills",
+      "courseId": "common",
+      "section": "学生资料",
+      "title": "能力素养培养体系",
+      "path": "能力素养培养体系.md",
+      "kind": "markdown"
+    },
+    {
+      "id": "common-student-tools",
+      "courseId": "common",
+      "section": "学生资料",
+      "title": "工具清单和资源",
+      "path": "工具清单和资源.md",
+      "kind": "markdown"
+    },
+    {
+      "id": "common-extra-git",
+      "courseId": "common",
+      "section": "补充资料",
+      "title": "Git 协同开发指南",
+      "path": "Git协同开发指南.md",
+      "kind": "markdown"
+    },
+    {
+      "id": "common-extra-project",
+      "courseId": "common",
+      "section": "补充资料",
+      "title": "项目管理与关键节点指南",
+      "path": "项目管理与关键节点指南.md",
+      "kind": "markdown"
+    },
+    {
+      "id": "common-extra-docs",
+      "courseId": "common",
+      "section": "补充资料",
+      "title": "文档体系梳理",
+      "path": "📋文档体系梳理.md",
+      "kind": "markdown"
+    }
+  ]
+}

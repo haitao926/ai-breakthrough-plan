@@ -1,0 +1,105 @@
+{
+  "id": "project2",
+  "title": "产品设计与交互体验",
+  "direction": "social",
+  "teacherName": "李老师",
+  "summary": "用产品思维拆解真实问题，训练用户洞察与方案表达能力。",
+  "description": "这门课围绕“发现问题 - 访谈洞察 - 方案设计 - 价值表达”的连续过程展开，帮助学生从社科视角理解创新产品如何从真实需求中长出来。",
+  "audience": "适合对产品、设计、用户研究和公共议题感兴趣的学生。",
+  "pace": "4 课时，适合工作坊式连续开展。",
+  "status": "published",
+  "materialsRoot": "project2",
+  "relatedProjects": [
+    "project2"
+  ],
+  "positioning": "用户洞察 / 产品方案",
+  "courseType": "专题课程",
+  "guidePath": "curriculum.md",
+  "learningObjectives": [
+    "理解产品经理与项目经理在创新过程中的不同职责。",
+    "能够通过访谈与同理心地图识别真实用户痛点。",
+    "形成具备价值判断和实施意识的初步产品方案。"
+  ],
+  "materials": [
+    {
+      "id": "project2-guide-1",
+      "courseId": "project2",
+      "section": "课程导学",
+      "title": "课程结构总览",
+      "path": "curriculum.md",
+      "kind": "markdown"
+    },
+    {
+      "id": "project2-guide-2",
+      "courseId": "project2",
+      "section": "课程导学",
+      "title": "课程导入课件",
+      "path": "course_intro_slides.html",
+      "kind": "html"
+    },
+    {
+      "id": "project2-teacher-1",
+      "courseId": "project2",
+      "section": "教师资料",
+      "title": "教师手册",
+      "path": "TEACHING_MANUAL.md",
+      "kind": "markdown"
+    },
+    {
+      "id": "project2-teacher-2",
+      "courseId": "project2",
+      "section": "教师资料",
+      "title": "教师讲解逻辑",
+      "path": "teacher_guide_logic.md",
+      "kind": "markdown"
+    },
+    {
+      "id": "project2-teacher-3",
+      "courseId": "project2",
+      "section": "教师资料",
+      "title": "访谈与洞察课件",
+      "path": "interview_slides.html",
+      "kind": "html"
+    },
+    {
+      "id": "project2-student-1",
+      "courseId": "project2",
+      "section": "学生资料",
+      "title": "核心知识卡片",
+      "path": "1_core_knowledge_cards.md",
+      "kind": "markdown"
+    },
+    {
+      "id": "project2-student-2",
+      "courseId": "project2",
+      "section": "学生资料",
+      "title": "实践案例工作纸",
+      "path": "2_practical_cases_worksheets.md",
+      "kind": "markdown"
+    },
+    {
+      "id": "project2-student-3",
+      "courseId": "project2",
+      "section": "学生资料",
+      "title": "职业手册",
+      "path": "5_professional_handbook.md",
+      "kind": "markdown"
+    },
+    {
+      "id": "project2-extra-1",
+      "courseId": "project2",
+      "section": "补充资料",
+      "title": "结题指导课件",
+      "path": "capstone_guide_slides.html",
+      "kind": "html"
+    },
+    {
+      "id": "project2-extra-2",
+      "courseId": "project2",
+      "section": "补充资料",
+      "title": "趣味版讲义",
+      "path": "项目2-产品经理与项目经理-趣味版.md",
+      "kind": "markdown"
+    }
+  ]
+}

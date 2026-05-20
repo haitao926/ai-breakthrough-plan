@@ -1,0 +1,10 @@
+{
+  "success": true,
+  "model": "gpt-image-1.5-all",
+  "prompt": "为中学AI创新教育平台绘制一张高品质网站横幅主视觉，主题是项目库本身的抽象表达，不要人物。高级教育品牌 editorial collage 风格，适合网站横幅裁切，主体横向铺开并集中在画面中段。画面像一个被整理过的项目地图与创客工作台融合场景：移动机器人原型、小型机械臂、项目卡片、课题标签、成果缩略图、蓝图纸、便签、路线节点和连接线，形成清晰的方向浏览感。整体克制、现代、专业、空间感强，信息结构清楚，不要文字、logo、水印，不要拟人机器人，不要杂乱。配色以靛蓝、深蓝、银灰为主，少量暖橙点缀。",
+  "original_prompt": "为中学AI创新教育平台绘制一张高品质网站横幅主视觉，主题是项目库本身的抽象表达，不要人物。高级教育品牌 editorial collage 风格，适合网站横幅裁切，主体横向铺开并集中在画面中段。画面像一个被整理过的项目地图与创客工作台融合场景：移动机器人原型、小型机械臂、项目卡片、课题标签、成果缩略图、蓝图纸、便签、路线节点和连接线，形成清晰的方向浏览感。整体克制、现代、专业、空间感强，信息结构清楚，不要文字、logo、水印，不要拟人机器人，不要杂乱。配色以靛蓝、深蓝、银灰为主，少量暖橙点缀。",
+  "optimized_prompt": null,
+  "image_url": "https://pro.filesystem.site/cdn/20260413/431bca1c2c7a0eda6d9e880fc5f144.png",
+  "output_path": "/Users/apple/Library/CloudStorage/OneDrive-个人/1_Course/2025-2026/《AI破壁计划》/apps/web-vue/public/assets/banners/banner-projects.png",
+  "via": "direct"
+}

@@ -13,7 +13,7 @@ RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-echo -e "${GREEN}=== AI破壁计划 代码托管平台启动器 ===${NC}"
+echo -e "${GREEN}=== SASU AI Lab 代码托管平台启动器 ===${NC}"
 
 # 1. 检查文件是否存在
 if [ ! -f "$EXECUTABLE" ]; then

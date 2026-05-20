@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { apiFetch } from '@/api/client';
+import { getAuthToken, getAuthUser } from '@/api/auth';
 
 function indexSubmissions(submissions = []) {
   const map = {};
@@ -53,10 +54,20 @@ export const useProjectStore = defineStore('project', {
       }
     },
     async fetchList() {
+      if (!getAuthToken() || !getAuthUser()) {
+        this.list = [];
+        this.listLoading = false;
+        return [];
+      }
       this.listLoading = true;
       try {
         const res = await apiFetch('/projects');
+        if (res.status === 401) {
+          this.list = [];
+          return [];
+        }
         const data = await res.json();
+        if (!res.ok) throw new Error(data?.error || '加载项目失败');
         this.list = data.projects || [];
       } catch (err) {
         console.error(err);

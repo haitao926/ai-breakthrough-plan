@@ -10,8 +10,8 @@
           <i class="fas fa-cube text-lg"></i>
         </div>
         <div>
-          <div class="text-xs font-black text-slate-900 tracking-tight leading-none">HAI Tech Lab</div>
-          <div class="text-[9px] font-bold text-indigo-500 uppercase tracking-widest mt-1">项目广场 · Lab Center</div>
+          <div class="text-xs font-black text-slate-900 tracking-tight leading-none">{{ brandName }}</div>
+          <div class="text-[9px] font-bold text-indigo-500 tracking-widest mt-1">{{ schoolName }} · 项目广场</div>
         </div>
       </div>
       <div class="flex items-center gap-3">
@@ -26,7 +26,7 @@
         <div class="max-w-xl">
           <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50/50 text-indigo-600 text-[10px] font-black uppercase tracking-widest mb-6">
             <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
-            Break the Wall · AI 破壁
+            {{ brandName }} · Project Hub
           </div>
           <h2 class="text-4xl lg:text-5xl font-black text-slate-900 tracking-tight mb-4">开启你的科创旅程</h2>
           <p class="text-lg text-slate-500 font-medium leading-relaxed">伟大的创新始于每一个小小的灵感快拍。在这里管理你的所有 AI 课题，或者立即开启一个新文件夹。</p>
@@ -130,7 +130,7 @@
               <div class="mt-auto p-5 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between text-[11px] font-bold text-slate-400">
                 <span class="flex items-center gap-2"><i class="far fa-clock"></i> {{ formatDate(project.updated_at || project.created_at) }}</span>
                 <span class="text-indigo-600 opacity-0 group-hover:opacity-100 transition-all flex items-center gap-2 translate-x-4 group-hover:translate-x-0">
-                  前去破壁 <i class="fas fa-arrow-right"></i>
+                  进入项目 <i class="fas fa-arrow-right"></i>
                 </span>
               </div>
             </button>
@@ -184,6 +184,8 @@
 </template>
 
 <script setup>
+import { brandName, schoolName } from '@/constants/brand';
+
 defineProps({
   projects: { type: Array, default: () => [] },
   projectsLoading: { type: Boolean, default: false },
@@ -215,4 +217,3 @@ defineEmits([
 <style scoped>
 /* Tailwind handles the bulk. Keep local overrides minimal. */
 </style>
-
