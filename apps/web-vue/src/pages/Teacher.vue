@@ -1195,6 +1195,137 @@ async function saveCompetitionAs(status) {
   await saveCompetition();
 }
 
+async function loadBanners() {
+  const res = await apiFetch('/admin/banners');
+  const data = await readJsonResponse(res, 'admin_banners');
+  if (!res.ok) throw new Error(data?.error || 'Banner 加载失败');
+  banners.value = data.banners || [];
+  if (selectedBannerIndex.value >= banners.value.length) selectedBannerIndex.value = -1;
+}
+
+function syncBannerForm(item) {
+  Object.assign(bannerForm, {
+    title: item?.title || '',
+    type: item?.type || 'feature',
+    tag: item?.tag || '',
+    image: item?.image || '',
+    targetUrl: item?.targetUrl || '',
+    priority: Number.isFinite(Number(item?.priority)) ? Number(item.priority) : 999
+  });
+}
+
+function selectBanner(index) {
+  selectedBannerIndex.value = index;
+  syncBannerForm(banners.value[index]);
+}
+
+function startBannerCreate() {
+  uploadKind.value = 'banner';
+  selectedBannerIndex.value = -1;
+  syncBannerForm(null);
+}
+
+async function saveBanner() {
+  const payload = { ...bannerForm };
+  const editing = selectedBannerIndex.value >= 0;
+  const endpoint = editing ? `/admin/banners/${selectedBannerIndex.value}` : '/admin/banners';
+  const res = await apiFetch(endpoint, {
+    method: editing ? 'PATCH' : 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await readJsonResponse(res, 'banner_save');
+  if (!res.ok) {
+    notification.error(data?.error || 'Banner 保存失败');
+    return;
+  }
+  notification.success('Banner 已保存');
+  await loadBanners();
+  if (!editing) selectedBannerIndex.value = 0;
+}
+
+async function deleteBanner() {
+  if (selectedBannerIndex.value < 0) return;
+  const res = await apiFetch(`/admin/banners/${selectedBannerIndex.value}`, { method: 'DELETE' });
+  const data = await readJsonResponse(res, 'banner_delete');
+  if (!res.ok) {
+    notification.error(data?.error || 'Banner 删除失败');
+    return;
+  }
+  notification.success('Banner 已删除');
+  selectedBannerIndex.value = -1;
+  syncBannerForm(null);
+  await loadBanners();
+}
+
+async function loadStories() {
+  const res = await apiFetch('/admin/stories');
+  const data = await readJsonResponse(res, 'admin_stories');
+  if (!res.ok) throw new Error(data?.error || '成果故事加载失败');
+  stories.value = data.stories || [];
+}
+
+function syncStoryForm(item) {
+  Object.assign(storyForm, {
+    title: item?.title || '',
+    slug: item?.slug || '',
+    studentLabel: item?.studentLabel || '',
+    summary: item?.summary || '',
+    result: item?.result || '',
+    relatedCompetitionSlug: item?.relatedCompetitionSlug || '',
+    relatedCourseIdsText: (item?.relatedCourseIds || []).join(','),
+    cover: item?.cover || '',
+    featured: Boolean(item?.featured)
+  });
+}
+
+function selectStory(story) {
+  selectedStorySlug.value = story.slug;
+  syncStoryForm(story);
+}
+
+function startStoryCreate() {
+  uploadKind.value = 'story';
+  selectedStorySlug.value = '';
+  syncStoryForm(null);
+}
+
+async function saveStory() {
+  const payload = {
+    ...storyForm,
+    relatedCourseIds: storyForm.relatedCourseIdsText.split(',').map(item => item.trim()).filter(Boolean)
+  };
+  const editing = Boolean(selectedStorySlug.value);
+  const endpoint = editing ? `/admin/stories/${selectedStorySlug.value}` : '/admin/stories';
+  const res = await apiFetch(endpoint, {
+    method: editing ? 'PATCH' : 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await readJsonResponse(res, 'story_save');
+  if (!res.ok) {
+    notification.error(data?.error || '成果故事保存失败');
+    return;
+  }
+  notification.success('成果故事已保存');
+  await loadStories();
+  selectStory(data.story);
+}
+
+async function deleteStory() {
+  if (!selectedStorySlug.value) return;
+  const res = await apiFetch(`/admin/stories/${selectedStorySlug.value}`, { method: 'DELETE' });
+  const data = await readJsonResponse(res, 'story_delete');
+  if (!res.ok) {
+    notification.error(data?.error || '成果故事删除失败');
+    return;
+  }
+  notification.success('成果故事已删除');
+  selectedStorySlug.value = '';
+  syncStoryForm(null);
+  await loadStories();
+}
+
 async function loadRegistrations() {
   if (!selectedCompetitionSlug.value) return;
   const res = await apiFetch(`/competitions/${selectedCompetitionSlug.value}/registrations`);
@@ -1412,6 +1543,8 @@ async function refreshAll() {
     await Promise.all([
       loadCourses(),
       loadCompetitions(),
+      loadBanners(),
+      loadStories(),
       loadResources(),
       loadProjectTopics(),
       loadProjectReviewQueue(),
