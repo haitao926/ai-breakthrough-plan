@@ -119,9 +119,33 @@ const directionVisuals = {
 };
 
 const courseVisuals = {
+  'common': {
+    cover: '/course-covers/common.png',
+    eyebrow: 'Foundation'
+  },
   'project1': {
     cover: '/course-covers/project1.png',
     eyebrow: 'Vibe Coding'
+  },
+  'project2': {
+    cover: '/course-covers/project2.png',
+    eyebrow: 'Product Design'
+  },
+  'project3': {
+    cover: '/course-covers/project3.png',
+    eyebrow: 'Web Fullstack'
+  },
+  'project4': {
+    cover: '/course-covers/project4.png',
+    eyebrow: 'AI & ML'
+  },
+  'project5': {
+    cover: '/course-covers/project5.png',
+    eyebrow: 'IoT Hardware'
+  },
+  'project6': {
+    cover: '/course-covers/project6.png',
+    eyebrow: 'Capstone Startup'
   },
   'robotics-club': {
     cover: '/course-covers/robotics-club.png',
