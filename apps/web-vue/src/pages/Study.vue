@@ -28,8 +28,8 @@
             @click="showWorkbench = !showWorkbench"
             class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4.5 py-2.5 text-xs font-black text-slate-700 shadow-sm transition hover:border-indigo-200 hover:text-indigo-600 hover:-translate-y-0.5 active:scale-95"
           >
-            <i class="fas" :class="showWorkbench ? 'fa-columns' : 'fa-laptop-code'"></i>
-            {{ showWorkbench ? '收起工作台' : '展开工作台' }}
+            <i class="fas" :class="showWorkbench ? 'fa-columns' : 'fa-bullseye'"></i>
+            {{ showWorkbench ? '收起任务面板' : '展开任务面板' }}
           </button>
 
           <div class="flex rounded-2xl border border-slate-200 bg-slate-100 p-1.5">
@@ -72,79 +72,19 @@
               :lesson-title="lessonTitle"
               :lesson-description="lessonData?.description"
               :phases="lessonPhases"
-              :materials="materials"
-              :deliverables="lessonDeliverables"
             />
-
-            <!-- Assignments Section -->
-            <section id="lesson-assignments" class="pb-14 pt-10">
-              <div class="rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm">
-                <div class="flex flex-col gap-3 border-b border-slate-100 pb-5 sm:flex-row sm:items-end sm:justify-between">
-                  <div>
-                    <div class="text-[10px] font-black uppercase tracking-[0.22em] text-indigo-500">Assignments</div>
-                    <h2 class="mt-2 text-2xl font-black text-slate-900">本课作业提交</h2>
-                  </div>
-                  <span class="text-xs font-bold text-slate-400">{{ lessonAssignments.length }} 项作业</span>
-                </div>
-
-                <div v-if="assignmentLoading" class="py-8 text-center text-slate-400">
-                  <i class="fas fa-spinner fa-spin"></i> 正在加载作业
-                </div>
-                <div v-else-if="!lessonAssignments.length" class="py-8 text-sm font-medium text-slate-400">
-                  当前课时还没有发布作业。
-                </div>
-                <div v-else class="mt-5 grid gap-6">
-                  <article v-for="assignment in lessonAssignments" :key="assignment.id" class="rounded-2xl border border-slate-100 bg-slate-50 p-6">
-                    <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <h3 class="text-lg font-black text-slate-900">{{ assignment.title }}</h3>
-                        <p class="mt-2 text-sm leading-7 text-slate-600">{{ assignment.requirements || assignment.description || '按课堂要求整理并提交。' }}</p>
-                        <div class="mt-3 flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                          <span>截止 {{ assignment.dueAt ? formatDate(assignment.dueAt) : '未设置' }}</span>
-                          <span class="mx-2 text-slate-200">|</span>
-                          <span :class="ownSubmission(assignment.id) ? 'text-emerald-500' : ''">状态 {{ ownSubmission(assignment.id)?.status || '未提交' }}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <form class="mt-6 grid gap-4" @submit.prevent="submitAssignment(assignment)">
-                      <textarea v-model="assignmentDrafts[assignment.id].content" class="min-h-[120px] w-full rounded-2xl border border-slate-200 bg-white p-4 text-sm font-medium text-slate-700 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="填写作业说明、反思或正文"></textarea>
-                      <input v-model="assignmentDrafts[assignment.id].link" class="w-full rounded-2xl border border-slate-200 bg-white p-4 text-sm font-medium text-slate-700 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="作品链接 / 代码仓库链接（可选，需 http(s)）" />
-                      <input v-model="assignmentDrafts[assignment.id].attachmentNote" class="w-full rounded-2xl border border-slate-200 bg-white p-4 text-sm font-medium text-slate-700 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="附件说明（可选）" />
-                      <button class="self-start rounded-full bg-indigo-600 px-8 py-3.5 text-xs font-black text-white shadow-xl shadow-indigo-600/25 transition duration-300 hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-indigo-600/40" type="submit">
-                        {{ ownSubmission(assignment.id) ? '更新提交' : '提交作业' }}
-                      </button>
-                      <div v-if="ownSubmission(assignment.id)?.feedback" class="mt-4 rounded-2xl bg-indigo-50/70 p-5 border border-indigo-100/50">
-                        <div class="flex items-center gap-3 mb-3">
-                          <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-600/25">
-                            <i class="fas" :class="ownSubmission(assignment.id)?.reviewed_by === 'AI_Assistant' ? 'fa-robot' : 'fa-graduation-cap'"></i>
-                          </div>
-                          <div>
-                            <div class="text-xs font-black text-indigo-950 uppercase tracking-widest">
-                              {{ ownSubmission(assignment.id)?.reviewed_by === 'AI_Assistant' ? 'AI 助教小破的即时评测反馈' : '教师反馈' }}
-                            </div>
-                            <div class="mt-0.5 text-[9px] font-black text-indigo-400 uppercase tracking-widest">
-                              Instant Evaluation
-                            </div>
-                          </div>
-                        </div>
-                        <p class="text-sm font-medium leading-7 text-indigo-900 whitespace-pre-line">
-                          {{ ownSubmission(assignment.id).feedback }}
-                        </p>
-                      </div>
-                    </form>
-                  </article>
-                </div>
-              </div>
-            </section>
           </div>
         </main>
 
-        <InteractiveWorkbench
+        <MissionControlPanel
           v-if="showWorkbench"
-          :lesson-title="lessonTitle"
-          :lesson-description="lessonData?.description"
-          :lesson-id="lessonId"
-          :course-id="courseId"
+          :materials="materials"
+          :deliverables="lessonDeliverables"
+          :assignments="lessonAssignments"
+          :submissions="assignmentSubmissions"
+          :drafts="assignmentDrafts"
+          :loading="assignmentLoading"
+          @submit="submitAssignment"
         />
 
         <input ref="hwInput" type="file" class="hidden" @change="handleHomeworkUpload" />
@@ -183,7 +123,7 @@ import { getAuthToken } from '@/api/auth';
 import { getCurrentUser } from '@/api/authApi';
 import CourseSyllabusSidebar from '@/components/study/CourseSyllabusSidebar.vue';
 import LessonStage from '@/components/study/LessonStage.vue';
-import InteractiveWorkbench from '@/components/study/InteractiveWorkbench.vue';
+import MissionControlPanel from '@/components/study/MissionControlPanel.vue';
 
 const route = useRoute();
 const router = useRouter();

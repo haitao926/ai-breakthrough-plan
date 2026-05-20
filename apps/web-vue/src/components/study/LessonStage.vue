@@ -8,34 +8,6 @@
       </div>
       <h1 class="mt-6 text-4xl font-black leading-tight tracking-tight text-slate-950 lg:text-5xl">{{ lessonTitle }}</h1>
       <p v-if="lessonDescription" class="mt-6 text-xl font-medium leading-9 text-slate-600">{{ lessonDescription }}</p>
-
-      <!-- Deliverables List -->
-      <div v-if="deliverables?.length" class="mt-8 rounded-2xl bg-slate-50 p-6 border border-slate-100">
-        <div class="text-[10px] font-black uppercase tracking-[0.24em] text-slate-500">Target Deliverables (本课需产出)</div>
-        <ul class="mt-4 space-y-3">
-          <li v-for="item in deliverables" :key="item" class="flex items-start gap-3">
-            <i class="fas fa-bullseye mt-1 text-emerald-500"></i>
-            <span class="text-sm font-bold leading-6 text-slate-700">{{ item }}</span>
-          </li>
-        </ul>
-      </div>
-
-      <!-- Materials -->
-      <div v-if="materials?.length" class="mt-8">
-        <div class="text-[10px] font-black uppercase tracking-[0.24em] text-slate-500">Lesson Materials (资料下载)</div>
-        <div class="mt-4 flex flex-wrap gap-3">
-          <a
-            v-for="material in materials"
-            :key="material.id"
-            :href="material.downloadUrl"
-            target="_blank"
-            class="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50"
-          >
-            <i class="fas text-slate-400" :class="materialIcon(material)"></i>
-            <span class="text-sm font-bold text-slate-700">{{ material.title }}</span>
-          </a>
-        </div>
-      </div>
     </header>
 
     <!-- Main Content Flow (Phases) -->
