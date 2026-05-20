@@ -48,25 +48,10 @@
 
           <aside class="course-hero__aside">
             <img :src="courseVisual.cover" :alt="`${course.title} 封面`" />
-            <div class="course-snapshot">
-              <strong>{{ course.positioning || sectionMeta.title }}</strong>
-              <p>{{ compactDescription }}</p>
-            </div>
           </aside>
         </header>
 
-        <section class="learning-rail" aria-label="课程学习路径">
-          <article v-for="step in learningPath" :key="step.id" class="rail-step" :class="`rail-step--${step.tone}`">
-            <div class="rail-step__icon">
-              <i class="fas" :class="step.icon"></i>
-            </div>
-            <div>
-              <span>{{ step.kicker }}</span>
-              <strong>{{ step.title }}</strong>
-              <p>{{ step.description }}</p>
-            </div>
-          </article>
-        </section>
+
 
         <section class="content-grid">
           <article class="course-panel course-overview">
@@ -82,10 +67,7 @@
               </div>
               <div v-if="!learningObjectives.length" class="empty-note">学习目标正在补充中。</div>
             </div>
-            <div class="audience-box">
-              <span>适合对象</span>
-              <strong>{{ course.audience || '待补充' }}</strong>
-            </div>
+
           </article>
 
           <article class="course-panel next-panel">
