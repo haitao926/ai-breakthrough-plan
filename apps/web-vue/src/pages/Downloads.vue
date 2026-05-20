@@ -85,21 +85,7 @@
                       </p>
                     </div>
 
-                    <!-- Step pathways progress grid -->
-                    <div class="grid grid-cols-4 gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-100">
-                      <span
-                        v-for="step in pathwaySteps"
-                        :key="`${course.id}-${step.id}`"
-                        class="py-1.5 rounded-lg text-[10px] font-black text-center border transition-all duration-300 flex flex-col items-center justify-center gap-0.5 hover:bg-slate-100 hover:scale-[1.05]"
-                        :class="activeStep === step.id 
-                          ? [stepActiveBg(section.id), 'shadow-sm font-extrabold'] 
-                          : 'bg-transparent text-slate-400 border-transparent hover:text-slate-600'"
-                        @click.stop="openCourseWithStep(course.id, step.id)"
-                      >
-                        <i class="fas text-[9px]" :class="step.icon"></i>
-                        {{ step.label }}
-                      </span>
-                    </div>
+
                   </div>
 
                   <!-- Footer Action row -->

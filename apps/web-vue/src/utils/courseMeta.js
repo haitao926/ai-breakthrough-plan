@@ -119,6 +119,10 @@ const directionVisuals = {
 };
 
 const courseVisuals = {
+  'project1': {
+    cover: '/course-covers/project1.png',
+    eyebrow: 'Vibe Coding'
+  },
   'robotics-club': {
     cover: '/course-covers/robotics-club.png',
     eyebrow: 'Robotics Club'
