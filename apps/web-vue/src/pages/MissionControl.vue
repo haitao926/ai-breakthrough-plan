@@ -145,7 +145,7 @@ onMounted(async () => {
   color: #f1f5f9;
   display: flex;
   flex-direction: column;
-  font-family: 'Outfit', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+  font-family: inherit;
   background-image: 
     linear-gradient(rgba(99, 102, 241, 0.02) 1px, transparent 1px), 
     linear-gradient(90deg, rgba(99, 102, 241, 0.02) 1px, transparent 1px);

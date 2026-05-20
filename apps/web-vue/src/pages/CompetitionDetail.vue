@@ -415,7 +415,7 @@ onMounted(loadCompetition);
 .detail-kicker {
   margin: 0 0 14px;
   color: #4f46e5;
-  font-family: 'Outfit', 'Noto Sans SC', sans-serif;
+  font-family: inherit;
   font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0.18em;
@@ -469,7 +469,7 @@ onMounted(loadCompetition);
   margin: 20px 0 0;
   max-width: 780px;
   color: #0f172a;
-  font-family: 'Outfit', 'Noto Sans SC', sans-serif;
+  font-family: inherit;
   font-size: clamp(2.1rem, 5vw, 4.4rem);
   font-weight: 800;
   line-height: 1;
@@ -499,7 +499,7 @@ onMounted(loadCompetition);
 .next-step-panel p {
   margin: 0;
   color: #55d6c2;
-  font-family: 'Outfit', 'Noto Sans SC', sans-serif;
+  font-family: inherit;
   font-size: 0.76rem;
   font-weight: 900;
   letter-spacing: 0.16em;
@@ -525,7 +525,7 @@ onMounted(loadCompetition);
   display: block;
   margin-top: 6px;
   color: #f7c94b;
-  font-family: 'Outfit', 'Noto Sans SC', sans-serif;
+  font-family: inherit;
   font-size: 4.2rem;
   line-height: 0.9;
 }
@@ -707,7 +707,7 @@ onMounted(loadCompetition);
   display: block;
   margin-top: 8px;
   color: #0f172a;
-  font-family: 'Outfit', 'Noto Sans SC', sans-serif;
+  font-family: inherit;
   font-size: clamp(1.25rem, 2vw, 1.75rem);
   font-weight: 800;
   line-height: 1.05;
@@ -762,7 +762,7 @@ onMounted(loadCompetition);
 .panel-heading h2 {
   margin: 5px 0 0;
   color: #0f172a;
-  font-family: 'Outfit', 'Noto Sans SC', sans-serif;
+  font-family: inherit;
   font-size: 1.45rem;
   font-weight: 900;
 }
@@ -823,7 +823,7 @@ onMounted(loadCompetition);
   border-radius: 999px;
   background: #6366f1;
   color: #fff;
-  font-family: 'Outfit', 'Noto Sans SC', sans-serif;
+  font-family: inherit;
   font-weight: 800;
 }
 

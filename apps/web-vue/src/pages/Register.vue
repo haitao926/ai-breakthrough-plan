@@ -166,7 +166,7 @@ async function handleSubmit() {
 
 .card-head h2 {
   margin: 0;
-  font-family: 'Outfit', 'Noto Sans SC', system-ui, sans-serif;
+  font-family: inherit;
   font-size: 1.8rem;
   font-weight: 800;
   color: #0f172a;

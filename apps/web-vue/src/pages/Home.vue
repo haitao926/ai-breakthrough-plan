@@ -308,7 +308,7 @@ fetchCompetitions().then(items => {
 .overview-header h2,
 .compact-panel-head h2,
 .quick-link-copy h3 {
-  font-family: 'Outfit', 'Noto Sans SC', sans-serif;
+  font-family: inherit;
 }
 
 .section-kicker {

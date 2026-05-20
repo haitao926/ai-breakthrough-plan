@@ -428,7 +428,7 @@ onMounted(() => {
 }
 
 .login-brand strong {
-  font-family: 'Outfit', 'Noto Sans SC', sans-serif;
+  font-family: inherit;
   font-size: 1rem;
   font-weight: 800;
 }
@@ -471,7 +471,7 @@ onMounted(() => {
 .login-intro h1 {
   margin: 18px 0 0;
   color: #0f172a;
-  font-family: 'Outfit', 'Noto Sans SC', sans-serif;
+  font-family: inherit;
   font-size: clamp(2.8rem, 6.2vw, 6.4rem);
   font-weight: 800;
   line-height: 0.98;
@@ -653,7 +653,7 @@ onMounted(() => {
 .panel-head h2 {
   margin: 8px 0 0;
   color: #0f172a;
-  font-family: 'Outfit', 'Noto Sans SC', sans-serif;
+  font-family: inherit;
   font-size: 2.08rem;
   font-weight: 800;
 }

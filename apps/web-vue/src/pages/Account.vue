@@ -264,7 +264,7 @@ onMounted(() => {
 .profile-copy h1 {
   margin: 9px 0 0;
   color: #0f172a;
-  font-family: 'Outfit', 'Noto Sans SC', sans-serif;
+  font-family: inherit;
   font-size: clamp(2rem, 4vw, 4.1rem);
   font-weight: 800;
   line-height: 1;
@@ -360,7 +360,7 @@ onMounted(() => {
 .section-heading h2 {
   margin: 8px 0 0;
   color: #0f172a;
-  font-family: 'Outfit', 'Noto Sans SC', sans-serif;
+  font-family: inherit;
   font-size: 1.45rem;
   font-weight: 800;
   line-height: 1.25;

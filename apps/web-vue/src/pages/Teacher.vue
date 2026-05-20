@@ -1343,7 +1343,7 @@ onMounted(async () => {
 }
 
 .teacher-ops {
-  font-family: 'Outfit', 'Noto Sans SC', system-ui, sans-serif;
+  font-family: inherit;
   background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.04), transparent 45%);
 }
 

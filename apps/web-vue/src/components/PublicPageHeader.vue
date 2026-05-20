@@ -77,7 +77,7 @@ defineProps({
 .public-page-header__title {
   margin: 0;
   color: #0f172a;
-  font-family: 'Outfit', 'Noto Sans SC', sans-serif;
+  font-family: inherit;
   font-size: clamp(1.42rem, 1.7vw, 1.8rem);
   font-weight: 800;
   line-height: 1.08;

@@ -199,7 +199,7 @@ onUnmounted(stopRotation);
 .rolling-banner__title {
   margin: 9px 0 0;
   color: #fff;
-  font-family: 'Outfit', 'Noto Sans SC', sans-serif;
+  font-family: inherit;
   font-size: clamp(1.75rem, 3.1vw, 3.35rem);
   font-weight: 800;
   line-height: 1.03;

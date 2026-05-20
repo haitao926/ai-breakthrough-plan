@@ -20,13 +20,14 @@ export function getTeamMembersText(projectDetail) {
 }
 
 export function getProposalSources(projectId, projectDetail) {
-  const charter = getLocalData(`ai_course_charter_${projectId}`) || {};
-  const preResearch = getLocalData(`ai_course_pre_research_${projectId}`) || {};
-  const literature = getLocalData(`ai_course_literature_${projectId}`) || {};
+  const remoteToolData = projectDetail?.toolData || {};
+  const charter = remoteToolData.charter || getLocalData(`ai_course_charter_${projectId}`) || {};
+  const preResearch = remoteToolData.pre_research || getLocalData(`ai_course_pre_research_${projectId}`) || {};
+  const literature = remoteToolData.literature || getLocalData(`ai_course_literature_${projectId}`) || {};
   if (!Array.isArray(preResearch.methods)) preResearch.methods = [];
   if (!Array.isArray(literature.papers)) literature.papers = [];
-  const innovationData = getLocalData(`ai_course_innovation_${projectId}`) || {};
-  const wbsData = getLocalData(`ai_course_wbs_${projectId}`) || {};
+  const innovationData = remoteToolData.innovation || getLocalData(`ai_course_innovation_${projectId}`) || {};
+  const wbsData = remoteToolData.wbs || getLocalData(`ai_course_wbs_${projectId}`) || {};
   if (!Array.isArray(wbsData.tasks)) wbsData.tasks = [];
   const teamMembers = getTeamMembersText(projectDetail);
   const deliverableType = charter.mode === 'research' ? 'research' : 'engineering';

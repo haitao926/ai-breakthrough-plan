@@ -3,7 +3,7 @@
     <SiteNav active="showcase" />
 
     <!-- Main Container -->
-    <main class="portal-shell portal-main flex-grow max-w-[1320px] mx-auto px-5 sm:px-6 lg:px-8 py-8 space-y-16">
+    <main class="portal-shell portal-main flex-grow max-w-[1320px] mx-auto px-5 sm:px-6 lg:px-8 pb-16 space-y-16">
       
       <!-- Spotlight Hero Section -->
       <section v-if="featuredStory" class="relative overflow-hidden rounded-3xl border border-slate-200/60 bg-white/70 backdrop-blur-xl p-6 sm:p-10 shadow-xl shadow-slate-100/40">

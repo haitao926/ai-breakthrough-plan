@@ -42,11 +42,17 @@ const COURSES_DIR = path.join(__dirname, '../../content/courses');
 const COURSE_CATALOG_PATH = path.join(COURSES_DIR, 'catalog.json');
 const DISCIPLINE_DATA_PATH = path.join(__dirname, '../../content/courses/disciplines/index.json');
 const MATERIALS_DIR = path.join(__dirname, '../../content/materials');
-const PORTAL_DIR = path.join(__dirname, '../../content/portal');
+const PORTAL_DIR = process.env.PORTAL_DIR
+  ? path.resolve(process.env.PORTAL_DIR)
+  : path.join(__dirname, '../../content/portal');
 const PORTAL_COMPETITIONS_PATH = path.join(PORTAL_DIR, 'competitions.json');
 const PORTAL_COMPETITION_DETAILS_DIR = path.join(PORTAL_DIR, 'competition-details');
 const PORTAL_STORIES_PATH = path.join(PORTAL_DIR, 'stories.json');
 const PORTAL_BANNERS_PATH = path.join(PORTAL_DIR, 'banners.json');
+
+function envValue(name, fallback = '') {
+  return String(process.env[name] || fallback || '').trim();
+}
 
 const ALLOWED_EXTENSIONS = new Set([
   '.pdf',
@@ -244,6 +250,143 @@ function parseAttachmentList(value) {
   return Array.isArray(parsed) ? parsed : [];
 }
 
+function normalizeToolKey(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+function getProjectMembership(projectId, userId) {
+  return db.get(
+    'SELECT id, role FROM project_members WHERE project_id = ? AND user_id = ?',
+    [projectId, userId]
+  );
+}
+
+function canReadProject(user, project) {
+  if (!user || !project) return false;
+  if (user.role === 'teacher' || user.role === 'judge') return true;
+  if (Number(project.created_by) === Number(user.id)) return true;
+  return Boolean(getProjectMembership(project.id, user.id));
+}
+
+function canWriteProject(user, project) {
+  if (!user || !project) return false;
+  if (user.role === 'teacher' || user.role === 'judge') return true;
+  if (Number(project.created_by) === Number(user.id)) return true;
+  return Boolean(getProjectMembership(project.id, user.id));
+}
+
+function requireProjectAccess(request, reply, project, mode = 'read') {
+  const allowed = mode === 'write'
+    ? canWriteProject(request.user, project)
+    : canReadProject(request.user, project);
+  if (!allowed) {
+    reply.code(403);
+    reply.send({ error: mode === 'write' ? '无权限操作该项目' : '无权限访问该项目' });
+    return false;
+  }
+  return true;
+}
+
+function loadProjectToolData(projectId) {
+  return db.all(
+    `SELECT id, project_id, tool_key, data, created_by, updated_by, created_at, updated_at
+     FROM project_tool_data
+     WHERE project_id = ?
+     ORDER BY updated_at DESC, id DESC`,
+    [projectId]
+  ).map(row => ({
+    ...row,
+    data: safeParseJson(row.data) || {}
+  }));
+}
+
+function getProjectToolData(projectId, toolKey) {
+  return db.get(
+    `SELECT id, project_id, tool_key, data, created_by, updated_by, created_at, updated_at
+     FROM project_tool_data
+     WHERE project_id = ? AND tool_key = ?`,
+    [projectId, normalizeToolKey(toolKey)]
+  );
+}
+
+function upsertProjectToolData(projectId, toolKey, data, userId) {
+  const normalizedToolKey = normalizeToolKey(toolKey);
+  const payload = typeof data === 'string' ? safeParseJson(data) : data;
+  const dataJson = JSON.stringify(payload && typeof payload === 'object' ? payload : {});
+  const existing = db.get(
+    'SELECT id, created_by FROM project_tool_data WHERE project_id = ? AND tool_key = ?',
+    [projectId, normalizedToolKey]
+  );
+  const nowAt = now();
+  if (existing) {
+    db.run(
+      'UPDATE project_tool_data SET data = ?, updated_by = ?, updated_at = ? WHERE id = ?',
+      [dataJson, userId || null, nowAt, existing.id]
+    );
+    return { id: existing.id, projectId, toolKey: normalizedToolKey, data: payload || {}, updatedAt: nowAt };
+  }
+  const info = db.run(
+    `INSERT INTO project_tool_data (project_id, tool_key, data, created_by, updated_by, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [projectId, normalizedToolKey, dataJson, userId || null, userId || null, nowAt, nowAt]
+  );
+  return { id: info.lastInsertRowid, projectId, toolKey: normalizedToolKey, data: payload || {}, updatedAt: nowAt };
+}
+
+function parseGiteaRepoUrl(repoUrl) {
+  const raw = String(repoUrl || '').trim();
+  if (!raw) return null;
+  try {
+    const normalized = raw.endsWith('.git') ? raw.slice(0, -4) : raw;
+    const url = new URL(normalized);
+    const parts = url.pathname.split('/').filter(Boolean);
+    if (parts.length < 2) return null;
+    const repo = parts.pop();
+    const owner = parts.pop();
+    if (!owner || !repo) return null;
+    return { host: url.origin, owner, repo, repoUrl: `${url.origin}/${owner}/${repo}` };
+  } catch (err) {
+    const match = raw.match(/^https?:\/\/[^/]+\/([^/]+)\/([^/]+?)(?:\.git)?\/?$/i);
+    if (match) {
+      const url = new URL(raw.replace(/\.git$/i, ''));
+      return { host: url.origin, owner: match[1], repo: match[2], repoUrl: `${url.origin}/${match[1]}/${match[2]}` };
+    }
+    return null;
+  }
+}
+
+async function validateGiteaRepo(repoUrl) {
+  const parsed = parseGiteaRepoUrl(repoUrl);
+  if (!parsed) {
+    return { ok: false, status: 400, error: 'Gitea 仓库地址格式无效' };
+  }
+  if (!envValue('GITEA_BASE_URL', GITEA_BASE_URL) || !envValue('GITEA_ADMIN_TOKEN', GITEA_ADMIN_TOKEN)) {
+    return { ok: false, status: 503, error: 'Gitea 仓库校验服务未配置' };
+  }
+  const repoPath = `/api/v1/repos/${encodeURIComponent(parsed.owner)}/${encodeURIComponent(parsed.repo)}`;
+  const result = await requestGitea(repoPath, { method: 'GET' });
+  if (!result.ok) {
+    if (result.status === 404) {
+      return { ok: false, status: 404, error: 'Gitea 仓库不存在' };
+    }
+    return { ok: false, status: result.status || 502, error: result.data?.message || 'Gitea 仓库校验失败' };
+  }
+  return { ok: true, repo: { ...parsed, repoUrl: result.data?.html_url || parsed.repoUrl } };
+}
+
+function buildMilestoneSourceKey(task, index = 0) {
+  const phase = String(task?.phase || task?.description || 'm1').trim() || 'm1';
+  const title = String(task?.title || '').trim().toLowerCase();
+  const output = String(task?.output || task?.deliverables?.output || '').trim().toLowerCase();
+  const base = [phase, title, output, index].join('|');
+  return crypto.createHash('sha1').update(base).digest('hex');
+}
+
 function readJsonFile(filePath, fallback = null) {
   try {
     if (!fs.existsSync(filePath)) return fallback;
@@ -325,6 +468,13 @@ function validateSubmissionDetails(type, details) {
   if (!requiredFields.length) return null;
   if (!details || typeof details !== 'object') {
     return '缺少阶段内容';
+  }
+  if (['milestone_1', 'milestone_2', 'midterm', 'final'].includes(type)) {
+    const missingCodeFields = ['codeRepo', 'codeCommit'].filter(key => !String(details?.[key] || '').trim());
+    if (missingCodeFields.length) {
+      const labels = missingCodeFields.map(key => SUBMISSION_FIELD_LABELS[key] || key).join('、');
+      return `缺少必填字段：${labels}`;
+    }
   }
   if (details.uploadedMaterials || details.templateRef || details.notes) {
     return null;
@@ -673,7 +823,13 @@ function getProjectDetail(projectId) {
     [projectId]
   );
 
-  return { project, members, submissions, logs };
+  const toolDataRows = loadProjectToolData(projectId);
+  const toolData = toolDataRows.reduce((acc, item) => {
+    acc[item.tool_key] = item.data || {};
+    return acc;
+  }, {});
+
+  return { project, members, submissions, logs, toolData, toolDataRows };
 }
 
 function getProjectMilestones(projectId) {
@@ -1157,6 +1313,47 @@ function loadPortalBanners() {
     .sort((a, b) => a.priority - b.priority);
 }
 
+function savePortalBanners(items) {
+  writeJsonFile(PORTAL_BANNERS_PATH, Array.isArray(items) ? items : []);
+}
+
+function normalizeBannerPayload(input = {}, existing = {}) {
+  return {
+    type: String(input.type || existing.type || 'feature').trim(),
+    title: String(input.title || existing.title || '').trim(),
+    image: String(input.image || existing.image || '').trim(),
+    tag: String(input.tag || existing.tag || '').trim(),
+    targetUrl: String(input.targetUrl || input.target_url || existing.targetUrl || '').trim(),
+    priority: Number.isFinite(Number(input.priority)) ? Number(input.priority) : (Number.isFinite(Number(existing.priority)) ? Number(existing.priority) : 999)
+  };
+}
+
+function savePortalStories(items) {
+  writeJsonFile(PORTAL_STORIES_PATH, Array.isArray(items) ? items : []);
+}
+
+function normalizeStoryPayload(input = {}, existing = {}) {
+  const title = String(input.title || existing.title || '').trim();
+  const slug = String(input.slug || existing.slug || title)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 100);
+  return {
+    title,
+    slug,
+    studentLabel: String(input.studentLabel || input.student_label || existing.studentLabel || '').trim(),
+    summary: String(input.summary || existing.summary || '').trim(),
+    result: String(input.result || existing.result || '').trim(),
+    relatedCompetitionSlug: String(input.relatedCompetitionSlug || input.related_competition_slug || existing.relatedCompetitionSlug || '').trim(),
+    relatedCourseIds: normalizeJsonArray(input.relatedCourseIds ?? existing.relatedCourseIds),
+    cover: String(input.cover || existing.cover || '').trim(),
+    featured: Boolean(input.featured ?? existing.featured)
+  };
+}
+
 function buildCoursePreviewMap() {
   return loadCourseCatalog().reduce((acc, course) => {
     acc[course.id] = {
@@ -1512,10 +1709,7 @@ fastify.patch(`${API_PREFIX}/courses/:id/lessons/:lessonId`, async (request, rep
 });
 
 function canAccessProject(user, project) {
-  if (!user || !project) return false;
-  if (user.role === 'teacher' || user.role === 'judge') return true;
-  if (!project.created_by) return false;
-  return Number(project.created_by) === Number(user.id);
+  return canReadProject(user, project);
 }
 
 function syncLegacyAttachments() {
@@ -1614,16 +1808,18 @@ function canRegisterJudge(inviteCode) {
 }
 
 async function requestGitea(pathname, options = {}) {
-  if (!GITEA_BASE_URL || !GITEA_ADMIN_TOKEN) {
+  const baseUrl = envValue('GITEA_BASE_URL', GITEA_BASE_URL);
+  const adminToken = envValue('GITEA_ADMIN_TOKEN', GITEA_ADMIN_TOKEN);
+  if (!baseUrl || !adminToken) {
     throw new Error('Gitea 未配置');
   }
   if (typeof fetch !== 'function') {
     throw new Error('当前 Node 版本不支持 fetch');
   }
-  const url = new URL(pathname, GITEA_BASE_URL);
+  const url = new URL(pathname, baseUrl);
   const headers = {
     'Content-Type': 'application/json',
-    Authorization: `token ${GITEA_ADMIN_TOKEN}`,
+    Authorization: `token ${adminToken}`,
     ...(options.headers || {})
   };
   const res = await fetch(url, { ...options, headers });
@@ -1682,7 +1878,9 @@ async function requestAiChat(messages, apiKey) {
 
 async function ensureGiteaRepo(project, request) {
   if (!project || project.gitea_repo_url) return project?.gitea_repo_url || null;
-  if (!GITEA_BASE_URL || !GITEA_ADMIN_TOKEN || !GITEA_DEFAULT_OWNER) return null;
+  const baseUrl = envValue('GITEA_BASE_URL', GITEA_BASE_URL);
+  const defaultOwner = envValue('GITEA_DEFAULT_OWNER', GITEA_DEFAULT_OWNER);
+  if (!baseUrl || !envValue('GITEA_ADMIN_TOKEN', GITEA_ADMIN_TOKEN) || !defaultOwner) return null;
 
   const baseName = slugifyRepoName(project.title) || `project-${project.id}`;
   const repoName = `${baseName}-${project.id}`.replace(/-+/g, '-');
@@ -1699,9 +1897,9 @@ async function ensureGiteaRepo(project, request) {
     });
   };
 
-  let result = await tryCreate(`/api/v1/orgs/${encodeURIComponent(GITEA_DEFAULT_OWNER)}/repos`);
+  let result = await tryCreate(`/api/v1/orgs/${encodeURIComponent(defaultOwner)}/repos`);
   if (!result.ok && result.status === 404) {
-    result = await tryCreate(`/api/v1/admin/users/${encodeURIComponent(GITEA_DEFAULT_OWNER)}/repos`);
+    result = await tryCreate(`/api/v1/admin/users/${encodeURIComponent(defaultOwner)}/repos`);
   }
 
   if (!result.ok && result.status !== 409) {
@@ -1710,7 +1908,7 @@ async function ensureGiteaRepo(project, request) {
   }
 
   const repoUrl = result.data?.html_url
-    || `${GITEA_BASE_URL.replace(/\/$/, '')}/${GITEA_DEFAULT_OWNER}/${repoName}`;
+    || `${baseUrl.replace(/\/$/, '')}/${defaultOwner}/${repoName}`;
 
   db.run('UPDATE projects SET gitea_repo_url = ?, updated_at = ? WHERE id = ?', [
     repoUrl,
@@ -1797,6 +1995,117 @@ fastify.get(`${API_PREFIX}/public/path-mappings`, async () => {
         }))
     }))
   };
+});
+
+fastify.get(`${API_PREFIX}/admin/banners`, async (request, reply) => {
+  if (!requireRole(request, reply, ['teacher', 'judge'])) return;
+  return { banners: loadPortalBanners() };
+});
+
+fastify.post(`${API_PREFIX}/admin/banners`, async (request, reply) => {
+  if (!requireRole(request, reply, ['teacher'])) return;
+  const banner = normalizeBannerPayload(request.body || {});
+  if (!banner.title || !banner.targetUrl) {
+    reply.code(400);
+    return { error: 'Banner 标题与目标链接必填' };
+  }
+  const banners = loadPortalBanners();
+  banners.push(banner);
+  savePortalBanners(banners);
+  logAudit('banner.create', request, { title: banner.title });
+  reply.code(201);
+  return { banner };
+});
+
+fastify.patch(`${API_PREFIX}/admin/banners/:index`, async (request, reply) => {
+  if (!requireRole(request, reply, ['teacher'])) return;
+  const index = Number.parseInt(String(request.params.index || ''), 10);
+  const banners = loadPortalBanners();
+  if (!Number.isFinite(index) || index < 0 || index >= banners.length) {
+    reply.code(404);
+    return { error: 'Banner 不存在' };
+  }
+  banners[index] = normalizeBannerPayload(request.body || {}, banners[index]);
+  if (!banners[index].title || !banners[index].targetUrl) {
+    reply.code(400);
+    return { error: 'Banner 标题与目标链接必填' };
+  }
+  savePortalBanners(banners);
+  logAudit('banner.update', request, { index });
+  return { banner: banners[index] };
+});
+
+fastify.delete(`${API_PREFIX}/admin/banners/:index`, async (request, reply) => {
+  if (!requireRole(request, reply, ['teacher'])) return;
+  const index = Number.parseInt(String(request.params.index || ''), 10);
+  const banners = loadPortalBanners();
+  if (!Number.isFinite(index) || index < 0 || index >= banners.length) {
+    reply.code(404);
+    return { error: 'Banner 不存在' };
+  }
+  const [removed] = banners.splice(index, 1);
+  savePortalBanners(banners);
+  logAudit('banner.delete', request, { index, title: removed?.title || '' });
+  return { success: true };
+});
+
+fastify.get(`${API_PREFIX}/admin/stories`, async (request, reply) => {
+  if (!requireRole(request, reply, ['teacher', 'judge'])) return;
+  const competitionMap = listPublishedCompetitions().reduce((acc, item) => {
+    acc[item.slug] = item;
+    return acc;
+  }, {});
+  const courseMap = buildCoursePreviewMap();
+  return { stories: loadPortalStories().map(story => buildStoryResponse(story, competitionMap, courseMap)) };
+});
+
+fastify.post(`${API_PREFIX}/admin/stories`, async (request, reply) => {
+  if (!requireRole(request, reply, ['teacher'])) return;
+  const story = normalizeStoryPayload(request.body || {});
+  if (!story.title || !story.slug) {
+    reply.code(400);
+    return { error: '故事标题与 slug 必填' };
+  }
+  const stories = loadPortalStories();
+  if (stories.some(item => item.slug === story.slug)) {
+    reply.code(409);
+    return { error: '故事 slug 已存在' };
+  }
+  stories.unshift(story);
+  savePortalStories(stories);
+  logAudit('story.create', request, { slug: story.slug });
+  reply.code(201);
+  return { story };
+});
+
+fastify.patch(`${API_PREFIX}/admin/stories/:slug`, async (request, reply) => {
+  if (!requireRole(request, reply, ['teacher'])) return;
+  const stories = loadPortalStories();
+  const index = stories.findIndex(item => item.slug === request.params.slug);
+  if (index < 0) {
+    reply.code(404);
+    return { error: '故事不存在' };
+  }
+  const story = normalizeStoryPayload(request.body || {}, stories[index]);
+  story.slug = stories[index].slug;
+  stories[index] = story;
+  savePortalStories(stories);
+  logAudit('story.update', request, { slug: story.slug });
+  return { story };
+});
+
+fastify.delete(`${API_PREFIX}/admin/stories/:slug`, async (request, reply) => {
+  if (!requireRole(request, reply, ['teacher'])) return;
+  const stories = loadPortalStories();
+  const index = stories.findIndex(item => item.slug === request.params.slug);
+  if (index < 0) {
+    reply.code(404);
+    return { error: '故事不存在' };
+  }
+  const [removed] = stories.splice(index, 1);
+  savePortalStories(stories);
+  logAudit('story.delete', request, { slug: removed?.slug || request.params.slug });
+  return { success: true };
 });
 
 fastify.get(`${API_PREFIX}/assignments`, async (request, reply) => {
@@ -2352,6 +2661,18 @@ fastify.get(`${API_PREFIX}/auth/me`, async (request, reply) => {
   return { user: request.user };
 });
 
+fastify.post(`${API_PREFIX}/gitea/validate-repo`, async (request, reply) => {
+  if (!requireRole(request, reply, ['student', 'teacher', 'judge'])) return;
+  const repoUrl = String(request.body?.repoUrl || request.body?.repo_url || '').trim();
+  const validation = await validateGiteaRepo(repoUrl);
+  if (!validation.ok) {
+    reply.code(validation.status || 400);
+    return { error: validation.error };
+  }
+  logAudit('gitea.repo.validate', request, validation.repo);
+  return { ok: true, repo: validation.repo };
+});
+
 fastify.post(`${API_PREFIX}/ai/chat`, async (request, reply) => {
   if (!requireAuth(request, reply)) return;
   const payload = request.body || {};
@@ -2495,6 +2816,13 @@ fastify.post(`${API_PREFIX}/projects`, async (request, reply) => {
   if (giteaRepoUrl && !/^https?:\/\//i.test(giteaRepoUrl)) {
     reply.code(400);
     return { error: 'Gitea 仓库地址格式无效' };
+  }
+  if (giteaRepoUrl) {
+    const validation = await validateGiteaRepo(giteaRepoUrl);
+    if (!validation.ok) {
+      reply.code(validation.status || 400);
+      return { error: validation.error };
+    }
   }
 
   const info = db.run(
@@ -2735,10 +3063,7 @@ fastify.get(`${API_PREFIX}/projects/:id`, async (request, reply) => {
     return { error: '项目不存在' };
   }
 
-  if (!canAccessProject(request.user, project)) {
-    reply.code(403);
-    return { error: '无权限访问该项目' };
-  }
+  if (!requireProjectAccess(request, reply, project, 'read')) return;
 
   const detail = getProjectDetail(projectId);
   return detail;
@@ -2758,16 +3083,20 @@ fastify.patch(`${API_PREFIX}/projects/:id`, async (request, reply) => {
     return { error: '项目不存在' };
   }
 
-  if (!canAccessProject(request.user, project)) {
-    reply.code(403);
-    return { error: '无权限操作该项目' };
-  }
+  if (!requireProjectAccess(request, reply, project, 'write')) return;
 
   const payload = request.body || {};
   const giteaRepoUrl = String(payload.giteaRepoUrl || '').trim();
   if (giteaRepoUrl && !/^https?:\/\//i.test(giteaRepoUrl)) {
     reply.code(400);
     return { error: 'Gitea 仓库地址格式无效' };
+  }
+  if (giteaRepoUrl) {
+    const validation = await validateGiteaRepo(giteaRepoUrl);
+    if (!validation.ok) {
+      reply.code(validation.status || 400);
+      return { error: validation.error };
+    }
   }
 
   db.run(
@@ -2791,10 +3120,7 @@ fastify.post(`${API_PREFIX}/projects/:id/members`, async (request, reply) => {
     reply.code(404);
     return { error: '项目不存在' };
   }
-  if (!canAccessProject(request.user, project)) {
-    reply.code(403);
-    return { error: '无权限操作该项目' };
-  }
+  if (!requireProjectAccess(request, reply, project, 'write')) return;
 
   const payload = request.body || {};
   const memberIds = normalizeMemberIds(payload.memberIds);
@@ -2805,6 +3131,126 @@ fastify.post(`${API_PREFIX}/projects/:id/members`, async (request, reply) => {
   addProjectMembers(projectId, memberIds, 'member');
   logAudit('project.members.add', request, { projectId, memberIds });
   return { success: true };
+});
+
+fastify.get(`${API_PREFIX}/projects/:id/tool-data`, async (request, reply) => {
+  if (!requireRole(request, reply, ['student', 'teacher', 'judge'])) return;
+  const projectId = parseProjectId(request.params.id);
+  if (!projectId) {
+    reply.code(400);
+    return { error: '项目ID无效' };
+  }
+  const project = getProject(projectId);
+  if (!project) {
+    reply.code(404);
+    return { error: '项目不存在' };
+  }
+  if (!requireProjectAccess(request, reply, project, 'read')) return;
+  const items = loadProjectToolData(projectId);
+  const data = items.reduce((acc, item) => {
+    acc[item.tool_key] = item.data || {};
+    return acc;
+  }, {});
+  return { items, data };
+});
+
+fastify.get(`${API_PREFIX}/projects/:id/tool-data/:toolKey`, async (request, reply) => {
+  if (!requireRole(request, reply, ['student', 'teacher', 'judge'])) return;
+  const projectId = parseProjectId(request.params.id);
+  const toolKey = normalizeToolKey(request.params.toolKey);
+  if (!projectId || !toolKey) {
+    reply.code(400);
+    return { error: '项目ID或工具类型无效' };
+  }
+  const project = getProject(projectId);
+  if (!project) {
+    reply.code(404);
+    return { error: '项目不存在' };
+  }
+  if (!requireProjectAccess(request, reply, project, 'read')) return;
+  const row = getProjectToolData(projectId, toolKey);
+  return {
+    item: row ? { ...row, data: safeParseJson(row.data) || {} } : null,
+    data: row ? (safeParseJson(row.data) || {}) : null
+  };
+});
+
+fastify.put(`${API_PREFIX}/projects/:id/tool-data/:toolKey`, async (request, reply) => {
+  if (!requireRole(request, reply, ['student', 'teacher'])) return;
+  const projectId = parseProjectId(request.params.id);
+  const toolKey = normalizeToolKey(request.params.toolKey);
+  if (!projectId || !toolKey) {
+    reply.code(400);
+    return { error: '项目ID或工具类型无效' };
+  }
+  const project = getProject(projectId);
+  if (!project) {
+    reply.code(404);
+    return { error: '项目不存在' };
+  }
+  if (!requireProjectAccess(request, reply, project, 'write')) return;
+  const payload = request.body && Object.prototype.hasOwnProperty.call(request.body, 'data')
+    ? request.body.data
+    : request.body;
+  const item = upsertProjectToolData(projectId, toolKey, payload || {}, request.user.id);
+  logAudit('project.tool_data.upsert', request, { projectId, toolKey });
+  return { item, data: item.data };
+});
+
+fastify.post(`${API_PREFIX}/projects/:id/sync-wbs`, async (request, reply) => {
+  if (!requireRole(request, reply, ['student', 'teacher'])) return;
+  const projectId = parseProjectId(request.params.id);
+  if (!projectId) {
+    reply.code(400);
+    return { error: '项目ID无效' };
+  }
+  const project = getProject(projectId);
+  if (!project) {
+    reply.code(404);
+    return { error: '项目不存在' };
+  }
+  if (!requireProjectAccess(request, reply, project, 'write')) return;
+
+  const tasks = Array.isArray(request.body?.tasks) ? request.body.tasks : [];
+  const source = normalizeToolKey(request.body?.source || 'wbs') || 'wbs';
+  const synced = [];
+  const nowAt = now();
+  tasks.forEach((task, index) => {
+    const title = String(task?.title || '').trim();
+    if (!title) return;
+    const phase = String(task?.phase || task?.description || 'm1').trim() || 'm1';
+    const sourceKey = String(task?.sourceKey || task?.source_key || buildMilestoneSourceKey(task, index)).trim();
+    const output = String(task?.output || task?.deliverables?.output || '').trim();
+    const deliverables = {
+      ...(typeof task?.deliverables === 'object' && task.deliverables !== null ? task.deliverables : {}),
+      output
+    };
+    const sortOrder = Number.isFinite(Number(task?.sort_order ?? task?.sortOrder))
+      ? Number(task?.sort_order ?? task?.sortOrder)
+      : index;
+    const existing = db.get(
+      'SELECT id FROM project_milestones WHERE project_id = ? AND source = ? AND source_key = ?',
+      [projectId, source, sourceKey]
+    );
+    if (existing) {
+      db.run(
+        `UPDATE project_milestones
+         SET title = ?, description = ?, sort_order = ?, deliverables = ?, updated_at = ?
+         WHERE id = ?`,
+        [title, phase, sortOrder, JSON.stringify(deliverables), nowAt, existing.id]
+      );
+      synced.push(existing.id);
+      return;
+    }
+    const info = db.run(
+      `INSERT INTO project_milestones (project_id, title, description, parent_id, sort_order, assignee, start_date, end_date, deadline, deliverables, source, source_key, status, created_at, updated_at)
+       VALUES (?, ?, ?, NULL, ?, NULL, NULL, NULL, NULL, ?, ?, ?, 'pending', ?, ?)`,
+      [projectId, title, phase, sortOrder, JSON.stringify(deliverables), source, sourceKey, nowAt, nowAt]
+    );
+    synced.push(info.lastInsertRowid);
+  });
+  logAudit('project.wbs.sync', request, { projectId, count: synced.length });
+  return { success: true, synced, milestones: getProjectMilestones(projectId) };
 });
 
 fastify.get(`${API_PREFIX}/projects/:id/attachments.zip`, async (request, reply) => {
@@ -2938,6 +3384,12 @@ fastify.post(`${API_PREFIX}/projects/:id/status`, async (request, reply) => {
 fastify.get(`${API_PREFIX}/projects/:id/logs`, async (request, reply) => {
   if (!requireAuth(request, reply)) return;
   const projectId = parseProjectId(request.params.id);
+  const project = getProject(projectId);
+  if (!project) {
+    reply.code(404);
+    return { error: '项目不存在' };
+  }
+  if (!requireProjectAccess(request, reply, project, 'read')) return;
   const logs = db.all(
     `SELECT l.id, l.content, l.tags, l.created_at, u.name AS author_name, u.avatar_url
      FROM dev_logs l
@@ -2952,6 +3404,12 @@ fastify.get(`${API_PREFIX}/projects/:id/logs`, async (request, reply) => {
 fastify.post(`${API_PREFIX}/projects/:id/logs`, async (request, reply) => {
   if (!requireRole(request, reply, ['student', 'teacher'])) return;
   const projectId = parseProjectId(request.params.id);
+  const project = getProject(projectId);
+  if (!project) {
+    reply.code(404);
+    return { error: '项目不存在' };
+  }
+  if (!requireProjectAccess(request, reply, project, 'write')) return;
   const payload = request.body || {};
   const content = String(payload.content || '').trim();
   const tags = String(payload.tags || '').trim();
@@ -2972,6 +3430,12 @@ fastify.post(`${API_PREFIX}/projects/:id/logs`, async (request, reply) => {
 fastify.get(`${API_PREFIX}/projects/:id/resources`, async (request, reply) => {
   if (!requireAuth(request, reply)) return;
   const projectId = parseProjectId(request.params.id);
+  const project = getProject(projectId);
+  if (!project) {
+    reply.code(404);
+    return { error: '项目不存在' };
+  }
+  if (!requireProjectAccess(request, reply, project, 'read')) return;
   const requests = db.all(
     `SELECT r.*, u.name AS requester_name
      FROM resource_requests r
@@ -2986,6 +3450,12 @@ fastify.get(`${API_PREFIX}/projects/:id/resources`, async (request, reply) => {
 fastify.post(`${API_PREFIX}/projects/:id/resources`, async (request, reply) => {
   if (!requireRole(request, reply, ['student'])) return;
   const projectId = parseProjectId(request.params.id);
+  const project = getProject(projectId);
+  if (!project) {
+    reply.code(404);
+    return { error: '项目不存在' };
+  }
+  if (!requireProjectAccess(request, reply, project, 'write')) return;
   const payload = request.body || {};
   const type = String(payload.type || 'hardware');
   const itemName = String(payload.item_name || '').trim();
@@ -3030,6 +3500,12 @@ fastify.patch(`${API_PREFIX}/resources/:id/status`, async (request, reply) => {
 fastify.get(`${API_PREFIX}/projects/:id/tickets`, async (request, reply) => {
   if (!requireAuth(request, reply)) return;
   const projectId = parseProjectId(request.params.id);
+  const project = getProject(projectId);
+  if (!project) {
+    reply.code(404);
+    return { error: '项目不存在' };
+  }
+  if (!requireProjectAccess(request, reply, project, 'read')) return;
   const tickets = db.all(
     `SELECT t.*, u.name AS requester_name, u.avatar_url
      FROM help_tickets t
@@ -3044,6 +3520,12 @@ fastify.get(`${API_PREFIX}/projects/:id/tickets`, async (request, reply) => {
 fastify.post(`${API_PREFIX}/projects/:id/tickets`, async (request, reply) => {
   if (!requireRole(request, reply, ['student'])) return;
   const projectId = parseProjectId(request.params.id);
+  const project = getProject(projectId);
+  if (!project) {
+    reply.code(404);
+    return { error: '项目不存在' };
+  }
+  if (!requireProjectAccess(request, reply, project, 'write')) return;
   const payload = request.body || {};
   const title = String(payload.title || '').trim();
   const description = String(payload.description || '').trim();
@@ -3074,6 +3556,12 @@ fastify.patch(`${API_PREFIX}/tickets/:id`, async (request, reply) => {
     reply.code(404);
     return { error: '工单不存在' };
   }
+  const project = getProject(ticket.project_id);
+  if (!project) {
+    reply.code(404);
+    return { error: '项目不存在' };
+  }
+  if (!requireProjectAccess(request, reply, project, 'write')) return;
 
   const status = payload.status || ticket.status;
   const resolution = payload.resolution || ticket.resolution;
@@ -3107,6 +3595,12 @@ fastify.get(`${API_PREFIX}/admin/resources`, async (request, reply) => {
 fastify.get(`${API_PREFIX}/projects/:id/milestones`, async (request, reply) => {
   if (!requireAuth(request, reply)) return;
   const projectId = parseProjectId(request.params.id);
+  const project = getProject(projectId);
+  if (!project) {
+    reply.code(404);
+    return { error: '项目不存在' };
+  }
+  if (!requireProjectAccess(request, reply, project, 'read')) return;
   const milestones = db.all(
     `SELECT * FROM project_milestones
      WHERE project_id = ?
@@ -3119,6 +3613,12 @@ fastify.get(`${API_PREFIX}/projects/:id/milestones`, async (request, reply) => {
 fastify.post(`${API_PREFIX}/projects/:id/milestones`, async (request, reply) => {
   if (!requireRole(request, reply, ['student', 'teacher'])) return;
   const projectId = parseProjectId(request.params.id);
+  const project = getProject(projectId);
+  if (!project) {
+    reply.code(404);
+    return { error: '项目不存在' };
+  }
+  if (!requireProjectAccess(request, reply, project, 'write')) return;
   const payload = request.body || {};
   // Simple WBS task creation
   const title = String(payload.title || '').trim();
@@ -3130,6 +3630,10 @@ fastify.post(`${API_PREFIX}/projects/:id/milestones`, async (request, reply) => 
   const endDate = payload.end_date ?? payload.endDate ?? payload.end ?? null;
   const output = payload.output;
   const deliverablesPayload = payload.deliverables;
+  const source = payload.source ? normalizeToolKey(payload.source) : null;
+  const sourceKey = payload.sourceKey || payload.source_key
+    ? String(payload.sourceKey || payload.source_key).trim()
+    : null;
   const rawParentId = payload.parent_id ?? payload.parentId ?? null;
   let parentId = rawParentId === '' ? null : rawParentId;
   if (parentId !== null && parentId !== undefined) {
@@ -3173,8 +3677,8 @@ fastify.post(`${API_PREFIX}/projects/:id/milestones`, async (request, reply) => 
   }
 
   const info = db.run(
-    `INSERT INTO project_milestones (project_id, title, description, parent_id, sort_order, assignee, start_date, end_date, deadline, deliverables, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
+    `INSERT INTO project_milestones (project_id, title, description, parent_id, sort_order, assignee, start_date, end_date, deadline, deliverables, source, source_key, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
     [
       projectId,
       title,
@@ -3186,6 +3690,8 @@ fastify.post(`${API_PREFIX}/projects/:id/milestones`, async (request, reply) => 
       endDate ? String(endDate).trim() : null,
       deadline,
       deliverables,
+      source,
+      sourceKey,
       now(),
       now()
     ]
@@ -3196,6 +3702,17 @@ fastify.post(`${API_PREFIX}/projects/:id/milestones`, async (request, reply) => 
 fastify.patch(`${API_PREFIX}/milestones/:id`, async (request, reply) => {
   if (!requireRole(request, reply, ['student', 'teacher'])) return;
   const id = parseProjectId(request.params.id);
+  const milestone = db.get('SELECT * FROM project_milestones WHERE id = ?', [id]);
+  if (!milestone) {
+    reply.code(404);
+    return { error: '任务不存在' };
+  }
+  const project = getProject(milestone.project_id);
+  if (!project) {
+    reply.code(404);
+    return { error: '项目不存在' };
+  }
+  if (!requireProjectAccess(request, reply, project, 'write')) return;
   const payload = request.body || {};
   const status = payload.status; // e.g. move to another phase or mark done
   const description = payload.phase ?? payload.description; // update phase
@@ -3275,6 +3792,17 @@ fastify.patch(`${API_PREFIX}/milestones/:id`, async (request, reply) => {
 fastify.delete(`${API_PREFIX}/milestones/:id`, async (request, reply) => {
   if (!requireRole(request, reply, ['student', 'teacher'])) return;
   const id = parseProjectId(request.params.id);
+  const milestone = db.get('SELECT * FROM project_milestones WHERE id = ?', [id]);
+  if (!milestone) {
+    reply.code(404);
+    return { error: '任务不存在' };
+  }
+  const project = getProject(milestone.project_id);
+  if (!project) {
+    reply.code(404);
+    return { error: '项目不存在' };
+  }
+  if (!requireProjectAccess(request, reply, project, 'write')) return;
   db.run('DELETE FROM project_milestones WHERE id = ?', [id]);
   return { success: true };
 });
@@ -3283,6 +3811,12 @@ fastify.delete(`${API_PREFIX}/milestones/:id`, async (request, reply) => {
 fastify.get(`${API_PREFIX}/projects/:id/blueprint`, async (request, reply) => {
   if (!requireAuth(request, reply)) return;
   const projectId = parseProjectId(request.params.id);
+  const project = getProject(projectId);
+  if (!project) {
+    reply.code(404);
+    return { error: '项目不存在' };
+  }
+  if (!requireProjectAccess(request, reply, project, 'read')) return;
   const row = db.get('SELECT data FROM project_blueprints WHERE project_id = ?', [projectId]);
   return { data: row ? safeParseJson(row.data) : null };
 });
@@ -3290,6 +3824,12 @@ fastify.get(`${API_PREFIX}/projects/:id/blueprint`, async (request, reply) => {
 fastify.post(`${API_PREFIX}/projects/:id/blueprint`, async (request, reply) => {
   if (!requireRole(request, reply, ['student', 'teacher'])) return;
   const projectId = parseProjectId(request.params.id);
+  const project = getProject(projectId);
+  if (!project) {
+    reply.code(404);
+    return { error: '项目不存在' };
+  }
+  if (!requireProjectAccess(request, reply, project, 'write')) return;
   const payload = request.body || {};
   
   // Validate basic structure
@@ -3450,6 +3990,16 @@ fastify.post(`${API_PREFIX}/projects/:id/submissions`, async (request, reply) =>
     cleanupTempFiles(tempFiles);
     reply.code(400);
     return { error: detailError };
+  }
+
+  const repoUrl = String(details.codeRepo || '').trim();
+  if (repoUrl) {
+    const validation = await validateGiteaRepo(repoUrl);
+    if (!validation.ok) {
+      cleanupTempFiles(tempFiles);
+      reply.code(validation.status || 400);
+      return { error: validation.error };
+    }
   }
 
   let autoStatus = null;
@@ -4085,10 +4635,15 @@ fastify.get(`${API_PREFIX}/mission/projects`, async (request, reply) => {
   return { projects: stats };
 });
 
+async function initDatabase(dbPath = DB_PATH) {
+  db = await createDatabase(dbPath);
+  syncLegacyAttachments();
+  return db;
+}
+
 const start = async () => {
   try {
-    db = await createDatabase(DB_PATH);
-    syncLegacyAttachments();
+    await initDatabase(DB_PATH);
     await fastify.listen({ port: PORT, host: HOST });
     fastify.log.info(`Innovation platform running at http://localhost:${PORT}`);
   } catch (err) {
@@ -4097,4 +4652,16 @@ const start = async () => {
   }
 };
 
-start();
+if (require.main === module) {
+  start();
+}
+
+module.exports = {
+  fastify,
+  initDatabase,
+  start,
+  _internals: {
+    parseGiteaRepoUrl,
+    validateSubmissionDetails
+  }
+};
