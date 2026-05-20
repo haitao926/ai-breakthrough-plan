@@ -53,7 +53,7 @@
 
 
 
-        <section class="content-grid">
+        <section class="mt-5">
           <article class="course-panel course-overview">
             <div class="section-heading">
               <span>Course focus</span>
@@ -68,36 +68,6 @@
               <div v-if="!learningObjectives.length" class="empty-note">学习目标正在补充中。</div>
             </div>
 
-          </article>
-
-          <article class="course-panel next-panel">
-            <div class="section-heading">
-              <span>Next action</span>
-              <h2>现在可以做什么</h2>
-            </div>
-            <div class="next-action-list">
-              <RouterLink v-if="firstLesson" :to="lessonRoute(firstLesson)" class="next-action-card">
-                <i class="fas fa-layer-group"></i>
-                <div>
-                  <strong>进入第 {{ firstLesson.order || 1 }} 课</strong>
-                  <p>{{ firstLesson.title }}</p>
-                </div>
-              </RouterLink>
-              <a v-if="featuredGuide" :href="featuredGuide.downloadUrl" target="_blank" rel="noreferrer" class="next-action-card">
-                <i class="fas fa-file-lines"></i>
-                <div>
-                  <strong>先看导学资料</strong>
-                  <p>{{ featuredGuide.title }}</p>
-                </div>
-              </a>
-              <RouterLink :to="{ path: '/workspace', query: { course: course.id, title: `${course.title}实践项目` } }" class="next-action-card">
-                <i class="fas fa-diagram-project"></i>
-                <div>
-                  <strong>发起课程实践项目</strong>
-                  <p>进入工作台，把课程内容延展成作品。</p>
-                </div>
-              </RouterLink>
-            </div>
           </article>
         </section>
 
@@ -588,9 +558,7 @@ watch(() => route.params.courseId, loadCoursePage);
   @apply mt-2 text-sm font-medium leading-7 text-slate-500;
 }
 
-.content-grid {
-  @apply mt-5 grid gap-5 lg:grid-cols-[1fr_24rem];
-}
+
 
 .section-heading span {
   @apply text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600;
@@ -640,29 +608,7 @@ watch(() => route.params.courseId, loadCoursePage);
   @apply mt-2 block text-sm font-black leading-7 text-slate-800;
 }
 
-.next-panel {
-  @apply h-fit;
-}
 
-.next-action-list {
-  @apply mt-5 grid gap-3;
-}
-
-.next-action-card {
-  @apply flex gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4 transition hover:border-emerald-200 hover:bg-emerald-50;
-}
-
-.next-action-card i {
-  @apply mt-1 text-emerald-600;
-}
-
-.next-action-card strong {
-  @apply text-sm font-black text-slate-950;
-}
-
-.next-action-card p {
-  @apply mt-1 text-xs font-medium leading-6 text-slate-500;
-}
 
 .course-section {
   @apply mt-10;
