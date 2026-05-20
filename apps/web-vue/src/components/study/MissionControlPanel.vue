@@ -1,5 +1,5 @@
 <template>
-  <div class="flex h-full flex-col border-l border-slate-800 bg-slate-950 text-slate-100 shadow-2xl xl:w-[38%] shrink-0 overflow-hidden relative">
+  <div class="flex h-full flex-col border-l border-slate-800 bg-slate-950 text-slate-100 shadow-2xl xl:w-1/4 shrink-0 overflow-hidden relative">
     
     <!-- Top Cyber Accent Line -->
     <div class="h-[2px] w-full bg-gradient-to-r from-violet-600 via-indigo-500 to-cyan-400"></div>
