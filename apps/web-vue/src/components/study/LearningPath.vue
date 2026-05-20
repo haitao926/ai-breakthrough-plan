@@ -1,5 +1,5 @@
 <template>
-  <aside class="hidden w-80 shrink-0 border-r border-slate-200/60 bg-white px-6 py-8 xl:block">
+  <aside class="hidden w-72 shrink-0 border-r border-slate-200/60 bg-white px-6 py-8 xl:block">
     <div>
       <div class="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">学习路径</div>
       <div class="mt-6 space-y-3">

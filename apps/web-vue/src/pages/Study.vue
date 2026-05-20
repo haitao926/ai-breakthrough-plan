@@ -70,9 +70,7 @@
               >
                 上一页
               </button>
-              <div class="hidden items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 sm:flex">
-                <span v-for="(slide, index) in lessonSlides" :key="`dot-${slide.id}`" class="h-2 rounded-full transition-all" :class="index === currentSlideIndex ? 'w-8 bg-indigo-600' : 'w-2 bg-slate-300'"></span>
-              </div>
+              
               <button
                 class="rounded-2xl px-7 py-4 text-xs font-black uppercase tracking-[0.2em] text-white shadow-xl transition disabled:opacity-30"
                 :class="nextButtonClass"
@@ -84,7 +82,7 @@
             </footer>
 
             <!-- Assignments Section (Moved into Main Flow) -->
-            <section class="pb-14">
+            <section id="lesson-assignments" class="pb-14">
               <div class="rounded-[28px] border border-white/40 bg-white/70 backdrop-blur-md p-6 shadow-xl shadow-slate-200/20">
                 <div class="flex flex-col gap-3 border-b border-slate-100 pb-5 sm:flex-row sm:items-end sm:justify-between">
                   <div>

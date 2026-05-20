@@ -1,6 +1,6 @@
 <template>
   <section class="overflow-hidden rounded-[36px] border border-slate-200 bg-slate-950 p-3 shadow-2xl shadow-indigo-500/10">
-    <div class="relative aspect-video overflow-hidden rounded-[28px] bg-white">
+    <div class="relative min-h-[60vh] flex flex-col overflow-hidden rounded-[28px] bg-white">
       <div class="absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-4 px-8 py-6">
         <div class="inline-flex items-center gap-2 rounded-full bg-slate-900/90 px-4 py-2 text-[10px] font-black uppercase tracking-[0.22em] text-white">
           <span class="h-2 w-2 rounded-full" :class="activeSlideDotClass"></span>
@@ -11,7 +11,7 @@
         </div>
       </div>
 
-      <div v-if="slide" class="flex h-full flex-col justify-center px-10 pb-10 pt-24 lg:px-14">
+      <div v-if="slide" class="flex flex-1 flex-col justify-center px-10 pb-10 pt-24 lg:px-14">
         <template v-if="slide.type === 'overview'">
           <div class="max-w-4xl">
             <div class="text-[11px] font-black uppercase tracking-[0.28em] text-indigo-500">Lesson Overview</div>
@@ -97,7 +97,7 @@
                   class="flex items-start gap-4 rounded-[22px] border border-slate-200 bg-white px-5 py-4 shadow-sm"
                 >
                   <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-black text-white">{{ index + 1 }}</span>
-                  <span class="pt-0.5 text-base font-bold leading-8 text-slate-700" v-html="step"></span>
+                  <article class="slide-prose pt-0.5 text-base font-bold leading-8 text-slate-700" v-html="step"></article>
                 </div>
               </div>
             </div>
@@ -118,11 +118,21 @@
                 {{ item }}
               </div>
             </div>
+            
+            <div class="mt-12">
+              <button 
+                class="inline-flex items-center gap-3 rounded-full bg-emerald-500 px-8 py-4 text-sm font-black tracking-widest text-white shadow-xl shadow-emerald-500/30 transition hover:-translate-y-1 hover:bg-emerald-600 hover:shadow-2xl hover:shadow-emerald-500/40"
+                @click="scrollToAssignments"
+              >
+                <i class="fas fa-rocket"></i>
+                所有任务已就绪，直达作业区
+              </button>
+            </div>
           </div>
         </template>
       </div>
 
-      <div v-else class="flex h-full items-center justify-center text-slate-400">
+      <div v-else class="flex h-full flex-1 items-center justify-center text-slate-400">
         当前学习内容正在整理。
       </div>
     </div>
@@ -159,6 +169,19 @@ const activeSlideDotClass = computed(() => {
 function optionLetter(index) {
   return String.fromCharCode(65 + index);
 }
+
+function scrollToAssignments() {
+  const el = document.getElementById('lesson-assignments');
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    
+    // 增加一个高亮动画反馈
+    el.classList.add('ring-4', 'ring-emerald-500/50', 'ring-offset-4', 'transition-all', 'duration-500');
+    setTimeout(() => {
+      el.classList.remove('ring-4', 'ring-emerald-500/50', 'ring-offset-4');
+    }, 1500);
+  }
+}
 </script>
 
 <style scoped>
@@ -180,5 +203,30 @@ function optionLetter(index) {
 
 .slide-prose :deep(li) {
   @apply rounded-2xl bg-white px-4 py-3 shadow-sm;
+}
+
+.slide-prose :deep(code) {
+  @apply rounded-md bg-slate-200/70 px-1.5 py-0.5 text-[0.85em] font-black text-pink-600;
+}
+
+.slide-prose :deep(pre) {
+  @apply relative mt-6 mb-6 overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950 px-5 pb-5 pt-12 text-sm font-medium leading-relaxed text-emerald-400 shadow-xl shadow-slate-900/20;
+}
+
+.slide-prose :deep(pre::before) {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 16px;
+  left: 20px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ff5f56;
+  box-shadow: 18px 0 0 #ffbd2e, 36px 0 0 #27c93f;
+}
+
+.slide-prose :deep(pre code) {
+  @apply bg-transparent p-0 text-emerald-400 font-medium;
 }
 </style>

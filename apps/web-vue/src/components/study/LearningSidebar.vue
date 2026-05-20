@@ -1,5 +1,5 @@
 <template>
-  <aside class="space-y-8 bg-white px-6 py-8 xl:w-80 xl:shrink-0 xl:border-l xl:border-slate-200/60">
+  <aside class="space-y-8 bg-white px-6 py-8 xl:w-72 xl:shrink-0 xl:border-l xl:border-slate-200/60">
     <section>
       <div class="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">作业提交</div>
       <div
