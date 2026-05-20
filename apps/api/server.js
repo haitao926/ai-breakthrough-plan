@@ -2268,18 +2268,66 @@ fastify.post(`${API_PREFIX}/assignments/:id/submissions`, async (request, reply)
     [assignmentId, studentId]
   );
   const submittedAt = now();
+
+  // Retrieve AI API key for instant review
+  const headerKey = request.headers['x-model-key'];
+  const apiKey = String(headerKey || process.env.AI_API_KEY || '').trim();
+
+  let aiFeedback = '';
+  let status = 'submitted';
+  let reviewedBy = null;
+  let reviewedAt = null;
+  let score = null;
+
+  if (apiKey) {
+    try {
+      const messages = [
+        {
+          role: 'system',
+          content: `你是一名温暖、亲切的初中（七年级）人工智能与科创课程的“AI助教小破”。
+你的任务是对学生的作业提交进行【即时评测与启发式反馈】。
+请用极其鼓励、通俗易懂且简短的语言（150字以内）进行评价：
+1. 肯定学生付出的努力（给出正面情感回馈，比如“哇！你已经迈出了关键的一步！”）。
+2. 用生活中的生动比喻或浅显逻辑点评他们的提交内容，指出亮点。
+3. 给出1个非常具体、有趣的下一步改进建议或思考题，引导他们继续探索。
+注意：保持亲和力，适合12岁左右的孩子，排版要清晰美观。`
+        },
+        {
+          role: 'user',
+          content: `【作业标题】：${assignment.title}
+【作业要求】：${assignment.requirements || assignment.description || '无具体要求'}
+【学生提交内容】：
+- 作业文本/代码：${content || '(未填写)'}
+- 作品/项目链接：${link || '(未提供)'}
+- 附件说明：${attachmentNote || '(无)'}`
+        }
+      ];
+
+      const result = await requestAiChat(messages, apiKey);
+      if (result && result.content) {
+        aiFeedback = result.content;
+        status = 'reviewed';
+        reviewedBy = 'AI_Assistant';
+        reviewedAt = submittedAt;
+        score = 100;
+      }
+    } catch (err) {
+      console.error('AI Assignment Auto-Review failed:', err.message);
+    }
+  }
+
   if (existing) {
     db.run(
       `UPDATE assignment_submissions
-       SET content = ?, link = ?, attachment_note = ?, status = ?, score = NULL, feedback = '', reviewed_by = NULL, reviewed_at = NULL, submitted_at = ?, updated_at = ?
+       SET content = ?, link = ?, attachment_note = ?, status = ?, score = ?, feedback = ?, reviewed_by = ?, reviewed_at = ?, submitted_at = ?, updated_at = ?
        WHERE id = ?`,
-      [content, link, attachmentNote, 'submitted', submittedAt, submittedAt, existing.id]
+      [content, link, attachmentNote, status, score, aiFeedback, reviewedBy, reviewedAt, submittedAt, submittedAt, existing.id]
     );
   } else {
     db.run(
       `INSERT INTO assignment_submissions (assignment_id, student_id, content, link, attachment_note, status, score, feedback, reviewed_by, submitted_at, reviewed_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, NULL, '', NULL, ?, NULL, ?)`,
-      [assignmentId, studentId, content, link, attachmentNote, 'submitted', submittedAt, submittedAt]
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [assignmentId, studentId, content, link, attachmentNote, status, score, aiFeedback, reviewedBy, submittedAt, reviewedAt, submittedAt]
     );
   }
   const row = db.get(

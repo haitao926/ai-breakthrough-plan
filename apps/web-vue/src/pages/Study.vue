@@ -102,9 +102,24 @@
                       <button class="self-start rounded-full bg-indigo-600 px-8 py-3.5 text-xs font-black text-white shadow-xl shadow-indigo-600/25 transition duration-300 hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-indigo-600/40" type="submit">
                         {{ ownSubmission(assignment.id) ? '更新提交' : '提交作业' }}
                       </button>
-                      <p v-if="ownSubmission(assignment.id)?.feedback" class="mt-2 rounded-xl bg-indigo-50 p-4 text-xs font-bold leading-6 text-indigo-700">
-                        教师反馈：{{ ownSubmission(assignment.id).feedback }}
-                      </p>
+                      <div v-if="ownSubmission(assignment.id)?.feedback" class="mt-4 rounded-2xl bg-indigo-50/70 p-5 border border-indigo-100/50">
+                        <div class="flex items-center gap-3 mb-3">
+                          <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-600/25">
+                            <i class="fas" :class="ownSubmission(assignment.id)?.reviewed_by === 'AI_Assistant' ? 'fa-robot' : 'fa-graduation-cap'"></i>
+                          </div>
+                          <div>
+                            <div class="text-xs font-black text-indigo-950 uppercase tracking-widest">
+                              {{ ownSubmission(assignment.id)?.reviewed_by === 'AI_Assistant' ? 'AI 助教小破的即时评测反馈' : '教师反馈' }}
+                            </div>
+                            <div class="mt-0.5 text-[9px] font-black text-indigo-400 uppercase tracking-widest">
+                              Instant Evaluation
+                            </div>
+                          </div>
+                        </div>
+                        <p class="text-sm font-medium leading-7 text-indigo-900 whitespace-pre-line">
+                          {{ ownSubmission(assignment.id).feedback }}
+                        </p>
+                      </div>
                     </form>
                   </article>
                 </div>
