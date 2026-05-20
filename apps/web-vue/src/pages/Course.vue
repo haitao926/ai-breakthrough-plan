@@ -581,11 +581,11 @@ watch(() => route.params.courseId, loadCoursePage);
 }
 
 .objective-list {
-  @apply mt-6 grid gap-3;
+  @apply mt-6 grid gap-4 md:grid-cols-3;
 }
 
 .objective-item {
-  @apply flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4;
+  @apply flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4 h-full;
 }
 
 .objective-item span {
@@ -615,7 +615,7 @@ watch(() => route.params.courseId, loadCoursePage);
 }
 
 .lesson-list {
-  @apply grid gap-3;
+  @apply grid gap-4 lg:grid-cols-2;
 }
 
 .lesson-card {
