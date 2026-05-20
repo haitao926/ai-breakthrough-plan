@@ -132,6 +132,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { loadToolData, saveToolData } from '@/api/toolData';
 
 const route = useRoute();
 const router = useRouter();
@@ -148,19 +149,18 @@ const saved = ref(true);
 let statusTimer = null;
 let ready = false;
 
-function loadData() {
-  const savedData = JSON.parse(localStorage.getItem(dataKey.value) || '{}');
+async function loadData() {
+  const savedData = await loadToolData(projectId.value, 'architect', dataKey.value);
   form.diagramUrl = savedData.diagramUrl || '';
   form.items = Array.isArray(savedData.items) ? savedData.items : [];
   ready = true;
 }
 
-function saveData() {
+async function saveData() {
   if (!ready) return;
   saved.value = false;
   saveStatus.value = 'Saving...';
-  
-  localStorage.setItem(dataKey.value, JSON.stringify({ ...form, updatedAt: new Date().toISOString() }));
+  await saveToolData(projectId.value, 'architect', dataKey.value, { ...form, updatedAt: new Date().toISOString() });
   
   clearTimeout(statusTimer);
   statusTimer = setTimeout(() => {

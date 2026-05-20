@@ -48,53 +48,77 @@
               <div
                 v-for="course in section.items"
                 :key="course.id"
-                class="course-card relative rounded-2xl border border-slate-200/60 bg-white/70 backdrop-blur-xl p-6 hover:shadow-xl hover:shadow-indigo-500/5 hover:-translate-y-1 hover:border-indigo-200 transition-all duration-300 flex flex-col justify-between cursor-pointer group"
+                class="course-card relative rounded-3xl border border-slate-200/60 bg-white/95 hover:shadow-[0_20px_50px_rgba(99,102,241,0.08)] hover:-translate-y-1.5 hover:border-indigo-300 transition-all duration-300 flex flex-col justify-between cursor-pointer group overflow-hidden"
                 @click="openCourse(course.id)"
               >
-                <!-- Color track indicator strip -->
-                <div class="absolute left-0 top-6 bottom-6 w-1 rounded-r-md" :class="sectionBorderBg(section.id)"></div>
+                <!-- Top Cover Visual Area -->
+                <div class="relative w-full">
+                  <!-- Tag Badge -->
+                  <span class="absolute top-3 right-3 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-white/90 backdrop-blur-md text-slate-700 shadow-sm border border-slate-100/40 z-20">
+                    {{ course.courseType || section.label }}
+                  </span>
 
-                <div class="space-y-4">
-                  <!-- Header: icon & type badge -->
-                  <div class="flex items-center justify-between">
-                    <div class="w-9 h-9 rounded-lg flex items-center justify-center text-sm" :class="sectionIconBg(section.id)">
-                      <i class="fas" :class="sectionIcon(section.id)"></i>
-                    </div>
-                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">
-                      {{ course.courseType || section.label }}
-                    </span>
+                  <!-- SVG layout -->
+                  <div v-if="isSvg(getCourseVisual(course.id, course.direction).cover)" class="h-36 w-full flex items-center justify-center p-6 relative overflow-hidden" :class="sectionCoverBg(section.id)">
+                    <div class="absolute inset-0 bg-white/20 opacity-40 blur-xl pointer-events-none"></div>
+                    <img :src="getCourseVisual(course.id, course.direction).cover" class="h-full w-auto object-contain relative z-10 transition-transform duration-500 group-hover:scale-110" />
                   </div>
 
-                  <!-- Title & summary -->
-                  <div class="space-y-2">
-                    <h3 class="text-base sm:text-lg font-extrabold text-slate-900 group-hover:text-indigo-600 transition-colors leading-snug line-clamp-1">
-                      {{ course.title }}
-                    </h3>
-                    <p class="text-xs sm:text-sm text-slate-500 font-semibold leading-relaxed line-clamp-2 h-[40px]">
-                      {{ course.summary }}
-                    </p>
-                  </div>
-
-                  <!-- Step pathways -->
-                  <div class="flex gap-2 pt-1">
-                    <span
-                      v-for="step in pathwaySteps"
-                      :key="`${course.id}-${step.id}`"
-                      class="flex-1 py-1 rounded-md text-xs font-bold text-center border transition-colors"
-                      :class="activeStep === step.id ? 'bg-indigo-50 text-indigo-600 border-indigo-200/40 font-extrabold' : 'bg-slate-50 text-slate-400 border-slate-200/50'"
-                    >
-                      {{ step.label }}
-                    </span>
+                  <!-- PNG layout -->
+                  <div v-else class="h-36 w-full overflow-hidden relative bg-slate-900">
+                    <img :src="getCourseVisual(course.id, course.direction).cover" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                   </div>
                 </div>
 
-                <!-- Footer button action -->
-                <div class="flex items-center justify-between text-xs font-bold pt-4 border-t border-slate-100 mt-5" :class="sectionText(section.id)">
-                  <span class="flex items-center gap-1.5">
-                    <i class="fas" :class="stepActionIcon(activeStep)"></i> 
-                    {{ stepActionLabel(activeStep) }}
-                  </span>
-                  <i class="fas fa-arrow-right transition-transform group-hover:translate-x-1"></i>
+                <!-- Bottom Content Details -->
+                <div class="p-6 flex-1 flex flex-col justify-between">
+                  <div class="space-y-4">
+                    <!-- Title & Summary -->
+                    <div class="space-y-1.5">
+                      <h3 class="text-sm sm:text-base font-black text-slate-900 group-hover:text-indigo-600 transition-colors leading-snug line-clamp-1">
+                        {{ course.title }}
+                      </h3>
+                      <p class="text-xs text-slate-400 font-semibold leading-relaxed line-clamp-2 h-[36px]">
+                        {{ course.summary }}
+                      </p>
+                    </div>
+
+                    <!-- Step pathways progress grid -->
+                    <div class="grid grid-cols-4 gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-100">
+                      <span
+                        v-for="step in pathwaySteps"
+                        :key="`${course.id}-${step.id}`"
+                        class="py-1.5 rounded-lg text-[10px] font-black text-center border transition-all duration-300 flex flex-col items-center justify-center gap-0.5"
+                        :class="activeStep === step.id 
+                          ? [stepActiveBg(section.id), 'shadow-sm font-extrabold'] 
+                          : 'bg-transparent text-slate-400 border-transparent hover:text-slate-600'"
+                      >
+                        <i class="fas text-[9px]" :class="step.icon"></i>
+                        {{ step.label }}
+                      </span>
+                    </div>
+
+                    <!-- Teacher and Audience meta row -->
+                    <div class="flex items-center gap-4 text-[10px] font-bold text-slate-400 pt-3 border-t border-slate-100/60">
+                      <span class="flex items-center gap-1.5">
+                        <i class="fas fa-user-edit text-[9px] text-slate-300"></i> 
+                        {{ course.teacherName || '导师组' }}
+                      </span>
+                      <span class="flex items-center gap-1.5">
+                        <i class="fas fa-bullseye text-[9px] text-slate-300"></i> 
+                        {{ course.audience || '七年级' }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- Footer Action row -->
+                  <div class="flex items-center justify-between text-xs font-bold pt-4 border-t border-slate-100/60 mt-5" :class="sectionText(section.id)">
+                    <span class="flex items-center gap-1.5">
+                      <i class="fas" :class="stepActionIcon(activeStep)"></i> 
+                      {{ stepActionLabel(activeStep) }}
+                    </span>
+                    <i class="fas fa-arrow-right transition-transform group-hover:translate-x-1"></i>
+                  </div>
                 </div>
               </div>
             </div>
@@ -240,6 +264,32 @@ function sectionIconBg(id) {
     humanities: 'bg-amber-50 text-amber-600',
     capstone: 'bg-indigo-50 text-indigo-600'
   }[id] || 'bg-indigo-50 text-indigo-600';
+}
+
+function isSvg(path) {
+  return String(path || '').toLowerCase().endsWith('.svg');
+}
+
+function sectionCoverBg(id) {
+  return {
+    foundation: 'bg-gradient-to-br from-slate-50 to-slate-100',
+    science: 'bg-gradient-to-br from-emerald-50 to-teal-100/50',
+    engineering: 'bg-gradient-to-br from-indigo-50/50 to-blue-100/60',
+    social: 'bg-gradient-to-br from-rose-50 to-pink-100/50',
+    humanities: 'bg-gradient-to-br from-amber-50 to-orange-100/50',
+    capstone: 'bg-gradient-to-br from-violet-50 to-indigo-100/50'
+  }[id] || 'bg-gradient-to-br from-indigo-50 to-blue-100/50';
+}
+
+function stepActiveBg(sectionId) {
+  return {
+    foundation: 'bg-slate-900 text-white border-transparent',
+    science: 'bg-emerald-600 text-white border-transparent',
+    engineering: 'bg-indigo-600 text-white border-transparent',
+    social: 'bg-rose-500 text-white border-transparent',
+    humanities: 'bg-amber-50 text-amber-600 border-transparent',
+    capstone: 'bg-violet-600 text-white border-transparent'
+  }[sectionId] || 'bg-indigo-600 text-white border-transparent';
 }
 
 function stepActionLabel(step) {

@@ -131,7 +131,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { apiFetch } from '@/api/client';
+import { loadToolData, saveToolData } from '@/api/toolData';
 
 const route = useRoute();
 const router = useRouter();
@@ -150,8 +150,8 @@ const saved = ref(true);
 let statusTimer = null;
 let ready = false;
 
-function loadData() {
-  const savedData = JSON.parse(localStorage.getItem(dataKey.value) || '{}');
+async function loadData() {
+  const savedData = await loadToolData(projectId.value, 'innovation', dataKey.value);
   form.summary = savedData.summary || '';
   form.comparison = savedData.comparison || '';
   form.proof = savedData.proof || '';
@@ -159,12 +159,11 @@ function loadData() {
   ready = true;
 }
 
-function saveData() {
+async function saveData() {
   if (!ready) return;
   saved.value = false;
   saveStatus.value = 'Auto Saving...';
-  
-  localStorage.setItem(dataKey.value, JSON.stringify({ ...form, updatedAt: new Date().toISOString() }));
+  await saveToolData(projectId.value, 'innovation', dataKey.value, { ...form, updatedAt: new Date().toISOString() });
   
   clearTimeout(statusTimer);
   statusTimer = setTimeout(() => {

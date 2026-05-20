@@ -951,23 +951,13 @@ async function saveProjectBlueprint(details, wbsTasks) {
 async function syncMilestonesFromWbs(wbsTasks) {
   if (!projectId.value || !wbsTasks?.length) return;
   try {
-    const res = await apiFetch(`/projects/${projectId.value}/milestones`);
-    const data = await res.json();
-    if (res.ok && Array.isArray(data.milestones) && data.milestones.length) {
-      return;
-    }
-  } catch (err) {}
-
-  for (const task of wbsTasks) {
-    try {
-      await apiFetch(`/projects/${projectId.value}/milestones`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: task.title, phase: task.phase, output: task.output })
-      });
-    } catch (err) {
-      console.error(err);
-    }
+    await apiFetch(`/projects/${projectId.value}/sync-wbs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tasks: wbsTasks, source: 'wbs' })
+    });
+  } catch (err) {
+    console.error(err);
   }
 }
 

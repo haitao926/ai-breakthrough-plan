@@ -122,7 +122,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { apiFetch } from '@/api/client';
+import { loadToolData, saveToolData } from '@/api/toolData';
 
 const route = useRoute();
 const router = useRouter();
@@ -214,8 +214,7 @@ function setToolView(tool) {
 async function saveData() {
   if (!ready) return;
   saved.value = false;
-  
-  localStorage.setItem(dataKey.value, JSON.stringify({ mode: mode.value, ...form }));
+  await saveToolData(projectId.value, 'charter', dataKey.value, { mode: mode.value, ...form });
   
   setTimeout(() => {
     saved.value = true;
@@ -223,8 +222,8 @@ async function saveData() {
   }, 1000);
 }
 
-function loadData() {
-  const savedData = JSON.parse(localStorage.getItem(dataKey.value) || '{}');
+async function loadData() {
+  const savedData = await loadToolData(projectId.value, 'charter', dataKey.value);
   form.projName = savedData.projName || '';
   form.projPersona = savedData.projPersona || '';
   form.projPain = savedData.projPain || '';

@@ -155,6 +155,15 @@ export function validateStageDetails(stageKey, details, proposalStatus) {
   }
 
   const config = getStageConfig(stageKey);
+  if ((stageKey === 'midterm' || stageKey === 'final' || stageKey === 'milestone_1' || stageKey === 'milestone_2')) {
+    const missingCodeFields = (config.fields || [])
+      .filter(field => ['codeRepo', 'codeCommit'].includes(field.name))
+      .filter(field => !String(details?.[field.name] || '').trim());
+    if (missingCodeFields.length) {
+      return `请填写：${missingCodeFields.map(field => field.label).join('、')}`;
+    }
+  }
+
   if (!details?.uploadedMaterials) {
     const required = (config.fields || []).filter(field => field.required);
     const missing = required.filter(field => !String(details?.[field.name] || '').trim());

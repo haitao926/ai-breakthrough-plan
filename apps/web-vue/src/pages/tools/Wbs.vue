@@ -132,6 +132,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { apiFetch } from '@/api/client';
+import { saveToolData } from '@/api/toolData';
 
 const route = useRoute();
 const router = useRouter();
@@ -218,6 +219,13 @@ function syncLocal() {
   if (!ready) return;
   localStorage.setItem(dataKey.value, JSON.stringify({ tasks: tasks.value }));
   localStorage.setItem(briefKey.value, JSON.stringify({ ...brief, feasibility }));
+  if (projectId.value) {
+    saveToolData(projectId.value, 'wbs', dataKey.value, {
+      tasks: tasks.value,
+      brief: { ...brief, feasibility },
+      updatedAt: new Date().toISOString()
+    });
+  }
   saved.value = false;
   setTimeout(() => { saved.value = true; }, 1000);
 }
