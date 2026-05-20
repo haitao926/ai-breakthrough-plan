@@ -482,7 +482,7 @@ fetchCompetitions().then(items => {
 
 .quick-link-overlay {
   background:
-    linear-gradient(180deg, rgba(15, 23, 42, 0.1), rgba(15, 23, 42, 0.85));
+    linear-gradient(180deg, rgba(15, 23, 42, 0) 20%, rgba(15, 23, 42, 0.2) 50%, rgba(15, 23, 42, 0.85) 100%);
   transition: opacity 0.4s ease;
 }
 
