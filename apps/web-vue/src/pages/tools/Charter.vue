@@ -257,7 +257,7 @@ onMounted(loadData);
 </script>
 
 <style scoped>
-.charter-tool { font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif; }
+.charter-tool { font-family: inherit; }
 .premium-card { @apply rounded-[44px] border border-slate-200/60 p-10 shadow-sm transition-all duration-700; }
 .animate-reveal { animation: reveal 1s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 @keyframes reveal { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }

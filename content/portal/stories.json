@@ -7,7 +7,7 @@
     "result": "市级展示入选",
     "relatedCompetitionSlug": "shanghai-ai-creative-practice",
     "relatedCourseIds": ["project1", "project2"],
-    "cover": "/assets/portal/story-gesture.svg",
+    "cover": "/assets/portal/story-gesture.png",
     "featured": true
   },
   {
@@ -18,7 +18,7 @@
     "result": "区级创客优秀项目",
     "relatedCompetitionSlug": "district-maker-marathon",
     "relatedCourseIds": ["project3", "project5"],
-    "cover": "/assets/portal/story-garden.svg",
+    "cover": "/assets/portal/story-garden.png",
     "featured": true
   },
   {
@@ -29,7 +29,7 @@
     "result": "上海市展示交流",
     "relatedCompetitionSlug": "youth-data-intelligence-showcase",
     "relatedCourseIds": ["project3", "project4"],
-    "cover": "/assets/portal/story-data.svg",
+    "cover": "/assets/portal/story-data.png",
     "featured": false
   }
 ]

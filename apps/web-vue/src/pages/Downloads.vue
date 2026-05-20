@@ -44,38 +44,57 @@
               <span>{{ section.desc }}</span>
             </div>
 
-            <div v-if="section.items.length" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div v-if="section.items.length" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               <div
                 v-for="course in section.items"
                 :key="course.id"
-                class="course-card rounded-2xl overflow-hidden cursor-pointer group"
-                :class="`course-card--${section.id}`"
+                class="course-card relative rounded-2xl border border-slate-200/60 bg-white/70 backdrop-blur-xl p-6 hover:shadow-xl hover:shadow-indigo-500/5 hover:-translate-y-1 hover:border-indigo-200 transition-all duration-300 flex flex-col justify-between cursor-pointer group"
                 @click="openCourse(course.id)"
               >
-                <div class="course-track-label">{{ section.label }} Track</div>
-                <div class="h-32 relative" :class="sectionGradient(section.id)">
-                  <i class="fas absolute -bottom-4 -right-4 text-8xl text-white opacity-10 transform rotate-12 group-hover:rotate-0 transition duration-500" :class="sectionIcon(section.id)"></i>
-                  <div class="absolute bottom-4 left-6 text-white">
-                    <span class="text-xs font-bold bg-white/20 px-2 py-1 rounded backdrop-blur">{{ course.courseType || section.label }}</span>
-                    <h3 class="text-xl font-bold mt-1">{{ course.title }}</h3>
+                <!-- Color track indicator strip -->
+                <div class="absolute left-0 top-6 bottom-6 w-1 rounded-r-md" :class="sectionBorderBg(section.id)"></div>
+
+                <div class="space-y-4">
+                  <!-- Header: icon & type badge -->
+                  <div class="flex items-center justify-between">
+                    <div class="w-9 h-9 rounded-lg flex items-center justify-center text-sm" :class="sectionIconBg(section.id)">
+                      <i class="fas" :class="sectionIcon(section.id)"></i>
+                    </div>
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">
+                      {{ course.courseType || section.label }}
+                    </span>
                   </div>
-                </div>
-                <div class="p-6">
-                  <p class="text-sm text-gray-500 mb-4 h-12 overflow-hidden">{{ course.summary }}</p>
-                  <div class="course-entry-grid">
+
+                  <!-- Title & summary -->
+                  <div class="space-y-2">
+                    <h3 class="text-base sm:text-lg font-extrabold text-slate-900 group-hover:text-indigo-600 transition-colors leading-snug line-clamp-1">
+                      {{ course.title }}
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-500 font-semibold leading-relaxed line-clamp-2 h-[40px]">
+                      {{ course.summary }}
+                    </p>
+                  </div>
+
+                  <!-- Step pathways -->
+                  <div class="flex gap-2 pt-1">
                     <span
                       v-for="step in pathwaySteps"
                       :key="`${course.id}-${step.id}`"
-                      class="course-entry-chip"
-                      :class="{ 'is-active': activeStep === step.id }"
+                      class="flex-1 py-1 rounded-md text-xs font-bold text-center border transition-colors"
+                      :class="activeStep === step.id ? 'bg-indigo-50 text-indigo-600 border-indigo-200/40 font-extrabold' : 'bg-slate-50 text-slate-400 border-slate-200/50'"
                     >
                       {{ step.label }}
                     </span>
                   </div>
-                  <div class="flex items-center justify-between text-xs font-bold border-t border-gray-100 pt-4" :class="sectionText(section.id)">
-                    <span><i class="fas" :class="stepActionIcon(activeStep)"></i> {{ stepActionLabel(activeStep) }}</span>
-                    <i class="fas fa-arrow-right group-hover:translate-x-1 transition"></i>
-                  </div>
+                </div>
+
+                <!-- Footer button action -->
+                <div class="flex items-center justify-between text-xs font-bold pt-4 border-t border-slate-100 mt-5" :class="sectionText(section.id)">
+                  <span class="flex items-center gap-1.5">
+                    <i class="fas" :class="stepActionIcon(activeStep)"></i> 
+                    {{ stepActionLabel(activeStep) }}
+                  </span>
+                  <i class="fas fa-arrow-right transition-transform group-hover:translate-x-1"></i>
                 </div>
               </div>
             </div>
@@ -199,6 +218,28 @@ function sectionText(id) {
     humanities: 'text-amber-600',
     capstone: 'text-indigo-400'
   }[id] || 'text-indigo-600';
+}
+
+function sectionBorderBg(id) {
+  return {
+    foundation: 'bg-slate-400/80',
+    science: 'bg-emerald-500/80',
+    engineering: 'bg-blue-500/80',
+    social: 'bg-purple-500/80',
+    humanities: 'bg-amber-500/80',
+    capstone: 'bg-indigo-600/80'
+  }[id] || 'bg-indigo-500/80';
+}
+
+function sectionIconBg(id) {
+  return {
+    foundation: 'bg-slate-100 text-slate-600',
+    science: 'bg-emerald-50 text-emerald-600',
+    engineering: 'bg-blue-50 text-blue-600',
+    social: 'bg-purple-50 text-purple-600',
+    humanities: 'bg-amber-50 text-amber-600',
+    capstone: 'bg-indigo-50 text-indigo-600'
+  }[id] || 'bg-indigo-50 text-indigo-600';
 }
 
 function stepActionLabel(step) {
@@ -351,73 +392,6 @@ watch(searchTerm, value => {
   font-size: 0.86rem;
   font-weight: 700;
 }
-
-.course-card {
-  position: relative;
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  border: 1px solid rgba(226, 232, 240, 0.8);
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.02);
-}
-
-.course-track-label {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  z-index: 2;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.9);
-  color: #334155;
-  padding: 4px 9px;
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  backdrop-filter: blur(12px);
-}
-
-.course-card:hover {
-  transform: translateY(-4px);
-  border-color: rgba(99, 102, 241, 0.25);
-  box-shadow: 0 20px 40px rgba(99, 102, 241, 0.08);
-}
-
-
-.course-entry-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 4px;
-  margin-bottom: 14px;
-}
-
-.course-entry-chip {
-  min-height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  border: 1px solid transparent;
-  background: #f8fafc;
-  padding: 0 4px;
-  color: #64748b;
-  font-size: 0.66rem;
-  font-weight: 800;
-  white-space: nowrap;
-}
-
-.course-entry-chip.is-active {
-  border-color: #cbd5e1;
-  background: #fff;
-  color: #0f172a;
-}
-
-.course-card--foundation { border-color: #cbd5e1; }
-.course-card--science { border-color: #bbf7d0; }
-.course-card--engineering { border-color: #bfdbfe; }
-.course-card--social { border-color: #fecdd3; }
-.course-card--humanities { border-color: #fde68a; }
-.course-card--capstone { border-color: #ddd6fe; }
 
 .scroll-anchor {
   scroll-margin-top: 112px;

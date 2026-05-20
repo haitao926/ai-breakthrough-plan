@@ -55,8 +55,9 @@
     scroll-behavior: smooth;
   }
 
-  body {
-    @apply antialiased text-slate-900 bg-[#f8fafc] font-['Noto_Sans_SC',system-ui,sans-serif];
+  body, input, button, select, textarea {
+    font-family: 'Outfit', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+    @apply antialiased text-slate-900 bg-[#f8fafc];
     letter-spacing: -0.011em;
   }
 }

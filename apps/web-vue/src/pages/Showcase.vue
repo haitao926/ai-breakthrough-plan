@@ -1,107 +1,202 @@
 <template>
-  <div class="portal-page">
+  <div class="portal-page text-gray-800 min-h-screen flex flex-col">
     <SiteNav active="showcase" />
 
-    <main class="portal-shell portal-main">
-      <section v-if="featuredStory" class="story-hero">
-        <img :src="featuredStory.cover" :alt="featuredStory.title" class="story-hero-cover" />
-        <div class="story-hero-copy">
-          <p class="poster-eyebrow">Featured Story</p>
-          <h1>{{ featuredStory.title }}</h1>
-          <p>学生成果页负责证明“课程和项目真的能产出作品”，因此保留案例陈列，并与大模型深度协同创作。</p>
-          <div class="meta-row">
-            <span class="route-pill">{{ featuredStory.result }}</span>
-            <span class="route-pill muted">{{ featuredStory.studentLabel }}</span>
-            <span class="ai-badge"><i class="fas fa-magic"></i> HAI Co-Created</span>
+    <!-- Main Container -->
+    <main class="portal-shell portal-main flex-grow max-w-[1320px] mx-auto px-5 sm:px-6 lg:px-8 py-8 space-y-16">
+      
+      <!-- Spotlight Hero Section -->
+      <section v-if="featuredStory" class="relative overflow-hidden rounded-3xl border border-slate-200/60 bg-white/70 backdrop-blur-xl p-6 sm:p-10 shadow-xl shadow-slate-100/40">
+        <!-- Background Ambient Glows -->
+        <div class="absolute -top-40 -right-40 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-40 -left-40 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none"></div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center relative z-10">
+          <!-- Copy Column -->
+          <div class="lg:col-span-7 space-y-6">
+            <div class="flex items-center gap-3">
+              <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-700 border border-indigo-200/50">
+                Spotlight Project
+              </span>
+              <span class="flex items-center gap-1 text-[10px] font-black text-cyan-600 bg-cyan-50 px-2.5 py-1 rounded-full border border-cyan-100/50">
+                <i class="fas fa-magic"></i> HAI Co-Created
+              </span>
+            </div>
+            
+            <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 leading-tight">
+              {{ featuredStory.title }}
+            </h1>
+            
+            <p class="text-sm sm:text-base text-slate-500 font-bold leading-relaxed max-w-2xl">
+              {{ featuredStory.summary }}
+            </p>
+            
+            <!-- Metadata & Action Row -->
+            <div class="pt-4 flex flex-wrap items-center gap-3 border-t border-slate-100/80">
+              <div class="flex items-center gap-2">
+                <span class="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200/60 text-xs font-black text-slate-600">
+                  <i class="fas fa-award mr-1.5 text-indigo-500"></i>{{ featuredStory.result }}
+                </span>
+                <span class="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200/60 text-xs font-black text-slate-500">
+                  <i class="fas fa-users mr-1.5 text-slate-400"></i>{{ featuredStory.studentLabel }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cover Image Column -->
+          <div class="lg:col-span-5">
+            <div class="relative group aspect-video sm:aspect-square lg:aspect-auto lg:h-[360px] rounded-2xl overflow-hidden shadow-2xl shadow-indigo-950/5 border border-slate-200/40">
+              <img 
+                :src="featuredStory.cover" 
+                :alt="featuredStory.title" 
+                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" 
+              />
+              <div class="absolute inset-0 bg-gradient-to-t from-slate-900/20 via-transparent to-transparent"></div>
+            </div>
           </div>
         </div>
       </section>
 
-      <!-- 优秀成果案例 -->
-      <section class="portal-section">
-        <div class="section-heading">
-          <p class="poster-eyebrow">Gallery</p>
-          <h2>成果案例</h2>
+      <!-- Curated Cases Section -->
+      <section class="space-y-6">
+        <div class="border-l-4 border-indigo-600 pl-4 py-1">
+          <p class="text-[10px] font-black uppercase tracking-widest text-indigo-600">Gallery</p>
+          <h2 class="text-xl sm:text-2xl font-black text-slate-900 mt-1">深度孵化案例</h2>
         </div>
-        <div class="story-grid">
-          <article v-for="story in stories" :key="story.slug" class="story-card">
-            <div class="story-cover-wrap">
-              <img :src="story.cover" :alt="story.title" class="story-cover" />
-            </div>
-            <div class="story-copy">
-              <div class="meta-row">
-                <span class="route-pill">{{ story.result }}</span>
-                <span class="route-pill muted">{{ story.studentLabel }}</span>
-                <span class="ai-badge"><i class="fas fa-magic"></i> HAI Co-Created</span>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <article 
+            v-for="story in stories" 
+            :key="story.slug" 
+            class="group relative rounded-2xl border border-slate-200/60 bg-white/70 backdrop-blur-xl overflow-hidden hover:shadow-xl hover:shadow-indigo-500/5 hover:-translate-y-1 hover:border-indigo-200 transition-all duration-300 flex flex-col justify-between"
+          >
+            <!-- Thumbnail Banner -->
+            <div class="relative h-48 overflow-hidden bg-slate-50 border-b border-slate-100">
+              <img 
+                :src="story.cover" 
+                :alt="story.title" 
+                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" 
+              />
+              <div class="absolute top-4 left-4 right-4 flex justify-between items-center z-10">
+                <span class="px-3 py-1 rounded-md text-xs font-bold uppercase tracking-wider bg-white/95 backdrop-blur text-slate-700 shadow-sm border border-slate-200/20">
+                  {{ story.result }}
+                </span>
+                <span class="px-2.5 py-1 rounded text-xs font-bold uppercase tracking-wider bg-indigo-600 text-indigo-50 shadow-sm">
+                  Curated
+                </span>
               </div>
-              <h3>{{ story.title }}</h3>
-              <p>{{ story.summary }}</p>
+            </div>
+
+            <!-- Content Area -->
+            <div class="p-6 flex-grow flex flex-col justify-between space-y-4">
+              <div class="space-y-2">
+                <div class="flex items-center gap-2 text-xs font-bold text-slate-400">
+                  <span>{{ story.studentLabel }}</span>
+                  <span>•</span>
+                  <span class="text-indigo-500"><i class="fas fa-magic mr-1"></i>Co-Created</span>
+                </div>
+                <h3 class="text-lg font-extrabold text-slate-900 leading-snug group-hover:text-indigo-600 transition-colors">
+                  {{ story.title }}
+                </h3>
+                <p class="text-xs sm:text-sm text-slate-500 font-semibold leading-relaxed line-clamp-3">
+                  {{ story.summary }}
+                </p>
+              </div>
+              
+              <div class="pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-indigo-600">
+                <span><i class="far fa-eye mr-1.5"></i>查看实践详情</span>
+                <i class="fas fa-arrow-right transition-transform group-hover:translate-x-1"></i>
+              </div>
             </div>
           </article>
         </div>
       </section>
 
-      <!-- 学生课题展示台 (Student Project Showcase Wall) -->
-      <section class="portal-section" style="margin-top: 56px;">
-        <div class="section-heading-row">
-          <div class="section-heading">
-            <p class="poster-eyebrow">Showcase Wall</p>
-            <h2>学生优秀项目展示</h2>
+      <!-- Student Showcase Wall Section -->
+      <section class="space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 border-b border-slate-200/50 pb-6">
+          <div class="border-l-4 border-indigo-600 pl-4 py-1">
+            <p class="text-[10px] font-black uppercase tracking-widest text-indigo-600">Showcase Wall</p>
+            <h2 class="text-xl sm:text-2xl font-black text-slate-900 mt-1">学生创意实践墙</h2>
           </div>
           
-          <div class="search-control">
-            <div class="search-box">
-              <i class="fas fa-search"></i>
+          <!-- Filter / Search box -->
+          <div class="relative w-full sm:w-72">
+            <div class="flex items-center gap-2 bg-white/70 backdrop-blur border border-slate-200/80 rounded-xl px-3.5 py-2 hover:border-slate-300 focus-within:border-indigo-300 focus-within:ring-2 focus-within:ring-indigo-100 transition-all">
+              <i class="fas fa-search text-slate-400 text-xs"></i>
               <input 
                 v-model="searchTerm" 
                 type="text" 
-                placeholder="搜索项目标题、简介或学生姓名..." 
+                placeholder="搜索标题、简介或作者..." 
+                class="bg-transparent border-0 outline-none w-full text-xs font-bold text-slate-700 placeholder-slate-400"
               />
-              <button v-if="searchTerm" class="clear-btn" @click="searchTerm = ''">
-                <i class="fas fa-times"></i>
+              <button v-if="searchTerm" class="text-slate-400 hover:text-slate-600" @click="searchTerm = ''">
+                <i class="fas fa-times text-xs"></i>
               </button>
             </div>
           </div>
         </div>
 
-        <div v-if="showcaseLoading" class="showcase-loading">
-          <i class="fas fa-spinner fa-spin"></i>
-          <span>正在加载学生作品...</span>
+        <!-- States -->
+        <div v-if="showcaseLoading" class="text-center py-20 bg-white/50 backdrop-blur rounded-2xl border border-slate-200/50 text-slate-400 space-y-2">
+          <i class="fas fa-spinner fa-spin text-xl"></i>
+          <p class="text-xs font-black">正在加载学生项目作品...</p>
         </div>
 
-        <div v-else-if="filteredShowcase.length === 0" class="showcase-empty">
-          <i class="fas fa-folder-open"></i>
-          <span>暂无符合条件的学生项目展示</span>
+        <div v-if="filteredShowcase.length === 0" class="text-center py-20 bg-white/50 backdrop-blur rounded-2xl border border-slate-200/50 text-slate-400 space-y-2">
+          <i class="far fa-folder-open text-2xl opacity-60"></i>
+          <p class="text-xs font-black">暂无符合条件的项目展示</p>
         </div>
 
-        <div v-else class="showcase-grid">
-          <article v-for="item in filteredShowcase" :key="item.id" class="showcase-card">
-            <div class="showcase-cover-wrap">
+        <!-- Student Cards Grid -->
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <article 
+            v-for="item in filteredShowcase" 
+            :key="item.id" 
+            class="group relative rounded-2xl border border-slate-200/60 bg-white/70 backdrop-blur-xl overflow-hidden hover:shadow-xl hover:shadow-indigo-500/5 hover:-translate-y-1 hover:border-indigo-200 transition-all duration-300 flex flex-col justify-between"
+          >
+            <!-- Cover image placeholder/loading -->
+            <div class="relative h-44 bg-gradient-to-br from-indigo-50/50 to-cyan-50/50 border-b border-slate-100 flex items-center justify-center overflow-hidden">
               <img
                 v-if="item.coverUrl"
                 :src="item.coverUrl"
                 :alt="item.projectTitle"
-                class="showcase-cover"
+                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
               />
-              <div v-else class="showcase-cover-placeholder">
-                <i class="fas fa-cubes"></i>
-                <span>HAI TECH LAB</span>
+              <div v-else class="text-center space-y-1.5 opacity-60">
+                <i class="fas fa-shapes text-2xl text-indigo-400/80"></i>
+                <p class="text-[10px] font-bold uppercase tracking-widest text-indigo-500">HAI Tech Lab</p>
               </div>
-              <span class="badge-tag primary">优秀项目</span>
-              <span v-if="item.className" class="badge-tag class-label">{{ item.className }}</span>
+              
+              <!-- Badges on cover -->
+              <span class="absolute top-3 left-3 px-2.5 py-1 rounded text-xs font-bold bg-white/95 backdrop-blur text-indigo-600 shadow-sm border border-indigo-100/50">
+                优秀成果
+              </span>
+              <span v-if="item.className" class="absolute top-3 right-3 px-2.5 py-1 rounded text-xs font-bold bg-slate-900/90 text-white shadow-sm">
+                {{ item.className }}
+              </span>
             </div>
 
-            <div class="showcase-card-body">
-              <h3>{{ item.projectTitle }}</h3>
-              <p class="summary">{{ item.projectSummary }}</p>
-              
-              <div class="showcase-card-footer">
-                <span class="student-author">
-                  <i class="fas fa-user-friends"></i>
+            <!-- Body info -->
+            <div class="p-6 flex-grow flex flex-col justify-between space-y-4">
+              <div class="space-y-2">
+                <h3 class="text-base font-extrabold text-slate-900 leading-snug group-hover:text-indigo-600 transition-colors line-clamp-1">
+                  {{ item.projectTitle }}
+                </h3>
+                <p class="text-xs sm:text-sm text-slate-500 font-semibold leading-relaxed line-clamp-2 h-[40px]">
+                  {{ item.projectSummary }}
+                </p>
+              </div>
+
+              <!-- Footer with author & downloads -->
+              <div class="pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-bold">
+                <span class="text-slate-500 flex items-center gap-1.5">
+                  <i class="far fa-user text-indigo-500"></i>
                   {{ item.studentName }}
                 </span>
                 
-                <div class="action-links">
+                <div class="flex gap-2">
                   <template v-if="item.attachments && item.attachments.length">
                     <a
                       v-for="att in item.attachments"
@@ -109,19 +204,20 @@
                       :href="att.url"
                       target="_blank"
                       rel="noreferrer"
-                      class="view-artifact-btn"
+                      class="px-3 py-1 rounded bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors flex items-center gap-1"
                     >
-                      <i class="fas fa-paperclip"></i>
+                      <i class="fas fa-paperclip text-[10px]"></i>
                       查看成果
                     </a>
                   </template>
-                  <span v-else class="no-attachment">无附件</span>
+                  <span v-else class="text-slate-300 py-1">无附件</span>
                 </div>
               </div>
             </div>
           </article>
         </div>
       </section>
+
     </main>
 
     <PortalFooter />
@@ -200,387 +296,10 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.story-hero {
-  display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
-  gap: 32px;
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  border-radius: 36px;
-  padding: 32px;
-  margin-bottom: 40px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.02);
-  align-items: center;
-}
-
-.story-hero-cover {
-  width: 100%;
-  height: 380px;
-  object-fit: cover;
-  border-radius: 24px;
-  transition: transform 0.5s ease;
-}
-
-.story-hero:hover .story-hero-cover {
-  transform: scale(1.01);
-}
-
-.story-hero-copy {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 16px;
-}
-
-.story-hero-copy h1 {
-  font-size: 2.8rem;
-  line-height: 1.1;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  background: linear-gradient(135deg, #1e1b4b 0%, #4338ca 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.story-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 24px;
-}
-
-.story-card {
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  border-radius: 28px;
-  overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.02);
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  display: flex;
-  flex-direction: column;
-}
-
-.story-card:hover {
-  transform: translateY(-6px) scale(1.01);
-  border-color: rgba(99, 102, 241, 0.3);
-  box-shadow: 0 25px 50px rgba(99, 102, 241, 0.08);
-}
-
-.story-cover-wrap {
-  overflow: hidden;
-  height: 240px;
-}
-
-.story-cover {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.story-card:hover .story-cover {
-  transform: scale(1.06);
-}
-
-.story-copy {
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  flex-grow: 1;
-}
-
-.story-copy h3 {
-  font-size: 1.35rem;
-  font-weight: 800;
-  color: #0f172a;
-  margin: 0;
-}
-
-.story-copy p {
-  font-size: 0.9rem;
-  color: #64748b;
-  line-height: 1.6;
-  margin: 0;
-}
-
-.ai-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border-radius: 99px;
-  background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(99, 102, 241, 0.1));
-  border: 1px solid rgba(6, 182, 212, 0.25);
-  color: #0891b2;
-  font-size: 0.72rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  box-shadow: 0 0 10px rgba(6, 182, 212, 0.05);
-}
-
-/* Student Showcase Wall styles */
-.section-heading-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 20px;
-  margin-bottom: 24px;
-  flex-wrap: wrap;
-}
-
-.search-control {
-  min-width: 320px;
-}
-
-.search-box {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 99px;
-  padding: 0 16px;
-  min-height: 44px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
-  transition: all 0.3s ease;
-}
-
-.search-box:focus-within {
-  border-color: rgba(99, 102, 241, 0.4);
-  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.08);
-  background: #fff;
-}
-
-.search-box i {
-  color: #94a3b8;
-  font-size: 0.88rem;
-}
-
-.search-box input {
-  border: 0;
-  outline: 0;
-  background: transparent;
-  font-size: 0.88rem;
-  color: #0f172a;
-  width: 100%;
-}
-
-.clear-btn {
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  color: #94a3b8;
-}
-
-.clear-btn:hover {
-  color: #64748b;
-}
-
-.showcase-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 24px;
-}
-
-.showcase-card {
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  border-radius: 28px;
-  overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.02);
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  display: flex;
-  flex-direction: column;
-}
-
-.showcase-card:hover {
-  transform: translateY(-6px) scale(1.01);
-  border-color: rgba(99, 102, 241, 0.3);
-  box-shadow: 0 25px 50px rgba(99, 102, 241, 0.08);
-}
-
-.showcase-cover-wrap {
-  position: relative;
-  height: 200px;
-  overflow: hidden;
-  background: #f8fafc;
-}
-
-.showcase-cover {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.showcase-card:hover .showcase-cover {
-  transform: scale(1.06);
-}
-
-.showcase-cover-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(6, 182, 212, 0.05));
-  color: #818cf8;
-  gap: 8px;
-}
-
-.showcase-cover-placeholder i {
-  font-size: 2.2rem;
-  opacity: 0.6;
-}
-
-.showcase-cover-placeholder span {
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  opacity: 0.6;
-}
-
-.badge-tag {
-  position: absolute;
-  top: 16px;
-  font-size: 0.72rem;
-  font-weight: 800;
-  padding: 5px 10px;
-  border-radius: 8px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-}
-
-.badge-tag.primary {
-  left: 16px;
-  background: #4f46e5;
-  color: #fff;
-}
-
-.badge-tag.class-label {
-  right: 16px;
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(4px);
-  color: #475569;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.showcase-card-body {
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  flex-grow: 1;
-}
-
-.showcase-card-body h3 {
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: #0f172a;
-  margin: 0;
-  line-height: 1.3;
-}
-
-.showcase-card-body .summary {
-  font-size: 0.88rem;
-  color: #64748b;
-  line-height: 1.6;
-  margin: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  flex-grow: 1;
-}
-
-.showcase-card-footer {
-  margin-top: 10px;
-  padding-top: 16px;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.84rem;
-}
-
-.student-author {
-  font-weight: 750;
-  color: #475569;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.student-author i {
-  color: #6366f1;
-}
-
-.action-links {
-  display: flex;
-  gap: 6px;
-}
-
-.view-artifact-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 12px;
-  border-radius: 10px;
-  background: rgba(99, 102, 241, 0.06);
-  color: #4f46e5;
-  font-weight: 800;
-  text-decoration: none;
-  font-size: 0.78rem;
-  transition: all 0.2s ease;
-}
-
-.view-artifact-btn:hover {
-  background: rgba(99, 102, 241, 0.12);
-  color: #3730a3;
-}
-
-.no-attachment {
-  color: #94a3b8;
-  font-size: 0.78rem;
-}
-
-.showcase-loading,
-.showcase-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 80px 20px;
-  color: #94a3b8;
-  gap: 16px;
-  background: rgba(255, 255, 255, 0.4);
-  border-radius: 28px;
-  border: 1px dashed rgba(0, 0, 0, 0.08);
-}
-
-.showcase-loading i,
-.showcase-empty i {
-  font-size: 2rem;
-}
-
-.showcase-loading span,
-.showcase-empty span {
-  font-size: 0.92rem;
-  font-weight: 700;
-}
-
-@media (max-width: 980px) {
-  .story-hero {
-    grid-template-columns: 1fr;
-    padding: 20px;
-  }
-  .story-hero-cover {
-    height: 260px;
-  }
+.portal-page {
+  background: 
+    linear-gradient(180deg, rgba(238, 242, 255, 0.9), rgba(248, 250, 252, 0.2) 320px),
+    #f8fafc;
+  min-height: 100vh;
 }
 </style>

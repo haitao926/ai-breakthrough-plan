@@ -331,7 +331,7 @@ onMounted(() => { loadData(); loadBrief(); });
 </script>
 
 <style scoped>
-.wbs-tool { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+.wbs-tool { font-family: inherit; }
 .premium-card { @apply rounded-[40px] border border-slate-200/60 p-8 shadow-sm; }
 .wbs-input {
   @apply w-full p-4 bg-slate-50 border-none rounded-2xl outline-none text-[11px] font-black transition-all placeholder:text-slate-200 focus:bg-white focus:ring-4 focus:ring-indigo-500/5;
