@@ -73,33 +73,16 @@
 
                 <!-- Bottom Content Details -->
                 <div class="p-6 flex-1 flex flex-col justify-between">
-                  <div class="space-y-4">
+                  <div class="space-y-6">
                     <!-- Title & Summary -->
                     <div class="space-y-2">
-                      <div>
-                        <h3 class="text-sm sm:text-base font-black text-slate-900 group-hover:text-indigo-600 transition-colors leading-snug line-clamp-1">
-                          {{ course.title }}
-                        </h3>
-                        <span class="inline-block text-[9px] font-black text-slate-400 bg-slate-50 border border-slate-100/60 px-2.5 py-0.5 rounded-full mt-1.5">
-                          {{ course.audience || '面向全体' }}
-                        </span>
-                      </div>
+                      <h3 class="text-sm sm:text-base font-black text-slate-900 group-hover:text-indigo-600 transition-colors leading-snug line-clamp-1">
+                        {{ course.title }}
+                      </h3>
                       
                       <p class="text-xs text-slate-500 font-semibold leading-relaxed line-clamp-2 h-[36px]">
                         {{ course.summary }}
                       </p>
-
-                      <!-- Positioning tags -->
-                      <div v-if="course.positioning" class="flex flex-wrap gap-1 pt-1">
-                        <span
-                          v-for="tag in course.positioning.split('/')"
-                          :key="tag"
-                          class="px-2 py-0.5 rounded-md text-[9px] font-black tracking-wide"
-                          :class="tagStyle(section.id)"
-                        >
-                          # {{ tag.trim() }}
-                        </span>
-                      </div>
                     </div>
 
                     <!-- Step pathways progress grid -->
@@ -115,18 +98,6 @@
                       >
                         <i class="fas text-[9px]" :class="step.icon"></i>
                         {{ step.label }}
-                      </span>
-                    </div>
-
-                    <!-- Teacher and Pace meta row -->
-                    <div class="flex items-center justify-between text-[10px] font-bold text-slate-400 pt-3 border-t border-slate-100/60">
-                      <span class="flex items-center gap-1.5">
-                        <i class="fas fa-user-edit text-[9px] text-slate-300"></i> 
-                        {{ course.teacherName || '导师组' }}
-                      </span>
-                      <span class="flex items-center gap-1.5 bg-slate-50 px-2.5 py-0.5 rounded-md text-slate-500 border border-slate-100/50">
-                        <i class="far fa-clock text-[9px] text-slate-400"></i> 
-                        {{ course.pace || '4 课时' }}
                       </span>
                     </div>
                   </div>
