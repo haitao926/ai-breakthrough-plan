@@ -1,50 +1,91 @@
 <template>
-  <div class="flex h-full flex-col border-l border-slate-800 bg-slate-950 text-slate-100 shadow-2xl xl:w-1/4 shrink-0 overflow-hidden relative">
+  <div class="flex h-full flex-col border-l border-slate-200/80 bg-slate-50/90 text-slate-800 shadow-xl xl:w-[28%] shrink-0 overflow-hidden relative">
     
-    <!-- Top Cyber Accent Line -->
-    <div class="h-[2px] w-full bg-gradient-to-r from-violet-600 via-indigo-500 to-cyan-400"></div>
+    <!-- Top Indigo Highlight Accent -->
+    <div class="h-[3px] w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
 
-    <!-- Header Panel with Cyberpunk Info Bar -->
-    <div class="flex h-20 items-center justify-between bg-slate-950/95 px-6 border-b border-slate-900/80 backdrop-blur-md">
+    <!-- Header Panel (Light Mode Integrated) -->
+    <div class="flex h-20 items-center justify-between bg-white px-6 border-b border-slate-200/80 backdrop-blur-md">
       <div class="flex items-center gap-3">
-        <!-- Animated indicator dot -->
-        <div class="relative flex h-3.5 w-3.5 items-center justify-center">
-          <span class="animate-ping absolute inline-flex h-2.5 w-2.5 rounded-full bg-indigo-400 opacity-75"></span>
-          <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+        <!-- Colored control dots -->
+        <div class="flex gap-1.5">
+          <div class="h-3 w-3 rounded-full bg-rose-400/80"></div>
+          <div class="h-3 w-3 rounded-full bg-amber-400/80"></div>
+          <div class="h-3 w-3 rounded-full bg-emerald-400/80"></div>
         </div>
         <div>
-          <span class="text-xs font-black uppercase tracking-[0.28em] text-white">Mission Control</span>
-          <span class="block text-[8px] font-black tracking-widest text-indigo-400/80 uppercase mt-0.5">Core Workspace</span>
+          <span class="text-xs font-black uppercase tracking-[0.24em] text-slate-800">Mission Control</span>
+          <span class="block text-[8px] font-black tracking-widest text-indigo-500 uppercase mt-0.5">任务与即时反馈</span>
         </div>
       </div>
-      <div class="flex items-center gap-2 rounded-xl bg-slate-900/80 border border-slate-800/80 px-3.5 py-1.5 shadow-inner">
-        <i class="fas fa-microchip text-[10px] text-cyan-400"></i>
-        <span class="text-[9px] font-black uppercase tracking-wider text-slate-300">AI-Powered Hub</span>
+      <div class="rounded-full bg-indigo-50 px-3 py-1 text-[10px] font-black tracking-wider text-indigo-600 border border-indigo-100">
+        AI助教小破已就绪
       </div>
     </div>
 
     <!-- Panel Content Area -->
-    <div class="flex-1 overflow-y-auto p-6 space-y-7 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
+    <div class="flex-1 overflow-y-auto p-5 space-y-6 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
       
-      <!-- Section 1: Lesson Materials & Files -->
-      <section v-if="materials?.length" class="space-y-3">
-        <div class="flex items-center justify-between">
-          <div class="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400 flex items-center gap-2">
-            <span class="h-1.5 w-1.5 rounded-full bg-cyan-400"></span>
-            <span>课程资料及工具包</span>
-          </div>
-          <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest">{{ materials.length }} Files</span>
+      <!-- Progress Indicator -->
+      <section v-if="deliverables?.length" class="bg-white rounded-2xl border border-slate-200/60 p-4.5 shadow-sm">
+        <div class="flex justify-between items-center mb-2.5">
+          <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">本课任务进度</span>
+          <span class="text-xs font-black text-indigo-600">{{ checkedCount }}/{{ deliverables.length }} 已完成</span>
+        </div>
+        <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+          <div
+            class="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full transition-all duration-500"
+            :style="{ width: `${(checkedCount / deliverables.length) * 100}%` }"
+          ></div>
+        </div>
+      </section>
+
+      <!-- Section 1: Core Deliverables Checklist (Interactive Quest checklist) -->
+      <section v-if="deliverables?.length" class="space-y-2.5">
+        <div class="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400 flex items-center gap-2 pl-1">
+          <i class="fas fa-list-check text-slate-400"></i>
+          <span>核心交付成果</span>
         </div>
 
-        <div class="grid gap-3.5 sm:grid-cols-2">
+        <div class="bg-white rounded-2.5xl border border-slate-200/60 p-4.5 shadow-sm divide-y divide-slate-100">
+          <div
+            v-for="(item, idx) in deliverables"
+            :key="item"
+            class="flex items-start gap-3.5 py-3 first:pt-1 last:pb-1 group cursor-pointer"
+            @click="toggleCheck(idx)"
+          >
+            <button
+              class="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg border transition-all mt-0.5"
+              :class="isChecked(idx) ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm shadow-indigo-600/20' : 'border-slate-300 bg-white group-hover:border-slate-400'"
+            >
+              <i v-if="isChecked(idx)" class="fas fa-check text-[10px]"></i>
+            </button>
+            <span
+              class="text-xs font-bold leading-5 transition-all duration-200"
+              :class="isChecked(idx) ? 'text-slate-400 line-through' : 'text-slate-700 group-hover:text-slate-900'"
+            >
+              {{ item }}
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 2: Lesson Materials & Files (Downloads) -->
+      <section v-if="materials?.length" class="space-y-2.5">
+        <div class="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400 flex items-center gap-2 pl-1">
+          <i class="fas fa-folder-open text-slate-400"></i>
+          <span>配套课程资料</span>
+        </div>
+
+        <div class="grid gap-3">
           <a
             v-for="material in materials"
             :key="material.id"
             :href="material.downloadUrl"
             target="_blank"
-            class="group relative flex items-center gap-3.5 rounded-2xl border border-slate-900 bg-slate-900/40 p-4 transition-all duration-300 hover:border-cyan-500/50 hover:bg-slate-900 hover:shadow-[0_0_20px_rgba(34,211,238,0.06)]"
+            class="group flex items-center gap-3.5 rounded-2xl border border-slate-200/50 bg-white p-4 shadow-sm transition hover:border-indigo-300 hover:shadow-md"
           >
-            <!-- File icon with specific gradient background for file types -->
+            <!-- Specific light colors for file extensions -->
             <div
               class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition duration-300 group-hover:scale-105"
               :class="iconBgClass(material)"
@@ -53,151 +94,123 @@
             </div>
 
             <div class="flex-1 min-w-0">
-              <span class="block text-xs font-black text-slate-200 group-hover:text-white transition line-clamp-1 leading-normal">{{ material.title }}</span>
-              <span class="block text-[8px] font-black text-slate-500 tracking-wider uppercase mt-1">Ready for download</span>
+              <span class="block text-xs font-black text-slate-700 group-hover:text-indigo-600 transition line-clamp-1 leading-normal">{{ material.title }}</span>
+              <span class="block text-[8px] font-black text-slate-400 tracking-wider uppercase mt-1">Ready for download</span>
             </div>
 
-            <!-- Arrow icon that slides on hover -->
-            <i class="fas fa-chevron-right text-[10px] text-slate-700 transition duration-300 group-hover:translate-x-1 group-hover:text-cyan-400"></i>
+            <i class="fas fa-chevron-right text-[9px] text-slate-300 transition duration-300 group-hover:translate-x-1 group-hover:text-indigo-600"></i>
           </a>
         </div>
       </section>
 
-      <!-- Section 2: Core Deliverables Checklist (Quest Log style) -->
-      <section v-if="deliverables?.length" class="space-y-3">
-        <div class="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400 flex items-center gap-2">
-          <span class="h-1.5 w-1.5 rounded-full bg-violet-400"></span>
-          <span>本课成果里程碑</span>
-        </div>
-
-        <div class="rounded-2xl border border-slate-900 bg-slate-900/20 p-5 space-y-4">
-          <div
-            v-for="(item, idx) in deliverables"
-            :key="item"
-            class="flex items-start gap-3.5 group"
-          >
-            <div class="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-indigo-950 border border-indigo-800 text-indigo-400 mt-0.5">
-              <span class="text-[9px] font-black">{{ idx + 1 }}</span>
-            </div>
-            <div class="flex flex-col">
-              <span class="text-xs font-bold leading-6 text-slate-300 group-hover:text-slate-200 transition">{{ item }}</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <!-- Section 3: Homework Submissions and AI Feedback -->
-      <section class="space-y-4">
-        <div class="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400 flex items-center gap-2">
-          <span class="h-1.5 w-1.5 rounded-full bg-indigo-400"></span>
-          <span>作业提报与即时评测</span>
+      <section class="space-y-3">
+        <div class="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400 flex items-center gap-2 pl-1">
+          <i class="fas fa-file-signature text-slate-400"></i>
+          <span>成果提交与评测</span>
         </div>
 
-        <div v-if="loading" class="py-16 text-center text-slate-500 bg-slate-900/20 rounded-3xl border border-slate-900">
-          <div class="relative flex h-10 w-10 mx-auto items-center justify-center mb-4">
-            <span class="animate-ping absolute inline-flex h-8 w-8 rounded-full bg-indigo-500 opacity-75"></span>
-            <i class="fas fa-satellite-dish text-indigo-400 text-lg relative"></i>
-          </div>
-          <p class="text-[10px] font-black tracking-widest text-slate-400 uppercase">Synchronizing with teacher server...</p>
+        <div v-if="loading" class="py-12 text-center text-slate-400 bg-white rounded-2.5xl border border-slate-200/60 shadow-sm">
+          <i class="fas fa-spinner fa-spin text-xl mb-2 text-indigo-500"></i>
+          <p class="text-[10px] font-black tracking-widest text-slate-400 uppercase">Synchronizing with system...</p>
         </div>
 
-        <div v-else-if="!assignments?.length" class="py-16 text-center text-slate-500 bg-slate-900/20 rounded-3xl border border-slate-900">
-          <i class="fas fa-award text-3xl mb-4 text-slate-700"></i>
-          <p class="text-xs font-bold text-slate-400 tracking-wider">本节课不需要提交电子作业</p>
+        <div v-else-if="!assignments?.length" class="py-12 text-center text-slate-400 bg-white rounded-2.5xl border border-slate-200/60 shadow-sm">
+          <i class="fas fa-award text-2xl mb-2 text-slate-300"></i>
+          <p class="text-xs font-bold text-slate-400 tracking-wider">本课无需提交电子作业</p>
         </div>
 
-        <div v-else class="space-y-6">
+        <div v-else class="space-y-5">
           <div
             v-for="assignment in assignments"
             :key="assignment.id"
-            class="rounded-3xl border border-slate-900 bg-slate-900/20 p-6 space-y-5"
+            class="bg-white rounded-2.5xl border border-slate-200/60 p-5 shadow-sm space-y-4"
           >
-            <!-- Assignment meta -->
-            <div class="flex flex-col gap-2.5 pb-4 border-b border-slate-900/80">
+            <!-- Assignment header -->
+            <div class="flex flex-col gap-2 pb-3 border-b border-slate-100">
               <div class="flex items-start justify-between gap-4">
-                <h4 class="text-sm font-black text-white leading-snug">{{ assignment.title }}</h4>
+                <h4 class="text-xs font-black text-slate-800 leading-snug">{{ assignment.title }}</h4>
                 <span
-                  class="rounded-full px-3 py-1 text-[8px] font-black uppercase tracking-wider shadow shrink-0"
+                  class="rounded-full px-2.5 py-0.5 text-[8px] font-black uppercase tracking-wider shrink-0"
                   :class="submissionStatusClass(assignment.id)"
                 >
                   {{ submissionStatusText(assignment.id) }}
                 </span>
               </div>
-              <p class="text-[11px] leading-relaxed text-slate-400">{{ assignment.requirements || assignment.description }}</p>
+              <p class="text-[11px] leading-relaxed text-slate-500">{{ assignment.requirements || assignment.description }}</p>
             </div>
 
             <!-- Submission Form -->
-            <form @submit.prevent="$emit('submit', assignment)" class="space-y-4">
+            <form @submit.prevent="$emit('submit', assignment)" class="space-y-3.5">
               <div class="space-y-1">
-                <label class="block text-[8px] font-black text-slate-500 uppercase tracking-widest pl-1">Submission Notes / Code</label>
+                <label class="block text-[8px] font-black text-slate-400 uppercase tracking-widest pl-1">成果心得 / 代码内容</label>
                 <textarea
                   v-model="drafts[assignment.id].content"
                   rows="4"
-                  class="w-full rounded-2xl border border-slate-900 bg-slate-950 p-4 text-xs font-medium text-slate-200 placeholder-slate-600 shadow-inner focus:border-indigo-500/80 focus:outline-none focus:ring-1 focus:ring-indigo-500/80 transition-all duration-300"
-                  placeholder="在此填写你的论文阅读总结、研究说明、或实验代码..."
+                  class="w-full rounded-2xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-700 placeholder-slate-400 shadow-inner focus:bg-white focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"
+                  placeholder="在这里写下你的研究成果、思考心得，或者实验代码段..."
                 ></textarea>
               </div>
 
               <div class="space-y-1">
-                <label class="block text-[8px] font-black text-slate-500 uppercase tracking-widest pl-1">Project Link (GitHub / Gitee)</label>
+                <label class="block text-[8px] font-black text-slate-400 uppercase tracking-widest pl-1">作品链接（GitHub / 网盘 / 演示网页）</label>
                 <input
                   v-model="drafts[assignment.id].link"
-                  class="w-full rounded-2xl border border-slate-900 bg-slate-950 px-4 py-3.5 text-xs font-medium text-slate-200 placeholder-slate-600 shadow-inner focus:border-indigo-500/80 focus:outline-none focus:ring-1 focus:ring-indigo-500/80 transition-all duration-300"
-                  placeholder="项目链接，须以 http(s) 开头"
+                  class="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-xs font-medium text-slate-700 placeholder-slate-400 shadow-inner focus:bg-white focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"
+                  placeholder="项目链接 (以 http(s) 开头)"
                 />
               </div>
 
               <div class="space-y-1">
-                <label class="block text-[8px] font-black text-slate-500 uppercase tracking-widest pl-1">Attachment description</label>
+                <label class="block text-[8px] font-black text-slate-400 uppercase tracking-widest pl-1">附件备注</label>
                 <input
                   v-model="drafts[assignment.id].attachmentNote"
-                  class="w-full rounded-2xl border border-slate-900 bg-slate-950 px-4 py-3.5 text-xs font-medium text-slate-200 placeholder-slate-600 shadow-inner focus:border-indigo-500/80 focus:outline-none focus:ring-1 focus:ring-indigo-500/80 transition-all duration-300"
-                  placeholder="如有附件，请注明（如：已提交PDF讲义在教师台）"
+                  class="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-xs font-medium text-slate-700 placeholder-slate-400 shadow-inner focus:bg-white focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"
+                  placeholder="如：已在纸质作业本中画图"
                 />
               </div>
               
               <button
                 type="submit"
-                class="w-full rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 py-3.5 text-xs font-black text-white transition-all duration-300 shadow-lg shadow-indigo-600/10 hover:shadow-indigo-600/20 active:scale-98"
+                class="w-full rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 py-3 text-xs font-black text-white transition-all shadow-md shadow-indigo-600/10 active:scale-98"
               >
-                <i class="fas fa-bolt mr-2"></i>
-                {{ hasSubmission(assignment.id) ? '更新提报 & 重新即时评测' : '确认提报并开启 AI 评测' }}
+                <i class="fas fa-bolt mr-1.5"></i>
+                {{ hasSubmission(assignment.id) ? '更新提交 & AI重新评测' : '提交并获取 AI 助教即时评测' }}
               </button>
             </form>
 
-            <!-- Holographic/Glowing AI Assistant Feedback Card -->
+            <!-- Light Mode Premium AI Assistant Feedback bubble -->
             <div
               v-if="hasSubmission(assignment.id) && getSubmission(assignment.id).feedback"
-              class="relative rounded-3xl p-5 border overflow-hidden"
+              class="relative rounded-2xl p-4.5 border transition duration-300"
               :class="getSubmission(assignment.id).reviewed_by === 'AI_Assistant'
-                ? 'bg-gradient-to-br from-indigo-950/80 to-slate-950 border-indigo-500/30 shadow-[0_4px_30px_rgba(99,102,241,0.06)]'
-                : 'bg-slate-900/60 border-slate-800'"
+                ? 'bg-indigo-50/50 border-indigo-100 shadow-[0_4px_20px_rgba(99,102,241,0.04)]'
+                : 'bg-slate-50 border-slate-150'"
             >
-              <!-- Cyber corner highlights -->
-              <div v-if="getSubmission(assignment.id).reviewed_by === 'AI_Assistant'" class="absolute top-0 right-0 h-10 w-10 pointer-events-none">
-                <div class="absolute top-0 right-0 h-[2px] w-4 bg-indigo-400"></div>
-                <div class="absolute top-0 right-0 h-4 w-[2px] bg-indigo-400"></div>
+              <!-- Cyber decoration elements -->
+              <div v-if="getSubmission(assignment.id).reviewed_by === 'AI_Assistant'" class="absolute top-0 right-0 h-8 w-8 pointer-events-none">
+                <div class="absolute top-0 right-0 h-[2px] w-3 bg-indigo-300"></div>
+                <div class="absolute top-0 right-0 h-3 w-[2px] bg-indigo-300"></div>
               </div>
 
-              <div class="flex items-center gap-3.5 mb-4.5">
-                <!-- Glowing avatar wrapper -->
+              <div class="flex items-center gap-3 mb-3 pb-3 border-b border-indigo-100/50">
                 <div
-                  class="flex h-9 w-9 items-center justify-center rounded-xl text-white shadow-md relative"
-                  :class="getSubmission(assignment.id).reviewed_by === 'AI_Assistant' ? 'bg-indigo-600 shadow-[0_0_15px_rgba(99,102,241,0.4)]' : 'bg-slate-800'"
+                  class="flex h-8 w-8 items-center justify-center rounded-xl text-white shadow-sm relative"
+                  :class="getSubmission(assignment.id).reviewed_by === 'AI_Assistant' ? 'bg-indigo-600' : 'bg-slate-700'"
                 >
-                  <i class="fas text-sm" :class="getSubmission(assignment.id).reviewed_by === 'AI_Assistant' ? 'fa-robot' : 'fa-graduation-cap'"></i>
+                  <i class="fas text-xs" :class="getSubmission(assignment.id).reviewed_by === 'AI_Assistant' ? 'fa-robot' : 'fa-graduation-cap'"></i>
                 </div>
                 <div>
-                  <div class="text-xs font-black text-white uppercase tracking-wider leading-none">
-                    {{ getSubmission(assignment.id).reviewed_by === 'AI_Assistant' ? 'AI 伴读小破的反馈报告' : '教师反馈报告' }}
+                  <div class="text-[11px] font-black text-slate-800 uppercase tracking-wider leading-none">
+                    {{ getSubmission(assignment.id).reviewed_by === 'AI_Assistant' ? 'AI 助教小破的反馈' : '教师评价' }}
                   </div>
-                  <div class="mt-1.5 text-[8px] font-black text-indigo-400 uppercase tracking-[0.16em] leading-none">
-                    System Auto Evaluation
+                  <div class="mt-1 text-[8px] font-black text-indigo-500 uppercase tracking-[0.16em] leading-none">
+                    Instant Review
                   </div>
                 </div>
               </div>
               
-              <p class="text-xs font-bold leading-7 text-slate-200 whitespace-pre-line border-t border-slate-900 pt-4 mt-3">
+              <p class="text-xs font-bold leading-6 text-slate-600 whitespace-pre-line">
                 {{ getSubmission(assignment.id).feedback }}
               </p>
             </div>
@@ -211,6 +224,8 @@
 </template>
 
 <script setup>
+import { computed, onMounted, ref } from 'vue';
+
 const props = defineProps({
   materials: {
     type: Array,
@@ -240,6 +255,39 @@ const props = defineProps({
 
 defineEmits(['submit']);
 
+// Save checked states of deliverables to local storage to make it interactive
+const checkedStates = ref({});
+
+onMounted(() => {
+  try {
+    const key = `deliverables_check_${props.assignments?.[0]?.lessonId || 'default'}`;
+    const stored = localStorage.getItem(key);
+    if (stored) {
+      checkedStates.value = JSON.parse(stored);
+    }
+  } catch (err) {
+    console.error(err);
+  }
+});
+
+const checkedCount = computed(() => {
+  return Object.values(checkedStates.value).filter(Boolean).length;
+});
+
+function isChecked(idx) {
+  return Boolean(checkedStates.value[idx]);
+}
+
+function toggleCheck(idx) {
+  checkedStates.value[idx] = !checkedStates.value[idx];
+  try {
+    const key = `deliverables_check_${props.assignments?.[0]?.lessonId || 'default'}`;
+    localStorage.setItem(key, JSON.stringify(checkedStates.value));
+  } catch (err) {
+    console.error(err);
+  }
+}
+
 function hasSubmission(assignmentId) {
   return Boolean(props.submissions[assignmentId]);
 }
@@ -250,17 +298,17 @@ function getSubmission(assignmentId) {
 
 function submissionStatusText(assignmentId) {
   const sub = getSubmission(assignmentId);
-  if (!sub.id) return '未提报';
-  if (sub.status === 'reviewed') return 'AI 已评测';
-  if (sub.status === 'submitted') return '已提报';
-  return sub.status || '已提报';
+  if (!sub.id) return '未完成';
+  if (sub.status === 'reviewed') return '已评测';
+  if (sub.status === 'submitted') return '已提交';
+  return sub.status || '已提交';
 }
 
 function submissionStatusClass(assignmentId) {
   const sub = getSubmission(assignmentId);
-  if (!sub.id) return 'bg-slate-900 text-slate-500 border border-slate-800';
-  if (sub.status === 'reviewed') return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/25';
-  return 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/25';
+  if (!sub.id) return 'bg-slate-100 text-slate-400 border border-slate-200';
+  if (sub.status === 'reviewed') return 'bg-emerald-50 text-emerald-600 border border-emerald-100';
+  return 'bg-indigo-50 text-indigo-600 border border-indigo-100';
 }
 
 function materialIcon(material) {
@@ -277,23 +325,22 @@ function materialIcon(material) {
 
 function iconBgClass(material) {
   const path = String(material?.path || '').toLowerCase();
-  if (/\.py$/i.test(path) || /\.ipynb$/i.test(path)) return 'bg-yellow-500/10 border border-yellow-500/20';
-  if (/\.pptx?$/i.test(path)) return 'bg-orange-500/10 border border-orange-500/20';
-  if (/\.pdf$/i.test(path)) return 'bg-rose-500/10 border border-rose-500/20';
-  return 'bg-indigo-500/10 border border-indigo-500/20';
+  if (/\.py$/i.test(path) || /\.ipynb$/i.test(path)) return 'bg-amber-50 border border-amber-100';
+  if (/\.pptx?$/i.test(path)) return 'bg-orange-50 border border-orange-100';
+  if (/\.pdf$/i.test(path)) return 'bg-rose-50 border border-rose-100';
+  return 'bg-indigo-50 border border-indigo-100';
 }
 
 function iconTextClass(material) {
   const path = String(material?.path || '').toLowerCase();
-  if (/\.py$/i.test(path) || /\.ipynb$/i.test(path)) return 'text-yellow-400';
-  if (/\.pptx?$/i.test(path)) return 'text-orange-400';
-  if (/\.pdf$/i.test(path)) return 'text-rose-400';
-  return 'text-indigo-400';
+  if (/\.py$/i.test(path) || /\.ipynb$/i.test(path)) return 'text-amber-500';
+  if (/\.pptx?$/i.test(path)) return 'text-orange-500';
+  if (/\.pdf$/i.test(path)) return 'text-rose-500';
+  return 'text-indigo-500';
 }
 </script>
 
 <style scoped>
-/* Custom scrollbar to keep it sleek */
 .scrollbar-thin::-webkit-scrollbar {
   width: 4px;
 }
@@ -301,10 +348,10 @@ function iconTextClass(material) {
   background: transparent;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: #cbd5e1;
   border-radius: 9999px;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #94a3b8;
 }
 </style>
