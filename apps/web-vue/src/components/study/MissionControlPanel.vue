@@ -51,21 +51,52 @@
           <div
             v-for="(item, idx) in deliverables"
             :key="item"
-            class="flex items-start gap-3.5 py-3 first:pt-1 last:pb-1 group cursor-pointer"
-            @click="toggleCheck(idx)"
+            class="flex flex-col py-3 first:pt-1 last:pb-1"
           >
-            <button
-              class="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg border transition-all mt-0.5"
-              :class="isChecked(idx) ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm shadow-indigo-600/20' : 'border-slate-300 bg-white group-hover:border-slate-400'"
+            <div
+              class="flex items-start gap-3.5 group cursor-pointer"
+              @click="toggleCheck(idx)"
             >
-              <i v-if="isChecked(idx)" class="fas fa-check text-[10px]"></i>
-            </button>
-            <span
-              class="text-xs font-bold leading-5 transition-all duration-200"
-              :class="isChecked(idx) ? 'text-slate-400 line-through' : 'text-slate-700 group-hover:text-slate-900'"
+              <button
+                class="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg border transition-all mt-0.5"
+                :class="isChecked(idx) ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm shadow-indigo-600/20' : 'border-slate-300 bg-white group-hover:border-slate-400'"
+              >
+                <i v-if="isChecked(idx)" class="fas fa-check text-[10px]"></i>
+              </button>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <span
+                    class="text-xs font-bold leading-5 transition-all duration-200"
+                    :class="isChecked(idx) ? 'text-slate-400 line-through' : 'text-slate-700 group-hover:text-slate-900'"
+                  >
+                    {{ item }}
+                  </span>
+                  
+                  <!-- Asset Badge -->
+                  <span
+                    v-if="hasEvidence(idx)"
+                    @click.stop="toggleExpandEvidence(idx)"
+                    class="rounded bg-indigo-50 px-1.5 py-0.5 text-[8px] font-black text-indigo-600 hover:bg-indigo-100 transition shrink-0 uppercase tracking-wider flex items-center gap-0.5 cursor-pointer border border-indigo-100/50"
+                  >
+                    <i class="fas fa-box-open text-[8px]"></i> 账本资产
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Expanded Evidence Details -->
+            <div
+              v-if="expandedEvidence === idx && hasEvidence(idx)"
+              class="mt-2.5 rounded-xl bg-slate-50 border border-slate-200/60 p-3 text-[11px] font-medium leading-relaxed text-slate-600 relative animate-fadeIn"
             >
-              {{ item }}
-            </span>
+              <div class="text-[9px] font-black uppercase text-indigo-600 tracking-wider mb-1.5 flex items-center justify-between">
+                <span>已验证的资产细节:</span>
+                <button @click.stop="expandedEvidence = null" class="text-slate-400 hover:text-slate-600">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+              <p class="whitespace-pre-line font-medium leading-5">"{{ deliverableEvidences[idx] }}"</p>
+            </div>
           </div>
         </div>
       </section>
@@ -224,7 +255,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
   materials: {
@@ -254,10 +285,29 @@ const props = defineProps({
   completedPhases: {
     type: Object,
     default: () => ({})
+  },
+  deliverableEvidences: {
+    type: Object,
+    default: () => ({})
   }
 });
 
 const emit = defineEmits(['submit', 'complete-phase']);
+
+const expandedEvidence = ref(null);
+
+function hasEvidence(idx) {
+  const text = props.deliverableEvidences?.[idx];
+  return text && text.trim().length > 0;
+}
+
+function toggleExpandEvidence(idx) {
+  if (expandedEvidence.value === idx) {
+    expandedEvidence.value = null;
+  } else {
+    expandedEvidence.value = idx;
+  }
+}
 
 const checkedCount = computed(() => {
   return Object.values(props.completedPhases).filter(Boolean).length;
