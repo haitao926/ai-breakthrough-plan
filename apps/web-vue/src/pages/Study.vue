@@ -72,6 +72,9 @@
               :lesson-title="lessonTitle"
               :lesson-description="lessonData?.description"
               :phases="lessonPhases"
+              :completed-phases="completedPhases"
+              @complete-phase="completePhase"
+              @focus-submission="focusSubmission"
             />
           </div>
         </main>
@@ -84,6 +87,7 @@
           :submissions="assignmentSubmissions"
           :drafts="assignmentDrafts"
           :loading="assignmentLoading"
+          :completed-phases="completedPhases"
           @submit="submitAssignment"
         />
 
@@ -150,6 +154,45 @@ const mainScroll = ref(null);
 const lessonAssignments = ref([]);
 const assignmentSubmissions = ref({});
 const assignmentDrafts = reactive({});
+const completedPhases = ref({});
+
+function loadCompletedPhases() {
+  try {
+    const key = `completed_phases_${courseId.value}_${lessonId.value}`;
+    const stored = localStorage.getItem(key);
+    completedPhases.value = stored ? JSON.parse(stored) : {};
+  } catch (err) {
+    completedPhases.value = {};
+  }
+}
+
+function saveCompletedPhases() {
+  try {
+    const key = `completed_phases_${courseId.value}_${lessonId.value}`;
+    localStorage.setItem(key, JSON.stringify(completedPhases.value));
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+function completePhase(index) {
+  completedPhases.value[index] = !completedPhases.value[index];
+  saveCompletedPhases();
+}
+
+function focusSubmission() {
+  showWorkbench.value = true;
+  nextTick(() => {
+    const el = document.querySelector('form');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('ring-4', 'ring-indigo-500/30', 'transition-all', 'duration-500');
+      setTimeout(() => {
+        el.classList.remove('ring-4', 'ring-indigo-500/30');
+      }, 1500);
+    }
+  });
+}
 
 const courseId = computed(() => String(route.params.courseId || route.query.project || 'project1'));
 const lessonId = computed(() => String(route.params.lessonId || route.query.lesson || 'lesson1'));
@@ -420,6 +463,7 @@ async function loadLessonPage() {
     if (!lessonData.value) {
       throw new Error('没有找到对应课时');
     }
+    loadCompletedPhases();
     await loadLessonAssignments();
   } catch (err) {
     pageError.value = err.message || '课时加载失败';

@@ -64,6 +64,31 @@
               </div>
             </div>
           </div>
+
+          <!-- Phase Verification Card -->
+          <div class="mt-10 pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+              <div
+                class="flex h-8 w-8 items-center justify-center rounded-xl text-white shadow-sm transition-all"
+                :class="isPhaseCompleted(index) ? 'bg-emerald-500 shadow-emerald-500/20' : 'bg-slate-100 border border-slate-200 text-slate-400'"
+              >
+                <i class="fas" :class="isPhaseCompleted(index) ? 'fa-check' : 'fa-circle-dot'"></i>
+              </div>
+              <div class="text-left">
+                <h4 class="text-xs font-black text-slate-800">阶段活动确认</h4>
+                <p class="text-[11px] text-slate-400 mt-0.5">完成上述课堂操作和记录后，请在此确认完成。</p>
+              </div>
+            </div>
+            <button
+              @click="$emit('complete-phase', index)"
+              class="rounded-xl px-5 py-2.5 text-xs font-black border transition duration-300 active:scale-95"
+              :class="isPhaseCompleted(index)
+                ? 'bg-emerald-50 text-emerald-600 border-emerald-200 shadow-sm shadow-emerald-500/5'
+                : 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-500 shadow-md shadow-indigo-600/10'"
+            >
+              {{ isPhaseCompleted(index) ? '本阶段已完成' : '确认完成此阶段' }}
+            </button>
+          </div>
         </div>
       </section>
     </div>
@@ -71,11 +96,11 @@
     <!-- Summary End Mark -->
     <div v-if="phases?.length" class="flex justify-center pt-8 pb-10">
       <button 
-        class="inline-flex items-center gap-3 rounded-full bg-emerald-500 px-10 py-5 text-sm font-black tracking-widest text-white shadow-xl shadow-emerald-500/30 transition hover:-translate-y-1 hover:bg-emerald-600 hover:shadow-2xl hover:shadow-emerald-500/40"
-        @click="scrollToAssignments"
+        class="inline-flex items-center gap-3 rounded-full bg-indigo-600 px-10 py-5 text-sm font-black tracking-widest text-white shadow-xl shadow-indigo-600/25 transition hover:-translate-y-1 hover:bg-indigo-700 hover:shadow-2xl hover:shadow-indigo-600/40"
+        @click="$emit('focus-submission')"
       >
-        <i class="fas fa-rocket"></i>
-        我已经完成了上述内容，去交作业！
+        <i class="fas fa-rocket animate-bounce"></i>
+        我已完成全部学习，去交作业！
       </button>
     </div>
 
@@ -83,7 +108,7 @@
 </template>
 
 <script setup>
-defineProps({
+const props = defineProps({
   lessonTitle: {
     type: String,
     default: ''
@@ -96,15 +121,17 @@ defineProps({
     type: Array,
     default: () => []
   },
-  materials: {
-    type: Array,
-    default: () => []
-  },
-  deliverables: {
-    type: Array,
-    default: () => []
+  completedPhases: {
+    type: Object,
+    default: () => ({})
   }
 });
+
+const emit = defineEmits(['complete-phase', 'focus-submission']);
+
+function isPhaseCompleted(index) {
+  return Boolean(props.completedPhases[index]);
+}
 
 function materialIcon(material) {
   const kind = String(material?.kind || '').toLowerCase();
@@ -114,18 +141,6 @@ function materialIcon(material) {
   if (kind === 'html') return 'fa-file-code';
   if (/\.md$/i.test(path)) return 'fa-file-lines';
   return 'fa-file';
-}
-
-function scrollToAssignments() {
-  const el = document.getElementById('lesson-assignments');
-  if (el) {
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    
-    el.classList.add('ring-4', 'ring-emerald-500/50', 'ring-offset-4', 'transition-all', 'duration-500');
-    setTimeout(() => {
-      el.classList.remove('ring-4', 'ring-emerald-500/50', 'ring-offset-4');
-    }, 1500);
-  }
 }
 </script>
 

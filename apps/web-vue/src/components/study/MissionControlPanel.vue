@@ -224,7 +224,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed } from 'vue';
 
 const props = defineProps({
   materials: {
@@ -250,42 +250,25 @@ const props = defineProps({
   loading: {
     type: Boolean,
     default: false
+  },
+  completedPhases: {
+    type: Object,
+    default: () => ({})
   }
 });
 
-defineEmits(['submit']);
-
-// Save checked states of deliverables to local storage to make it interactive
-const checkedStates = ref({});
-
-onMounted(() => {
-  try {
-    const key = `deliverables_check_${props.assignments?.[0]?.lessonId || 'default'}`;
-    const stored = localStorage.getItem(key);
-    if (stored) {
-      checkedStates.value = JSON.parse(stored);
-    }
-  } catch (err) {
-    console.error(err);
-  }
-});
+const emit = defineEmits(['submit', 'complete-phase']);
 
 const checkedCount = computed(() => {
-  return Object.values(checkedStates.value).filter(Boolean).length;
+  return Object.values(props.completedPhases).filter(Boolean).length;
 });
 
 function isChecked(idx) {
-  return Boolean(checkedStates.value[idx]);
+  return Boolean(props.completedPhases[idx]);
 }
 
 function toggleCheck(idx) {
-  checkedStates.value[idx] = !checkedStates.value[idx];
-  try {
-    const key = `deliverables_check_${props.assignments?.[0]?.lessonId || 'default'}`;
-    localStorage.setItem(key, JSON.stringify(checkedStates.value));
-  } catch (err) {
-    console.error(err);
-  }
+  emit('complete-phase', idx);
 }
 
 function hasSubmission(assignmentId) {
