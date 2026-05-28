@@ -1,25 +1,24 @@
 <template>
-  <div class="flex h-full flex-col border-l border-slate-200/80 bg-slate-50/90 text-slate-800 shadow-xl xl:w-[28%] shrink-0 overflow-hidden relative">
+  <div class="flex xl:h-[calc(100vh-92px)] flex-col border-l border-slate-200/60 bg-slate-50/70 text-slate-800 xl:w-[25%] xl:min-w-[320px] xl:max-w-[400px] shrink-0 overflow-hidden relative backdrop-blur-md">
     
     <!-- Top Indigo Highlight Accent -->
     <div class="h-[3px] w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
 
-    <!-- Header Panel (Light Mode Integrated) -->
-    <div class="flex h-20 items-center justify-between bg-white px-6 border-b border-slate-200/80 backdrop-blur-md">
+    <!-- Header Panel (Frosted glass integrated) -->
+    <div class="flex h-20 items-center justify-between bg-white/80 px-6 border-b border-slate-200/80 backdrop-blur-md shrink-0">
       <div class="flex items-center gap-3">
-        <!-- Colored control dots -->
         <div class="flex gap-1.5">
-          <div class="h-3 w-3 rounded-full bg-rose-400/80"></div>
-          <div class="h-3 w-3 rounded-full bg-amber-400/80"></div>
-          <div class="h-3 w-3 rounded-full bg-emerald-400/80"></div>
+          <div class="h-2.5 w-2.5 rounded-full bg-rose-400/80 animate-pulse"></div>
+          <div class="h-2.5 w-2.5 rounded-full bg-amber-400/80"></div>
+          <div class="h-2.5 w-2.5 rounded-full bg-emerald-400/80"></div>
         </div>
         <div>
           <span class="text-xs font-black uppercase tracking-[0.24em] text-slate-800">Mission Control</span>
-          <span class="block text-[8px] font-black tracking-widest text-indigo-500 uppercase mt-0.5">任务与即时反馈</span>
+          <span class="block text-[8px] font-black tracking-widest text-indigo-500 uppercase mt-0.5">交付与评测中心</span>
         </div>
       </div>
-      <div class="rounded-full bg-indigo-50 px-3 py-1 text-[10px] font-black tracking-wider text-indigo-600 border border-indigo-100">
-        AI助教小破已就绪
+      <div class="rounded-full bg-indigo-50/80 px-3 py-1 text-[9px] font-black tracking-wider text-indigo-655 border border-indigo-150/40">
+        AI 助教已就绪
       </div>
     </div>
 
@@ -27,230 +26,282 @@
     <div class="flex-1 overflow-y-auto p-5 space-y-6 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
       
       <!-- Progress Indicator -->
-      <section v-if="deliverables?.length" class="bg-white rounded-2xl border border-slate-200/60 p-4.5 shadow-sm">
+      <section v-if="assignments?.length" class="bg-white/95 rounded-2.5xl border border-slate-200/50 p-4.5 shadow-sm">
         <div class="flex justify-between items-center mb-2.5">
-          <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">本课任务进度</span>
-          <span class="text-xs font-black text-indigo-600">{{ checkedCount }}/{{ deliverables.length }} 已完成</span>
+          <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">本课工程里程碑进度</span>
+          <span class="text-xs font-black text-indigo-600">{{ submittedCount }}/{{ assignments.length }} 已完成交付</span>
         </div>
         <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
           <div
             class="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full transition-all duration-500"
-            :style="{ width: `${(checkedCount / deliverables.length) * 100}%` }"
+            :style="{ width: `${(submittedCount / assignments.length) * 100}%` }"
           ></div>
         </div>
       </section>
 
-      <!-- Section 1: Core Deliverables Checklist (Interactive Quest checklist) -->
-      <section v-if="deliverables?.length" class="space-y-2.5">
-        <div class="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400 flex items-center gap-2 pl-1">
-          <i class="fas fa-list-check text-slate-400"></i>
-          <span>核心交付成果</span>
+      <!-- Section 1: Core Deliverables Checklist (Milestones vertical timeline) -->
+      <section v-if="assignments?.length" class="space-y-3">
+        <div class="text-[10px] font-black uppercase tracking-[0.24em] text-slate-450 flex items-center gap-2 pl-1">
+          <i class="fas fa-cubes-stacked text-indigo-500"></i>
+          <span>本课工程里程碑</span>
         </div>
 
-        <div class="bg-white rounded-2.5xl border border-slate-200/60 p-4.5 shadow-sm divide-y divide-slate-100">
+        <div class="relative pl-6 space-y-5.5 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-[2px] before:bg-slate-200">
           <div
-            v-for="(item, idx) in deliverables"
-            :key="item"
-            class="flex flex-col py-3 first:pt-1 last:pb-1"
+            v-for="(assignment, idx) in assignments"
+            :key="assignment.id"
+            class="relative flex flex-col group cursor-pointer"
+            @click="openAssignmentDrawer(assignment.id)"
           >
+            <!-- Timeline Indicator Node -->
             <div
-              class="flex items-start gap-3.5 group cursor-pointer"
-              @click="toggleCheck(idx)"
+              class="absolute -left-[21px] top-1.5 flex h-4 w-4 items-center justify-center rounded-full border-2 transition-all duration-300"
+              :class="hasSubmission(assignment.id) 
+                ? 'bg-indigo-600 border-indigo-600 shadow-[0_0_8px_rgba(99,102,241,0.4)]' 
+                : 'bg-white border-slate-300 group-hover:border-indigo-400'"
             >
-              <button
-                class="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg border transition-all mt-0.5"
-                :class="isChecked(idx) ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm shadow-indigo-600/20' : 'border-slate-300 bg-white group-hover:border-slate-400'"
-              >
-                <i v-if="isChecked(idx)" class="fas fa-check text-[10px]"></i>
-              </button>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center justify-between gap-2">
-                  <span
-                    class="text-xs font-bold leading-5 transition-all duration-200"
-                    :class="isChecked(idx) ? 'text-slate-400 line-through' : 'text-slate-700 group-hover:text-slate-900'"
-                  >
-                    {{ item }}
-                  </span>
-                  
-                  <!-- Asset Badge -->
-                  <span
-                    v-if="hasEvidence(idx)"
-                    @click.stop="toggleExpandEvidence(idx)"
-                    class="rounded bg-indigo-50 px-1.5 py-0.5 text-[8px] font-black text-indigo-600 hover:bg-indigo-100 transition shrink-0 uppercase tracking-wider flex items-center gap-0.5 cursor-pointer border border-indigo-100/50"
-                  >
-                    <i class="fas fa-box-open text-[8px]"></i> 账本资产
-                  </span>
-                </div>
-              </div>
+              <div v-if="hasSubmission(assignment.id)" class="h-1.5 w-1.5 rounded-full bg-white"></div>
             </div>
 
-            <!-- Expanded Evidence Details -->
-            <div
-              v-if="expandedEvidence === idx && hasEvidence(idx)"
-              class="mt-2.5 rounded-xl bg-slate-50 border border-slate-200/60 p-3 text-[11px] font-medium leading-relaxed text-slate-600 relative animate-fadeIn"
-            >
-              <div class="text-[9px] font-black uppercase text-indigo-600 tracking-wider mb-1.5 flex items-center justify-between">
-                <span>已验证的资产细节:</span>
-                <button @click.stop="expandedEvidence = null" class="text-slate-400 hover:text-slate-600">
-                  <i class="fas fa-times"></i>
-                </button>
+            <!-- Content details -->
+            <div class="bg-white rounded-2xl border border-slate-200/50 p-4 transition-all duration-300 hover:shadow-md hover:border-indigo-300/80">
+              <div class="flex items-start justify-between gap-3">
+                <span
+                  class="text-xs font-bold leading-normal transition-all duration-200 truncate pr-1"
+                  :class="hasSubmission(assignment.id) ? 'text-slate-400 line-through font-medium' : 'text-slate-700 font-bold group-hover:text-indigo-650'"
+                >
+                  {{ idx + 1 }}. {{ assignment.title }}
+                </span>
+                
+                <!-- Status Badge -->
+                <span
+                  class="rounded-full px-2 py-0.5 text-[8px] font-black tracking-wide shrink-0 transition border uppercase"
+                  :class="getMilestoneBadgeClass(assignment.id)"
+                >
+                  {{ getMilestoneBadgeLabel(assignment.id) }}
+                </span>
               </div>
-              <p class="whitespace-pre-line font-medium leading-5">"{{ deliverableEvidences[idx] }}"</p>
+              <p class="text-[10px] font-medium text-slate-400 mt-2 line-clamp-1">
+                {{ assignment.requirements || assignment.description }}
+              </p>
             </div>
           </div>
         </div>
       </section>
 
       <!-- Section 2: Lesson Materials & Files (Downloads) -->
-      <section v-if="materials?.length" class="space-y-2.5">
-        <div class="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400 flex items-center gap-2 pl-1">
-          <i class="fas fa-folder-open text-slate-400"></i>
+      <section v-if="materials?.length" class="space-y-3">
+        <div class="text-[10px] font-black uppercase tracking-[0.24em] text-slate-455 flex items-center gap-2 pl-1">
+          <i class="fas fa-folder-open text-indigo-500"></i>
           <span>配套课程资料</span>
         </div>
 
-        <div class="grid gap-3">
+        <div class="flex flex-col gap-2.5">
           <a
             v-for="material in materials"
             :key="material.id"
             :href="material.downloadUrl"
             target="_blank"
-            class="group flex items-center gap-3.5 rounded-2xl border border-slate-200/50 bg-white p-4 shadow-sm transition hover:border-indigo-300 hover:shadow-md"
+            class="group flex items-center justify-between rounded-xl border border-slate-200/50 bg-white/70 px-4 py-3 shadow-sm transition hover:bg-white hover:border-indigo-350 hover:shadow-md"
           >
-            <!-- Specific light colors for file extensions -->
-            <div
-              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition duration-300 group-hover:scale-105"
-              :class="iconBgClass(material)"
-            >
-              <i class="fas text-sm" :class="[materialIcon(material), iconTextClass(material)]"></i>
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition duration-300 group-hover:scale-105" :class="iconBgClass(material)">
+                <i class="fas text-xs" :class="[materialIcon(material), iconTextClass(material)]"></i>
+              </div>
+              <span class="text-xs font-bold text-slate-650 group-hover:text-indigo-600 transition truncate leading-none pt-0.5">
+                {{ material.title }}
+              </span>
             </div>
-
-            <div class="flex-1 min-w-0">
-              <span class="block text-xs font-black text-slate-700 group-hover:text-indigo-600 transition line-clamp-1 leading-normal">{{ material.title }}</span>
-              <span class="block text-[8px] font-black text-slate-400 tracking-wider uppercase mt-1">Ready for download</span>
-            </div>
-
-            <i class="fas fa-chevron-right text-[9px] text-slate-300 transition duration-300 group-hover:translate-x-1 group-hover:text-indigo-600"></i>
+            <i class="fas fa-chevron-down text-[9px] text-slate-350 group-hover:text-indigo-600 group-hover:translate-y-0.5 transition duration-300"></i>
           </a>
         </div>
       </section>
 
-      <!-- Section 3: Homework Submissions and AI Feedback -->
+      <!-- Section 3: Homework Submissions Summary list -->
       <section class="space-y-3">
-        <div class="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400 flex items-center gap-2 pl-1">
-          <i class="fas fa-file-signature text-slate-400"></i>
-          <span>成果提交与评测</span>
+        <div class="text-[10px] font-black uppercase tracking-[0.24em] text-slate-450 flex items-center gap-2 pl-1">
+          <i class="fas fa-laptop-code text-indigo-500"></i>
+          <span>本课成果交付区</span>
         </div>
 
-        <div v-if="loading" class="py-12 text-center text-slate-400 bg-white rounded-2.5xl border border-slate-200/60 shadow-sm">
-          <i class="fas fa-spinner fa-spin text-xl mb-2 text-indigo-500"></i>
-          <p class="text-[10px] font-black tracking-widest text-slate-400 uppercase">Synchronizing with system...</p>
+        <div v-if="loading" class="py-10 text-center text-slate-400 bg-white rounded-2.5xl border border-slate-200/50 shadow-sm">
+          <i class="fas fa-spinner fa-spin text-lg mb-1.5 text-indigo-500"></i>
+          <p class="text-[9px] font-black tracking-widest text-slate-400 uppercase">Synchronizing with system...</p>
         </div>
 
-        <div v-else-if="!assignments?.length" class="py-12 text-center text-slate-400 bg-white rounded-2.5xl border border-slate-200/60 shadow-sm">
-          <i class="fas fa-award text-2xl mb-2 text-slate-300"></i>
+        <div v-else-if="!assignments?.length" class="py-10 text-center text-slate-400 bg-white rounded-2.5xl border border-slate-200/50 shadow-sm">
+          <i class="fas fa-award text-xl mb-1.5 text-slate-300"></i>
           <p class="text-xs font-bold text-slate-400 tracking-wider">本课无需提交电子作业</p>
         </div>
 
-        <div v-else class="space-y-5">
+        <div v-else class="space-y-3">
           <div
-            v-for="assignment in assignments"
+            v-for="(assignment, idx) in assignments"
             :key="assignment.id"
-            class="bg-white rounded-2.5xl border border-slate-200/60 p-5 shadow-sm space-y-4"
+            class="bg-white rounded-2.5xl border border-slate-200/50 p-4 shadow-sm space-y-3.5 hover:border-indigo-200 transition duration-300"
           >
-            <!-- Assignment header -->
-            <div class="flex flex-col gap-2 pb-3 border-b border-slate-100">
-              <div class="flex items-start justify-between gap-4">
-                <h4 class="text-xs font-black text-slate-800 leading-snug">{{ assignment.title }}</h4>
-                <span
-                  class="rounded-full px-2.5 py-0.5 text-[8px] font-black uppercase tracking-wider shrink-0"
-                  :class="submissionStatusClass(assignment.id)"
-                >
-                  {{ submissionStatusText(assignment.id) }}
-                </span>
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <h4 class="text-xs font-black text-slate-750 line-clamp-1 leading-normal">{{ assignment.title }}</h4>
+                <p class="text-[9px] text-slate-400 mt-1">成果任务 {{ idx + 1 }}</p>
               </div>
-              <p class="text-[11px] leading-relaxed text-slate-500">{{ assignment.requirements || assignment.description }}</p>
-            </div>
-
-            <!-- Submission Form -->
-            <form @submit.prevent="$emit('submit', assignment)" class="space-y-3.5">
-              <div class="space-y-1">
-                <label class="block text-[8px] font-black text-slate-400 uppercase tracking-widest pl-1">成果心得 / 代码内容</label>
-                <textarea
-                  v-model="drafts[assignment.id].content"
-                  rows="4"
-                  class="w-full rounded-2xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-700 placeholder-slate-400 shadow-inner focus:bg-white focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"
-                  placeholder="在这里写下你的研究成果、思考心得，或者实验代码段..."
-                ></textarea>
-              </div>
-
-              <div class="space-y-1">
-                <label class="block text-[8px] font-black text-slate-400 uppercase tracking-widest pl-1">作品链接（GitHub / 网盘 / 演示网页）</label>
-                <input
-                  v-model="drafts[assignment.id].link"
-                  class="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-xs font-medium text-slate-700 placeholder-slate-400 shadow-inner focus:bg-white focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"
-                  placeholder="项目链接 (以 http(s) 开头)"
-                />
-              </div>
-
-              <div class="space-y-1">
-                <label class="block text-[8px] font-black text-slate-400 uppercase tracking-widest pl-1">附件备注</label>
-                <input
-                  v-model="drafts[assignment.id].attachmentNote"
-                  class="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-xs font-medium text-slate-700 placeholder-slate-400 shadow-inner focus:bg-white focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"
-                  placeholder="如：已在纸质作业本中画图"
-                />
-              </div>
-              
-              <button
-                type="submit"
-                class="w-full rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 py-3 text-xs font-black text-white transition-all shadow-md shadow-indigo-600/10 active:scale-98"
+              <span
+                class="rounded-full px-2 py-0.5 text-[8px] font-black uppercase tracking-wider shrink-0"
+                :class="submissionStatusClass(assignment.id)"
               >
-                <i class="fas fa-bolt mr-1.5"></i>
-                {{ hasSubmission(assignment.id) ? '更新提交 & AI重新评测' : '提交并获取 AI 助教即时评测' }}
-              </button>
-            </form>
-
-            <!-- Light Mode Premium AI Assistant Feedback bubble -->
-            <div
-              v-if="hasSubmission(assignment.id) && getSubmission(assignment.id).feedback"
-              class="relative rounded-2xl p-4.5 border transition duration-300"
-              :class="getSubmission(assignment.id).reviewed_by === 'AI_Assistant'
-                ? 'bg-indigo-50/50 border-indigo-100 shadow-[0_4px_20px_rgba(99,102,241,0.04)]'
-                : 'bg-slate-50 border-slate-150'"
-            >
-              <!-- Cyber decoration elements -->
-              <div v-if="getSubmission(assignment.id).reviewed_by === 'AI_Assistant'" class="absolute top-0 right-0 h-8 w-8 pointer-events-none">
-                <div class="absolute top-0 right-0 h-[2px] w-3 bg-indigo-300"></div>
-                <div class="absolute top-0 right-0 h-3 w-[2px] bg-indigo-300"></div>
-              </div>
-
-              <div class="flex items-center gap-3 mb-3 pb-3 border-b border-indigo-100/50">
-                <div
-                  class="flex h-8 w-8 items-center justify-center rounded-xl text-white shadow-sm relative"
-                  :class="getSubmission(assignment.id).reviewed_by === 'AI_Assistant' ? 'bg-indigo-600' : 'bg-slate-700'"
-                >
-                  <i class="fas text-xs" :class="getSubmission(assignment.id).reviewed_by === 'AI_Assistant' ? 'fa-robot' : 'fa-graduation-cap'"></i>
-                </div>
-                <div>
-                  <div class="text-[11px] font-black text-slate-800 uppercase tracking-wider leading-none">
-                    {{ getSubmission(assignment.id).reviewed_by === 'AI_Assistant' ? 'AI 助教小破的反馈' : '教师评价' }}
-                  </div>
-                  <div class="mt-1 text-[8px] font-black text-indigo-500 uppercase tracking-[0.16em] leading-none">
-                    Instant Review
-                  </div>
-                </div>
-              </div>
-              
-              <p class="text-xs font-bold leading-6 text-slate-600 whitespace-pre-line">
-                {{ getSubmission(assignment.id).feedback }}
-              </p>
+                {{ submissionStatusText(assignment.id) }}
+              </span>
             </div>
 
+            <button
+              @click="openAssignmentDrawer(assignment.id)"
+              class="w-full inline-flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-black transition-all"
+              :class="hasSubmission(assignment.id) 
+                ? 'bg-slate-100 hover:bg-slate-200 text-slate-650' 
+                : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/10'"
+            >
+              <i class="fas" :class="hasSubmission(assignment.id) ? 'fa-magnifying-glass-chart' : 'fa-bolt-lightning'"></i>
+              {{ hasSubmission(assignment.id) ? '查看我的提交与AI评测' : '去交付本课成果' }}
+            </button>
           </div>
         </div>
       </section>
 
     </div>
+
+    <!-- FIXED DRAWERS AND SLIDE-OVERS -->
+    <Teleport to="body">
+      <!-- Backdrop with blur -->
+      <Transition name="fade">
+        <div
+          v-if="drawerOpen"
+          class="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm"
+          @click="closeDrawer"
+        ></div>
+      </Transition>
+
+      <!-- Workbench drawer slide-out -->
+      <Transition name="slide-over">
+        <div
+          v-if="drawerOpen && activeAssignment"
+          class="fixed bottom-0 right-0 top-0 z-50 flex h-full w-full max-w-xl flex-col bg-white shadow-2xl border-l border-slate-200/80"
+        >
+          <!-- Drawer Header -->
+          <div class="flex h-20 items-center justify-between border-b border-slate-150 px-6.5 bg-slate-50/60 shrink-0">
+            <div class="flex items-center gap-3">
+              <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-600/10">
+                <i class="fas fa-terminal text-sm"></i>
+              </div>
+              <div>
+                <h3 class="text-sm font-black text-slate-800 leading-none">工程成果交付台</h3>
+                <span class="block text-[8px] font-black tracking-widest text-indigo-500 uppercase mt-1.5">Deliverable Workbench</span>
+              </div>
+            </div>
+            <button
+              @click="closeDrawer"
+              class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 hover:text-slate-650 hover:shadow-sm transition"
+            >
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+
+          <!-- Drawer Body -->
+          <div class="flex-1 overflow-y-auto p-6 space-y-6">
+            <!-- Assignment Info Section -->
+            <div class="bg-indigo-50/20 rounded-2.5xl border border-indigo-100/50 p-5 space-y-2">
+              <div class="flex items-center justify-between gap-3">
+                <h4 class="text-xs font-black text-indigo-850">{{ activeAssignment.title }}</h4>
+                <span
+                  class="rounded-full px-2.5 py-0.5 text-[8px] font-black uppercase tracking-wider shrink-0 border"
+                  :class="submissionStatusClass(activeAssignment.id)"
+                >
+                  {{ submissionStatusText(activeAssignment.id) }}
+                </span>
+              </div>
+              <p class="text-[11px] leading-relaxed text-indigo-700/80 whitespace-pre-line">{{ activeAssignment.requirements || activeAssignment.description }}</p>
+            </div>
+
+            <!-- Form Content -->
+            <form @submit.prevent="handleSubmit" class="space-y-5">
+              <div class="space-y-2">
+                <div class="flex items-center justify-between pl-1">
+                  <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                    成果心得 / 实验代码段
+                  </label>
+                  <span class="text-[9px] font-bold text-slate-400">支持 Markdown 与 Python 代码</span>
+                </div>
+                <textarea
+                  v-model="drafts[activeAssignment.id].content"
+                  rows="10"
+                  class="w-full rounded-2.5xl border border-slate-200 bg-slate-50/50 p-4 text-xs font-mono leading-relaxed text-slate-700 placeholder-slate-400 shadow-inner focus:bg-white focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"
+                  placeholder="请输入你的实践观察、核心代码、发现的问题或者反思体会..."
+                ></textarea>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="space-y-1.5">
+                  <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">作品链接（GitHub / 演示）</label>
+                  <input
+                    v-model="drafts[activeAssignment.id].link"
+                    class="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-3.5 py-3 text-xs font-medium text-slate-700 placeholder-slate-400 shadow-inner focus:bg-white focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"
+                    placeholder="https://..."
+                  />
+                </div>
+
+                <div class="space-y-1.5">
+                  <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">附件说明 / 备注</label>
+                  <input
+                    v-model="drafts[activeAssignment.id].attachmentNote"
+                    class="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-3.5 py-3 text-xs font-medium text-slate-700 placeholder-slate-400 shadow-inner focus:bg-white focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"
+                    placeholder="如：已在纸质作业本完成制图"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                class="w-full inline-flex items-center justify-center gap-2 rounded-2.5xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 py-3.5 text-xs font-black text-white transition-all shadow-lg shadow-indigo-600/15 active:scale-98"
+              >
+                <i class="fas fa-paper-plane"></i>
+                {{ hasSubmission(activeAssignment.id) ? '重新提交并获取最新评测' : '正式提交成果并激活 AI 评测' }}
+              </button>
+            </form>
+
+            <!-- Premium AI Feedback bubble -->
+            <Transition name="fade-slide">
+              <div
+                v-if="hasSubmission(activeAssignment.id) && getSubmission(activeAssignment.id).feedback"
+                class="relative rounded-2.5xl p-5.5 border bg-gradient-to-br from-indigo-50/30 to-purple-50/20 border-indigo-100 shadow-md shadow-indigo-500/5"
+              >
+                <!-- Decorative grid pattern -->
+                <div class="absolute top-0 right-0 h-10 w-10 pointer-events-none">
+                  <div class="absolute top-0 right-0 h-[2px] w-4 bg-indigo-400/50"></div>
+                  <div class="absolute top-0 right-0 h-4 w-[2px] bg-indigo-400/50"></div>
+                </div>
+
+                <div class="flex items-center gap-3.5 mb-4 pb-3.5 border-b border-indigo-100">
+                  <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-600/10">
+                    <i class="fas fa-robot text-xs animate-pulse"></i>
+                  </div>
+                  <div>
+                    <div class="text-xs font-black text-slate-800 uppercase tracking-wider leading-none">
+                      {{ getSubmission(activeAssignment.id).reviewed_by === 'AI_Assistant' ? 'AI 助教小破的评测报告' : '教师评价' }}
+                    </div>
+                    <div class="mt-1.5 text-[8px] font-black text-indigo-500 uppercase tracking-[0.16em] leading-none">
+                      Interactive Evaluation
+                    </div>
+                  </div>
+                </div>
+                
+                <p class="text-xs font-bold leading-7 text-slate-655 whitespace-pre-line pl-1">
+                  {{ getSubmission(activeAssignment.id).feedback }}
+                </p>
+              </div>
+            </Transition>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -259,10 +310,6 @@ import { computed, ref } from 'vue';
 
 const props = defineProps({
   materials: {
-    type: Array,
-    default: () => []
-  },
-  deliverables: {
     type: Array,
     default: () => []
   },
@@ -281,44 +328,37 @@ const props = defineProps({
   loading: {
     type: Boolean,
     default: false
-  },
-  completedPhases: {
-    type: Object,
-    default: () => ({})
-  },
-  deliverableEvidences: {
-    type: Object,
-    default: () => ({})
   }
 });
 
-const emit = defineEmits(['submit', 'complete-phase']);
+const emit = defineEmits(['submit']);
 
-const expandedEvidence = ref(null);
+// Drawer States
+const drawerOpen = ref(false);
+const activeAssignmentId = ref(null);
 
-function hasEvidence(idx) {
-  const text = props.deliverableEvidences?.[idx];
-  return text && text.trim().length > 0;
-}
-
-function toggleExpandEvidence(idx) {
-  if (expandedEvidence.value === idx) {
-    expandedEvidence.value = null;
-  } else {
-    expandedEvidence.value = idx;
-  }
-}
-
-const checkedCount = computed(() => {
-  return Object.values(props.completedPhases).filter(Boolean).length;
+const activeAssignment = computed(() => {
+  return props.assignments.find(a => a.id === activeAssignmentId.value) || null;
 });
 
-function isChecked(idx) {
-  return Boolean(props.completedPhases[idx]);
+const submittedCount = computed(() => {
+  return props.assignments.filter(a => hasSubmission(a.id)).length;
+});
+
+function openAssignmentDrawer(assignmentId) {
+  activeAssignmentId.value = assignmentId;
+  drawerOpen.value = true;
 }
 
-function toggleCheck(idx) {
-  emit('complete-phase', idx);
+function closeDrawer() {
+  drawerOpen.value = false;
+  activeAssignmentId.value = null;
+}
+
+function handleSubmit() {
+  if (activeAssignment.value) {
+    emit('submit', activeAssignment.value);
+  }
 }
 
 function hasSubmission(assignmentId) {
@@ -331,17 +371,31 @@ function getSubmission(assignmentId) {
 
 function submissionStatusText(assignmentId) {
   const sub = getSubmission(assignmentId);
-  if (!sub.id) return '未完成';
-  if (sub.status === 'reviewed') return '已评测';
+  if (!sub.id) return '未交付';
+  if (sub.status === 'reviewed') return '已验证';
   if (sub.status === 'submitted') return '已提交';
   return sub.status || '已提交';
 }
 
 function submissionStatusClass(assignmentId) {
   const sub = getSubmission(assignmentId);
-  if (!sub.id) return 'bg-slate-100 text-slate-400 border border-slate-200';
-  if (sub.status === 'reviewed') return 'bg-emerald-50 text-emerald-600 border border-emerald-100';
-  return 'bg-indigo-50 text-indigo-600 border border-indigo-100';
+  if (!sub.id) return 'bg-slate-100 text-slate-400 border border-slate-200/60';
+  if (sub.status === 'reviewed') return 'bg-emerald-50 text-emerald-600 border border-emerald-150';
+  return 'bg-indigo-50 text-indigo-600 border border-indigo-150';
+}
+
+function getMilestoneBadgeClass(assignmentId) {
+  const sub = getSubmission(assignmentId);
+  if (!sub.id) return 'bg-slate-50 text-slate-400 border-slate-200/40';
+  if (sub.status === 'reviewed') return 'bg-emerald-50 text-emerald-600 border-emerald-100';
+  return 'bg-indigo-50 text-indigo-600 border-indigo-100';
+}
+
+function getMilestoneBadgeLabel(assignmentId) {
+  const sub = getSubmission(assignmentId);
+  if (!sub.id) return '未交付';
+  if (sub.status === 'reviewed') return '已验证';
+  return '已提交';
 }
 
 function materialIcon(material) {
@@ -371,6 +425,10 @@ function iconTextClass(material) {
   if (/\.pdf$/i.test(path)) return 'text-rose-500';
   return 'text-indigo-500';
 }
+
+defineExpose({
+  openAssignmentDrawer
+});
 </script>
 
 <style scoped>
@@ -386,5 +444,36 @@ function iconTextClass(material) {
 }
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* Slide-over Drawer Animations */
+.slide-over-enter-active,
+.slide-over-leave-active {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.slide-over-enter-from,
+.slide-over-leave-to {
+  transform: translateX(100%);
+}
+
+/* Fade Overlay Animations */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* Fade Slide Up Feedback Bubble */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.3s ease-out;
+}
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
 }
 </style>

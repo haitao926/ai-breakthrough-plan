@@ -72,10 +72,6 @@
               :lesson-title="lessonTitle"
               :lesson-description="lessonData?.description"
               :phases="lessonPhases"
-              :completed-phases="completedPhases"
-              :deliverable-evidences="deliverableEvidences"
-              @complete-phase="completePhase"
-              @save-evidence="saveDeliverableEvidence"
               @focus-submission="focusSubmission"
             />
           </div>
@@ -83,15 +79,12 @@
 
         <MissionControlPanel
           v-if="showWorkbench"
+          ref="missionControlRef"
           :materials="materials"
-          :deliverables="lessonDeliverables"
           :assignments="lessonAssignments"
           :submissions="assignmentSubmissions"
           :drafts="assignmentDrafts"
           :loading="assignmentLoading"
-          :completed-phases="completedPhases"
-          :deliverable-evidences="deliverableEvidences"
-          @complete-phase="completePhase"
           @submit="submitAssignment"
         />
 
@@ -158,89 +151,13 @@ const mainScroll = ref(null);
 const lessonAssignments = ref([]);
 const assignmentSubmissions = ref({});
 const assignmentDrafts = reactive({});
-const completedPhases = ref({});
-const deliverableEvidences = ref({});
-
-function loadDeliverableEvidences() {
-  try {
-    const key = `deliverable_evidences_${courseId.value}_${lessonId.value}`;
-    const stored = localStorage.getItem(key);
-    deliverableEvidences.value = stored ? JSON.parse(stored) : {};
-  } catch (err) {
-    deliverableEvidences.value = {};
-  }
-}
-
-function saveDeliverableEvidence(index, text) {
-  deliverableEvidences.value[index] = text || '';
-  try {
-    const key = `deliverable_evidences_${courseId.value}_${lessonId.value}`;
-    localStorage.setItem(key, JSON.stringify(deliverableEvidences.value));
-  } catch (err) {
-    console.error(err);
-  }
-}
-
-function loadCompletedPhases() {
-  try {
-    const key = `completed_phases_${courseId.value}_${lessonId.value}`;
-    const stored = localStorage.getItem(key);
-    completedPhases.value = stored ? JSON.parse(stored) : {};
-    loadDeliverableEvidences();
-  } catch (err) {
-    completedPhases.value = {};
-    deliverableEvidences.value = {};
-  }
-}
-
-function saveCompletedPhases() {
-  try {
-    const key = `completed_phases_${courseId.value}_${lessonId.value}`;
-    localStorage.setItem(key, JSON.stringify(completedPhases.value));
-  } catch (err) {
-    console.error(err);
-  }
-}
-
-function completePhase(index) {
-  completedPhases.value[index] = !completedPhases.value[index];
-  saveCompletedPhases();
-}
-
+const missionControlRef = ref(null);
 function focusSubmission() {
   showWorkbench.value = true;
   
-  // 自动拼接左侧已经沉淀的交付物数据到作业框中
-  if (lessonAssignments.value?.length > 0) {
-    const primaryAssignment = lessonAssignments.value[0];
-    if (assignmentDrafts[primaryAssignment.id]) {
-      const draft = assignmentDrafts[primaryAssignment.id];
-      if (!draft.content || draft.content.startsWith('## 📑 课堂探究与实践成果记录')) {
-        let assembledText = '## 📑 课堂探究与实践成果记录\n\n';
-        let hasEvidence = false;
-        lessonPhases.value.forEach((phase, index) => {
-          const evidenceText = deliverableEvidences.value[index];
-          if (evidenceText && evidenceText.trim()) {
-            assembledText += `### ✦ 阶段 ${index + 1}: ${phase.title}\n`;
-            assembledText += `> ${evidenceText.trim()}\n\n`;
-            hasEvidence = true;
-          }
-        });
-        if (hasEvidence) {
-          draft.content = assembledText;
-        }
-      }
-    }
-  }
-  
   nextTick(() => {
-    const el = document.querySelector('form');
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      el.classList.add('ring-4', 'ring-indigo-500/30', 'transition-all', 'duration-500');
-      setTimeout(() => {
-        el.classList.remove('ring-4', 'ring-indigo-500/30');
-      }, 1500);
+    if (lessonAssignments.value?.length > 0) {
+      missionControlRef.value?.openAssignmentDrawer(lessonAssignments.value[0].id);
     }
   });
 }
@@ -514,7 +431,6 @@ async function loadLessonPage() {
     if (!lessonData.value) {
       throw new Error('没有找到对应课时');
     }
-    loadCompletedPhases();
     await loadLessonAssignments();
   } catch (err) {
     pageError.value = err.message || '课时加载失败';

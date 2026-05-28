@@ -6,15 +6,58 @@
       <div class="home-shell">
         <RollingBanner :items="homeBannerItems" />
 
-        <div class="home-summary-panel">
+        <div class="home-summary-panel glass-premium">
           <div class="home-summary-route">
-            <p class="section-kicker">Learning Route</p>
-            <div class="home-route-line">
-              <div v-for="item in routePills" :key="item.title" class="home-route-pill">
-                <span>{{ item.title }}</span>
-                <strong>{{ item.desc }}</strong>
+            <div class="flex items-center justify-between mb-2">
+              <p class="section-kicker">Learning Route · 科创四步走</p>
+              <span class="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100/50">探索工程思维</span>
+            </div>
+            
+            <div class="relative py-4">
+              <!-- Background glowing line -->
+              <div class="absolute left-8 right-8 top-[36px] h-0.5 bg-slate-200/80 rounded-full overflow-hidden">
+                <div class="h-full bg-gradient-to-r from-indigo-500 via-cyan-400 to-purple-500 transition-all duration-500" :style="{ width: (activeStepIndex * 33.3) + '%' }"></div>
+              </div>
+              
+              <div class="relative grid grid-cols-4 gap-2">
+                <div 
+                  v-for="(item, idx) in routeSteps" 
+                  :key="item.title" 
+                  class="home-route-step group cursor-pointer"
+                  :class="{ active: activeStepIndex === idx }"
+                  @mouseenter="activeStepIndex = idx"
+                >
+                  <!-- Step number circle -->
+                  <div 
+                    class="w-8 h-8 rounded-full mx-auto flex items-center justify-center font-black text-xs transition-all duration-300 relative z-10 border-2"
+                    :class="activeStepIndex === idx 
+                      ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-500/30' 
+                      : 'bg-white border-slate-200 text-slate-400 group-hover:border-indigo-300 group-hover:text-indigo-600'"
+                  >
+                    {{ idx + 1 }}
+                  </div>
+                  
+                  <!-- Step description -->
+                  <div class="text-center mt-2">
+                    <span class="text-[9px] font-black uppercase tracking-wider text-slate-400 group-hover:text-indigo-600" :class="{ 'text-indigo-600': activeStepIndex === idx }">{{ item.title }}</span>
+                    <strong class="block text-[11px] font-extrabold text-slate-800 mt-0.5">{{ item.desc }}</strong>
+                  </div>
+                </div>
               </div>
             </div>
+
+            <!-- Active Step Detail Card -->
+            <transition name="fade-slide" mode="out-in">
+              <div :key="activeStepIndex" class="mt-2 p-3 rounded-2xl bg-indigo-50/30 border border-indigo-100/30 flex items-center gap-3">
+                <div class="w-14 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-slate-100 shadow-sm border border-slate-200/50">
+                  <img :src="routeSteps[activeStepIndex].image" class="w-full h-full object-cover" />
+                </div>
+                <div>
+                  <h4 class="text-[10px] font-black text-indigo-600 uppercase tracking-widest">{{ routeSteps[activeStepIndex].title }} · {{ routeSteps[activeStepIndex].desc }}</h4>
+                  <p class="text-[11px] text-slate-500 font-bold mt-0.5 leading-relaxed">{{ routeSteps[activeStepIndex].details }}</p>
+                </div>
+              </div>
+            </transition>
           </div>
 
           <div class="home-summary-actions">
@@ -162,11 +205,32 @@ const isTeacher = computed(() => isTeacherLike(user.value?.role));
 
 const homeBannerItems = getPageBannerItems('home');
 
-const routePills = [
-  { title: '项目', desc: '先看方向' },
-  { title: '知识', desc: '补研究线索' },
-  { title: '课程', desc: '进课堂任务' },
-  { title: '竞赛', desc: '去真实展示' }
+const activeStepIndex = ref(0);
+const routeSteps = [
+  {
+    title: '项目',
+    desc: '先看方向',
+    details: '自主立项与团队组建：探索机器人、数字创意与可持续创新主题，确立研究方向。',
+    image: '/assets/banners/banner-projects.png'
+  },
+  {
+    title: '知识',
+    desc: '补研究线索',
+    details: '跨学科知识自主探究：学习 AI 大语言模型、控制算法与工程设计，为项目推进扫清知识障碍。',
+    image: '/assets/banners/banner-knowledge.png'
+  },
+  {
+    title: '课程',
+    desc: '进课堂任务',
+    details: '实施与里程碑成果交付：动手调试软硬件、编写代码、制作演示材料，完成客观验证。',
+    image: '/assets/banners/banner-courses.png'
+  },
+  {
+    title: '竞赛',
+    desc: '去真实展示',
+    details: '成果路演与赛事衔接：在成果陈列墙上展示创意，对接市级、国家级青少年科创与创客竞赛。',
+    image: '/assets/banners/banner-competitions.png'
+  }
 ];
 
 const quickLinks = computed(() => {
@@ -375,14 +439,6 @@ fetchCompetitions().then(items => {
   transform: translateY(-3px);
 }
 
-.home-route-pill {
-  padding: 12px 14px;
-  border-radius: 18px;
-  background: rgba(248, 250, 252, 0.92);
-  border: 1px solid #e2e8f0;
-}
-
-.home-route-pill span,
 .course-list-copy span,
 .activity-tier,
 .quick-link-copy span {
@@ -394,12 +450,27 @@ fetchCompetitions().then(items => {
   text-transform: uppercase;
 }
 
-.home-route-pill strong {
-  display: block;
-  margin-top: 7px;
-  color: #0f172a;
-  font-size: 0.88rem;
-  line-height: 1.45;
+.home-route-step {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.home-route-step:hover {
+  transform: translateY(-2px);
+}
+
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
 }
 
 .home-main {

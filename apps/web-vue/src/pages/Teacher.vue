@@ -14,6 +14,7 @@
         <div class="flex items-center gap-3">
           <RouterLink to="/" class="nav-link">门户</RouterLink>
           <RouterLink to="/mission-control" class="nav-link">大屏</RouterLink>
+          <RouterLink to="/teacher/assessment" class="nav-link">考评中心</RouterLink>
           <span class="hidden rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold sm:inline-flex">{{ currentUser?.name || '教师' }}</span>
           <button class="icon-btn" @click="logout"><i class="fas fa-sign-out-alt"></i></button>
         </div>
@@ -473,6 +474,27 @@
             <p>Review queues</p>
             <h2>项目干预队列</h2>
           </div>
+
+          <!-- Project Alert Matrix (Stuck / Rejected / Pending items) -->
+          <div v-if="alertProjects.length > 0" class="mb-2 p-3 bg-rose-50 border border-rose-100/60 rounded-2xl">
+            <h3 class="text-[9px] font-black text-rose-600 uppercase tracking-widest flex items-center gap-1.5 mb-2">
+              <i class="fas fa-exclamation-circle animate-pulse"></i> 警报矩阵 (STUCK TARGETS)
+            </h3>
+            <div class="grid grid-cols-4 gap-1.5">
+              <button
+                v-for="proj in alertProjects"
+                :key="proj.id"
+                class="w-full aspect-square rounded-xl bg-white border border-rose-100 hover:border-rose-300 transition-all flex flex-col items-center justify-center p-1 relative group"
+                @click="selectReviewProject(proj.id)"
+                :title="proj.title"
+              >
+                <div class="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse-glow"></div>
+                <i class="fas text-[10px] mb-0.5" :class="proj.resourcesPendingCount > 0 ? 'fa-cubes text-amber-500' : 'fa-exclamation-triangle text-rose-500'"></i>
+                <span class="text-[8px] font-black text-slate-700 text-center truncate w-full">{{ proj.title }}</span>
+              </button>
+            </div>
+          </div>
+
           <button
             v-for="queue in projectQueues"
             :key="queue.key"
@@ -521,140 +543,151 @@
           <div v-if="reviewDossierLoading" class="empty-note">正在整理项目审核包...</div>
 
           <template v-else-if="reviewDossier?.project">
-            <section class="preview-layout">
-              <article class="preview-panel">
-                <div class="preview-head">
-                  <span class="status-pill">{{ statusLabel(reviewDossier.project.status) }}</span>
-                  <span>{{ formatDate(reviewDossier.project.updated_at) }}</span>
-                </div>
-                <h3>{{ reviewDossier.project.title }}</h3>
-                <p>{{ reviewDossier.project.summary || '学生尚未填写项目摘要。' }}</p>
-                <div class="metric-strip">
-                  <span>{{ reviewDossier.project.class_name || '未分班' }}</span>
-                  <span>成员 {{ reviewDossier.members?.length || 0 }}</span>
-                  <span>进度 {{ reviewDossier.meta?.milestoneProgress?.percent || 0 }}%</span>
-                  <span>资源待批 {{ reviewDossier.meta?.resourcesPendingCount || 0 }}</span>
-                </div>
-                <a v-if="reviewDossier.project.gitea_repo_url" class="repo-link" :href="reviewDossier.project.gitea_repo_url" target="_blank" rel="noreferrer">
-                  {{ reviewDossier.project.gitea_repo_url }}
-                </a>
-              </article>
-
-              <article class="preview-panel">
-                <h3>教师动作</h3>
-                <div class="button-row">
-                  <button
-                    v-for="action in statusActions"
-                    :key="action.status"
-                    class="secondary-btn"
-                    :class="{ danger: action.danger }"
-                    :disabled="!canManage || actionWorking"
-                    @click="advanceProjectStatus(action.status, action.note)"
-                  >
-                    {{ action.label }}
-                  </button>
-                </div>
-                <textarea v-model="projectActionNote" placeholder="状态推进说明，可选"></textarea>
-              </article>
-            </section>
-
-            <section class="workbench-grid">
-              <article class="workbench-card">
-                <div class="panel-title row-title">
-                  <div>
-                    <p>Stage submissions</p>
-                    <h3>阶段提交审核</h3>
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              <!-- Left Column: Student Details, Timelines, Logs (8 cols) -->
+              <div class="lg:col-span-8 space-y-6">
+                <article class="preview-panel">
+                  <div class="preview-head">
+                    <span class="status-pill">{{ statusLabel(reviewDossier.project.status) }}</span>
+                    <span>{{ formatDate(reviewDossier.project.updated_at) }}</span>
                   </div>
-                  <span class="status-pill">{{ reviewDossier.submissions?.length || 0 }} 份</span>
-                </div>
-                <div class="submission-list compact-list">
-                  <article v-for="submission in reviewDossier.submissions" :key="submission.id" class="submission-card review-submission">
-                    <div>
-                      <strong>{{ submissionTypeLabel(submission.type) }} · {{ submission.title || '未命名提交' }}</strong>
-                      <span>{{ statusLabel(submission.status) }} · {{ formatDate(submission.created_at) }}</span>
-                      <p>{{ submission.content || submissionSummary(submission) || '没有正文摘要。' }}</p>
-                      <div class="attachment-row" v-if="submission.attachments?.length">
-                        <a v-for="attachment in submission.attachments" :key="attachment.path" :href="attachment.url" target="_blank" rel="noreferrer">
-                          {{ attachment.name || '附件' }}
-                        </a>
+                  <h3>{{ reviewDossier.project.title }}</h3>
+                  <p>{{ reviewDossier.project.summary || '学生尚未填写项目摘要。' }}</p>
+                  <div class="metric-strip">
+                    <span>{{ reviewDossier.project.class_name || '未分班' }}</span>
+                    <span>成员 {{ reviewDossier.members?.length || 0 }}</span>
+                    <span>进度 {{ reviewDossier.meta?.milestoneProgress?.percent || 0 }}%</span>
+                    <span>资源待批 {{ reviewDossier.meta?.resourcesPendingCount || 0 }}</span>
+                  </div>
+                  <a v-if="reviewDossier.project.gitea_repo_url" class="repo-link" :href="reviewDossier.project.gitea_repo_url" target="_blank" rel="noreferrer">
+                    {{ reviewDossier.project.gitea_repo_url }}
+                  </a>
+                </article>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <!-- Milestones -->
+                  <article class="workbench-card">
+                    <div class="panel-title row-title">
+                      <div>
+                        <p>Milestones</p>
+                        <h3>里程碑验收</h3>
                       </div>
+                      <span class="status-pill">{{ reviewDossier.meta?.milestoneProgress?.done || 0 }}/{{ reviewDossier.meta?.milestoneProgress?.total || 0 }}</span>
                     </div>
-                    <form class="review-form" @submit.prevent="reviewProjectSubmission(submission)">
-                      <select v-model="projectReviewDrafts[submission.id].status">
-                        <option value="reviewed">通过</option>
-                        <option value="needs_changes">退回修改</option>
-                      </select>
-                      <textarea v-model="projectReviewDrafts[submission.id].feedback" placeholder="退回必须填写反馈，通过可选"></textarea>
-                      <button class="primary-btn small" type="submit" :disabled="!canManage || actionWorking">提交审核</button>
-                    </form>
+                    <div class="submission-list compact-list">
+                      <article v-for="milestone in reviewDossier.milestones" :key="milestone.id" class="mini-review-card p-3 border border-slate-100 rounded-xl mb-2 bg-slate-50/50">
+                        <div>
+                          <strong class="text-xs text-slate-800">{{ milestone.title }}</strong>
+                          <div class="text-[10px] text-slate-400 font-bold mt-0.5">{{ milestone.description || '未分阶段' }} · {{ statusLabel(milestone.status) }}</div>
+                          <p class="text-xs text-slate-600 mt-2 font-medium">{{ milestone.deliverables?.output || milestone.teacher_comment || '暂无交付说明。' }}</p>
+                        </div>
+                        <div class="button-row flex gap-2 mt-3">
+                          <button class="secondary-btn text-xs px-2.5 py-1.5" :disabled="!canManage || actionWorking" @click="reviewMilestone(milestone, 'approved')">验收</button>
+                          <button class="secondary-btn danger text-xs px-2.5 py-1.5" :disabled="!canManage || actionWorking" @click="reviewMilestone(milestone, 'rejected')">退回</button>
+                        </div>
+                      </article>
+                      <div v-if="!reviewDossier.milestones?.length" class="empty-note compact">学生还没有拆解里程碑。</div>
+                    </div>
                   </article>
-                  <div v-if="!reviewDossier.submissions?.length" class="empty-note compact">还没有阶段提交。</div>
-                </div>
-              </article>
 
-              <article class="workbench-card">
-                <div class="panel-title row-title">
-                  <div>
-                    <p>Milestones</p>
-                    <h3>里程碑验收</h3>
-                  </div>
-                  <span class="status-pill">{{ reviewDossier.meta?.milestoneProgress?.done || 0 }}/{{ reviewDossier.meta?.milestoneProgress?.total || 0 }}</span>
+                  <!-- Resources -->
+                  <article class="workbench-card">
+                    <div class="panel-title row-title">
+                      <div>
+                        <p>Resources</p>
+                        <h3>资源申请</h3>
+                      </div>
+                      <span class="status-pill">{{ reviewDossier.resources?.length || 0 }} 条</span>
+                    </div>
+                    <div class="submission-list compact-list">
+                      <article v-for="resource in reviewDossier.resources" :key="resource.id" class="mini-review-card p-3 border border-slate-100 rounded-xl mb-2 bg-slate-50/50">
+                        <div>
+                          <strong class="text-xs text-slate-800">{{ resource.item_name }}</strong>
+                          <div class="text-[10px] text-slate-400 font-bold mt-0.5">{{ resource.type }} · 数量 {{ resource.quantity }} · {{ statusLabel(resource.status) }}</div>
+                          <p class="text-xs text-slate-600 mt-2 font-medium">{{ resource.reason || '未填写申请理由。' }}</p>
+                        </div>
+                        <div class="button-row flex gap-2 mt-3">
+                          <button class="secondary-btn text-xs px-2.5 py-1.5" :disabled="!canManage || actionWorking || resource.status !== 'pending'" @click="auditResource(resource.id, 'approved')">同意</button>
+                          <button class="secondary-btn danger text-xs px-2.5 py-1.5" :disabled="!canManage || actionWorking || resource.status !== 'pending'" @click="auditResource(resource.id, 'rejected')">驳回</button>
+                        </div>
+                      </article>
+                      <div v-if="!reviewDossier.resources?.length" class="empty-note compact">没有资源申请。</div>
+                    </div>
+                  </article>
                 </div>
-                <div class="submission-list compact-list">
-                  <article v-for="milestone in reviewDossier.milestones" :key="milestone.id" class="mini-review-card">
+
+                <!-- Implementation Logs -->
+                <article class="workbench-card">
+                  <div class="panel-title">
+                    <p>Implementation logs</p>
+                    <h3>实施日志</h3>
+                  </div>
+                  <div class="timeline-list">
+                    <div v-for="log in reviewDossier.implementationLogs?.slice(0, 6)" :key="log.id" class="timeline-item">
+                      <strong>{{ log.author_name || '学生' }}</strong>
+                      <span>{{ formatDate(log.created_at) }}</span>
+                      <p>{{ log.content }}</p>
+                    </div>
+                    <div v-if="!reviewDossier.implementationLogs?.length" class="empty-note compact">还没有实施日志。</div>
+                  </div>
+                </article>
+              </div>
+
+              <!-- Right Column: Sticky Teacher Actions & Submissions Review (4 cols) -->
+              <div class="lg:col-span-4 lg:sticky lg:top-24 space-y-6">
+                <!-- Teacher Actions -->
+                <article class="preview-panel">
+                  <h3>项目状态干预</h3>
+                  <div class="button-row flex flex-wrap gap-2 mt-3">
+                    <button
+                      v-for="action in statusActions"
+                      :key="action.status"
+                      class="secondary-btn text-xs px-3 py-2 flex-grow text-center"
+                      :class="{ danger: action.danger }"
+                      :disabled="!canManage || actionWorking"
+                      @click="advanceProjectStatus(action.status, action.note)"
+                    >
+                      {{ action.label }}
+                    </button>
+                  </div>
+                  <textarea v-model="projectActionNote" placeholder="项目状态推进说明（可选）" class="w-full text-xs p-2.5 rounded-xl border border-slate-200 mt-2 bg-slate-50/50 focus:bg-white transition-all outline-none"></textarea>
+                </article>
+
+                <!-- Submissions Review Panel -->
+                <article class="workbench-card">
+                  <div class="panel-title row-title">
                     <div>
-                      <strong>{{ milestone.title }}</strong>
-                      <span>{{ milestone.description || '未分阶段' }} · {{ statusLabel(milestone.status) }}</span>
-                      <p>{{ milestone.deliverables?.output || milestone.teacher_comment || '暂无交付说明。' }}</p>
+                      <p>Stage submissions</p>
+                      <h3>阶段提交审核</h3>
                     </div>
-                    <div class="button-row">
-                      <button class="secondary-btn" :disabled="!canManage || actionWorking" @click="reviewMilestone(milestone, 'approved')">验收</button>
-                      <button class="secondary-btn danger" :disabled="!canManage || actionWorking" @click="reviewMilestone(milestone, 'rejected')">退回</button>
-                    </div>
-                  </article>
-                  <div v-if="!reviewDossier.milestones?.length" class="empty-note compact">学生还没有拆解里程碑。</div>
-                </div>
-              </article>
-
-              <article class="workbench-card">
-                <div class="panel-title row-title">
-                  <div>
-                    <p>Resources</p>
-                    <h3>资源申请</h3>
+                    <span class="status-pill">{{ reviewDossier.submissions?.length || 0 }} 份</span>
                   </div>
-                  <span class="status-pill">{{ reviewDossier.resources?.length || 0 }} 条</span>
-                </div>
-                <div class="submission-list compact-list">
-                  <article v-for="resource in reviewDossier.resources" :key="resource.id" class="mini-review-card">
-                    <div>
-                      <strong>{{ resource.item_name }}</strong>
-                      <span>{{ resource.type }} · 数量 {{ resource.quantity }} · {{ statusLabel(resource.status) }}</span>
-                      <p>{{ resource.reason || '未填写申请理由。' }}</p>
-                    </div>
-                    <div class="button-row">
-                      <button class="secondary-btn" :disabled="!canManage || actionWorking || resource.status !== 'pending'" @click="auditResource(resource.id, 'approved')">同意</button>
-                      <button class="secondary-btn danger" :disabled="!canManage || actionWorking || resource.status !== 'pending'" @click="auditResource(resource.id, 'rejected')">驳回</button>
-                    </div>
-                  </article>
-                  <div v-if="!reviewDossier.resources?.length" class="empty-note compact">没有资源申请。</div>
-                </div>
-              </article>
-
-              <article class="workbench-card">
-                <div class="panel-title">
-                  <p>Implementation logs</p>
-                  <h3>实施日志</h3>
-                </div>
-                <div class="timeline-list">
-                  <div v-for="log in reviewDossier.implementationLogs?.slice(0, 6)" :key="log.id" class="timeline-item">
-                    <strong>{{ log.author_name || '学生' }}</strong>
-                    <span>{{ formatDate(log.created_at) }}</span>
-                    <p>{{ log.content }}</p>
+                  <div class="submission-list compact-list max-h-[420px] overflow-y-auto custom-scrollbar pr-1">
+                    <article v-for="submission in reviewDossier.submissions" :key="submission.id" class="submission-card review-submission p-4 border border-slate-100 rounded-2xl bg-slate-50/40 mb-3 space-y-3">
+                      <div>
+                        <strong class="text-xs text-slate-800 block">{{ submissionTypeLabel(submission.type) }} · {{ submission.title || '未命名提交' }}</strong>
+                        <span class="text-[9px] text-slate-400 font-bold block mt-0.5">{{ statusLabel(submission.status) }} · {{ formatDate(submission.created_at) }}</span>
+                        <p class="text-xs text-slate-600 font-medium leading-relaxed mt-2 border-t border-slate-100/50 pt-2">{{ submission.content || submissionSummary(submission) || '没有正文摘要。' }}</p>
+                        <div class="attachment-row flex flex-wrap gap-1.5 mt-2" v-if="submission.attachments?.length">
+                          <a v-for="attachment in submission.attachments" :key="attachment.path" :href="attachment.url" target="_blank" rel="noreferrer" class="text-[10px] bg-indigo-50 text-indigo-600 hover:underline px-2 py-0.5 rounded border border-indigo-100/30">
+                            {{ attachment.name || '附件' }}
+                          </a>
+                        </div>
+                      </div>
+                      <form class="review-form flex flex-col gap-2 border-t border-slate-100/50 pt-3" @submit.prevent="reviewProjectSubmission(submission)">
+                        <select v-model="projectReviewDrafts[submission.id].status" class="text-xs p-2 rounded-lg border border-slate-200 bg-white">
+                          <option value="reviewed">通过</option>
+                          <option value="needs_changes">退回修改</option>
+                        </select>
+                        <textarea v-model="projectReviewDrafts[submission.id].feedback" placeholder="反馈说明（退回修改时必填）" class="text-xs p-2 rounded-lg border border-slate-200 w-full min-h-[50px]"></textarea>
+                        <button class="btn-primary py-2 text-xs font-black uppercase tracking-wider rounded-xl w-full text-center" type="submit" :disabled="!canManage || actionWorking">提交审核</button>
+                      </form>
+                    </article>
+                    <div v-if="!reviewDossier.submissions?.length" class="empty-note compact">还没有阶段提交。</div>
                   </div>
-                  <div v-if="!reviewDossier.implementationLogs?.length" class="empty-note compact">还没有实施日志。</div>
-                </div>
-              </article>
-            </section>
+                </article>
+              </div>
+            </div>
           </template>
 
           <div v-else class="empty-note">学生提交立项、中期、结题、里程碑或资源申请后，教师会在这里完成审核与状态推进。</div>
@@ -801,6 +834,15 @@ const projectReviewCount = computed(() => reviewProjects.value.filter(item => it
 const stageReviewCount = computed(() => reviewProjects.value.filter(item => item.reviewBucket === 'stage_review').length);
 const resourceQueueCount = computed(() => reviewProjects.value.filter(item => item.reviewBucket === 'resource_pending').length);
 const interventionCount = computed(() => reviewProjects.value.length);
+
+const alertProjects = computed(() => {
+  return reviewQueue.value.filter(p => 
+    p.status === 'rejected' || 
+    p.status === 'needs_changes' ||
+    (p.pendingSubmissionCount && p.pendingSubmissionCount > 0) ||
+    (p.resourcesPendingCount && p.resourcesPendingCount > 0)
+  ).slice(0, 8);
+});
 const activeStudentProjectCount = computed(() => projects.value.filter(item => item.status === 'in_progress').length);
 const rejectedStudentProjectCount = computed(() => projects.value.filter(item => item.status === 'rejected').length);
 const projectQueues = computed(() => [

@@ -25,6 +25,7 @@ import KanbanTool from '@/pages/tools/Kanban.vue';
 import DevLogTool from '@/pages/tools/DevLog.vue';
 import ArchitectGuideTool from '@/pages/tools/ArchitectGuide.vue';
 import ArchitectTool from '@/pages/tools/Architect.vue';
+import AssessmentPage from '@/pages/Assessment.vue';
 import pinia from '@/stores';
 import { useAuthStore } from '@/stores/auth';
 
@@ -46,6 +47,7 @@ const routes = [
   { path: '/tools/architect-guide', component: ArchitectGuideTool, meta: { requiresAuth: true } },
   { path: '/tools/architect', component: ArchitectTool, meta: { requiresAuth: true } },
   { path: '/teacher', component: TeacherPage, meta: { requiresAuth: true, roles: ['teacher', 'judge'] } },
+  { path: '/teacher/assessment', component: AssessmentPage, meta: { requiresAuth: true, roles: ['teacher', 'judge'] } },
   { path: '/mission-control', component: MissionControlPage, meta: { requiresAuth: true, roles: ['teacher', 'judge'] } },
   { path: '/showcase', component: ShowcasePage, meta: { public: true } },
   { path: '/knowledge', component: KnowledgePage, meta: { public: true } },

@@ -112,47 +112,72 @@
                 </div>
               </section>
 
-              <details class="bg-white/70 backdrop-blur-xl border border-white/40 rounded-3xl overflow-hidden shadow-sm">
-                <summary class="px-6 py-5 cursor-pointer list-none flex items-center justify-between hover:bg-white/80 transition-colors">
-                  <div>
-                    <h3 class="text-base font-black text-slate-900 tracking-tight">阶段提交材料准备助手</h3>
-                    <p class="text-xs text-slate-400 mt-1">服务开题、里程碑、中期、结题材料上传</p>
-                  </div>
-                  <div class="flex items-center gap-4">
-                    <div class="w-32 h-2 bg-slate-200/60 rounded-full overflow-hidden">
-                      <div class="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 transition-all duration-700" :style="{ width: inceptionPercent + '%' }"></div>
+              <!-- 科创探险打怪清单 (Sci-Tech Adventure Checklist) -->
+              <div class="bg-white/70 backdrop-blur-xl border border-white/40 rounded-3xl overflow-hidden shadow-sm p-6 lg:p-8">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-6 border-b border-slate-100/60">
+                  <div class="space-y-1">
+                    <div class="flex items-center gap-2">
+                      <span class="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-purple-100 text-purple-700 border border-purple-200/50">Sci-Tech Checklist</span>
+                      <span class="text-xs text-slate-400 font-bold">开题与里程碑材料自动监控</span>
                     </div>
-                    <span class="text-sm font-black text-slate-900">{{ inceptionPercent }}%</span>
+                    <h3 class="text-xl font-black text-slate-900 tracking-tight">科创探险打怪清单</h3>
                   </div>
-                </summary>
-
-                <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/40 text-sm text-slate-600 leading-relaxed font-medium">
-                  这里帮助学生把阶段提交需要的材料整理清楚，不是强制在线完成。学生可以用模板或本地文档准备，再到对应提交节点上传。
+                  
+                  <!-- Circular SVG progress ring -->
+                  <div class="flex items-center gap-4 bg-slate-50/50 px-4 py-3 rounded-2xl border border-slate-100">
+                    <div class="relative w-12 h-12 flex-shrink-0">
+                      <!-- SVG Circle -->
+                      <svg class="w-full h-full transform -rotate-90">
+                        <circle cx="24" cy="24" r="20" stroke="rgba(226, 232, 240, 0.8)" stroke-width="4" fill="transparent"></circle>
+                        <circle cx="24" cy="24" r="20" stroke="url(#checklistGradient)" stroke-dasharray="125.6" :stroke-dashoffset="125.6 - (125.6 * inceptionPercent) / 100" stroke-width="4" stroke-linecap="round" fill="transparent" class="transition-all duration-700"></circle>
+                        <defs>
+                          <linearGradient id="checklistGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#8b5cf6"></stop>
+                            <stop offset="100%" stop-color="#4f46e5"></stop>
+                          </linearGradient>
+                        </defs>
+                      </svg>
+                      <span class="absolute inset-0 flex items-center justify-center text-xs font-black text-slate-900">{{ inceptionPercent }}%</span>
+                    </div>
+                    <div>
+                      <div class="text-xs font-black text-slate-900">准备进度</div>
+                      <div class="text-[10px] text-slate-400 font-bold mt-0.5">已就绪 {{ inceptionDoneCount }}/{{ inceptionTotalCount }} 项</div>
+                    </div>
+                  </div>
                 </div>
 
-                <div class="divide-y divide-slate-100/60">
-                  <button
-                    v-for="item in visibleInceptionItems"
+                <div class="py-3 text-xs text-slate-500 leading-relaxed font-bold border-b border-slate-100/60 bg-slate-50/30 -mx-8 px-8 mb-4">
+                  💡 贴心提示：这里展示了开题和里程碑需要的支撑材料。你可以用模板在本地准备，不强制在平台填写，最终成果在对应提交点上传即可。
+                </div>
+
+                <div class="grid sm:grid-cols-2 gap-4">
+                  <div
+                    v-for="item in inceptionItems"
                     :key="item.key"
-                    class="w-full text-left px-6 py-4 flex items-center gap-4 hover:bg-white/85 transition-colors"
+                    class="group w-full text-left p-4 rounded-2xl border transition-all duration-300 flex items-center gap-4 cursor-pointer"
+                    :class="item.done 
+                      ? 'bg-emerald-50/40 border-emerald-100/40 hover:bg-emerald-50/80' 
+                      : 'bg-white border-slate-100 hover:border-indigo-300 hover:shadow-lg hover:shadow-indigo-500/5 hover:-translate-y-0.5'"
                     @click="openSubmissionGuide(item.action || item.key)"
                   >
+                    <!-- Status check box -->
                     <div
-                      class="w-7 h-7 rounded-lg flex items-center justify-center text-xs"
-                      :class="item.done ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100/80 text-slate-400'"
+                      class="w-8 h-8 rounded-xl flex items-center justify-center text-xs transition-colors shrink-0"
+                      :class="item.done ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600'"
                     >
-                      <i class="fas" :class="item.done ? 'fa-check' : 'fa-circle'"></i>
+                      <i class="fas" :class="item.done ? 'fa-check' : 'fa-compass'"></i>
                     </div>
                     <div class="flex-1 min-w-0">
-                      <div class="text-sm font-bold" :class="item.done ? 'text-slate-400' : 'text-slate-900'">{{ item.label }}</div>
-                      <div v-if="item.detail && !item.done" class="text-xs text-slate-500 mt-1">{{ item.detail.replace(/^缺：/, '缺少：') }}</div>
+                      <div class="text-sm font-extrabold" :class="item.done ? 'text-slate-500 line-through' : 'text-slate-900'">{{ item.label }}</div>
+                      <div v-if="item.detail && !item.done" class="text-[11px] text-slate-400 font-bold mt-1 truncate">{{ item.detail.replace(/^缺：/, '缺失: ') }}</div>
+                      <div v-else-if="item.done" class="text-[11px] text-emerald-600 font-bold mt-1">已就绪 ✓</div>
                     </div>
-                    <span class="text-xs font-bold" :class="item.done ? 'text-emerald-600' : 'text-indigo-600'">
-                      {{ item.done ? '已完成' : '去准备' }}
+                    <span class="text-xs font-black shrink-0 transition-colors" :class="item.done ? 'text-emerald-600' : 'text-indigo-600 group-hover:underline'">
+                      {{ item.done ? '已就绪' : '去准备 →' }}
                     </span>
-                  </button>
+                  </div>
                 </div>
-              </details>
+              </div>
             </div>
 
             <div v-else-if="currentTool === 'implementation'" class="p-8 lg:p-12 max-w-7xl mx-auto space-y-12 animate-reveal">

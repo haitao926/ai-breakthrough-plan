@@ -64,56 +64,6 @@
               </div>
             </div>
           </div>
-
-          <!-- Deliverable Evidence Form (Interactive data collector) -->
-          <div class="mt-8 rounded-[24px] border border-indigo-100/80 bg-indigo-50/30 p-6 lg:p-7 shadow-sm">
-            <div class="flex items-center justify-between mb-4">
-              <span class="text-xs font-black uppercase tracking-[0.2em] text-indigo-600">
-                <i class="fas fa-edit mr-1"></i> 本阶段实践与活动记录
-              </span>
-              <span class="text-[10px] font-black text-indigo-400">数据将存入个人数字科创账本</span>
-            </div>
-            <textarea
-              :value="deliverableEvidences[index] || ''"
-              @input="$emit('save-evidence', index, $event.target.value)"
-              rows="3"
-              class="w-full rounded-2xl border border-indigo-100/50 bg-white/80 p-4 text-xs font-bold text-slate-700 placeholder-indigo-300/70 shadow-inner focus:bg-white focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition leading-relaxed"
-              placeholder="请输入你在本阶段的调试发现、实验参数、或者实践反思（至少5个字，用于解锁此阶段）..."
-            ></textarea>
-            <div class="flex justify-between items-center mt-3 px-1">
-              <span class="text-[10px] font-black tracking-wide" :class="isEvidenceValid(index) ? 'text-emerald-500' : 'text-slate-400'">
-                <i class="fas mr-1" :class="isEvidenceValid(index) ? 'fa-circle-check' : 'fa-circle-question'"></i>
-                {{ isEvidenceValid(index) ? '记录完整，符合解锁标准' : '请输入至少5个字的活动记录' }}
-              </span>
-              <span class="text-[10px] font-black text-slate-400">已输入: {{ (deliverableEvidences[index] || '').trim().length }} 字</span>
-            </div>
-          </div>
-
-          <!-- Phase Verification Card -->
-          <div class="mt-8 pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div class="flex items-center gap-3">
-              <div
-                class="flex h-8 w-8 items-center justify-center rounded-xl text-white shadow-sm transition-all"
-                :class="isPhaseCompleted(index) ? 'bg-emerald-500 shadow-emerald-500/20' : 'bg-slate-100 border border-slate-200 text-slate-400'"
-              >
-                <i class="fas" :class="isPhaseCompleted(index) ? 'fa-check' : 'fa-circle-dot'"></i>
-              </div>
-              <div class="text-left">
-                <h4 class="text-xs font-black text-slate-800">阶段活动确认</h4>
-                <p class="text-[11px] text-slate-400 mt-0.5">完成上述课堂操作和记录后，请在此确认完成。</p>
-              </div>
-            </div>
-            <button
-              @click="$emit('complete-phase', index)"
-              :disabled="!isEvidenceValid(index) && !isPhaseCompleted(index)"
-              class="rounded-xl px-5 py-2.5 text-xs font-black border transition duration-300 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 disabled:hover:bg-indigo-600/80"
-              :class="isPhaseCompleted(index)
-                ? 'bg-emerald-50 text-emerald-600 border-emerald-200 shadow-sm shadow-emerald-500/5'
-                : 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-500 shadow-md shadow-indigo-600/10'"
-            >
-              {{ isPhaseCompleted(index) ? '本阶段已完成' : '确认完成此阶段' }}
-            </button>
-          </div>
         </div>
       </section>
     </div>
@@ -145,27 +95,10 @@ const props = defineProps({
   phases: {
     type: Array,
     default: () => []
-  },
-  completedPhases: {
-    type: Object,
-    default: () => ({})
-  },
-  deliverableEvidences: {
-    type: Object,
-    default: () => ({})
   }
 });
 
-const emit = defineEmits(['complete-phase', 'save-evidence', 'focus-submission']);
-
-function isPhaseCompleted(index) {
-  return Boolean(props.completedPhases[index]);
-}
-
-function isEvidenceValid(index) {
-  const text = props.deliverableEvidences[index];
-  return text && text.trim().length >= 5;
-}
+const emit = defineEmits(['focus-submission']);
 
 function materialIcon(material) {
   const kind = String(material?.kind || '').toLowerCase();

@@ -1,69 +1,123 @@
 <template>
-  <div class="mission">
-    <header class="mission-header">
-      <div class="title">
-        <RouterLink to="/teacher" class="back">返回后台</RouterLink>
-        <h1>Mission Control Center</h1>
+  <div class="mission bg-[#0b0f19] text-[#f1f5f9] min-h-screen flex flex-col font-sans">
+    <header class="mission-header border-b border-indigo-950 bg-slate-950/80 backdrop-blur-xl px-8 py-5 flex items-center justify-between sticky top-0 z-50">
+      <div class="title flex items-center gap-4">
+        <RouterLink to="/teacher" class="back border border-indigo-900 bg-indigo-950/20 text-indigo-400 hover:text-white hover:bg-indigo-900/50 hover:border-indigo-600 transition-all px-4 py-2 rounded-xl text-xs font-black tracking-wider uppercase">返回后台</RouterLink>
+        <div class="flex items-center gap-3">
+          <div class="w-2.5 h-2.5 bg-cyan-400 rounded-full animate-ping"></div>
+          <h1 class="text-lg font-black uppercase tracking-wider text-cyan-400 font-mono">HAI Cyber Control Center</h1>
+        </div>
       </div>
-      <div class="meta">
-        <span>Projects: {{ projects.length }}</span>
-        <button class="ghost" @click="loadProjects">刷新</button>
+      <div class="meta flex items-center gap-6">
+        <span class="text-xs font-mono font-bold text-slate-400">MONITOR QUEUE: <strong class="text-cyan-400 font-black">{{ projects.length }} PROJECTS</strong></span>
+        <button class="ghost border border-slate-800 bg-slate-900/60 hover:bg-white hover:text-slate-950 hover:border-white transition-all text-xs font-extrabold px-4 py-2 rounded-xl" @click="loadProjects">REFRESH DATA</button>
       </div>
     </header>
 
-    <main class="mission-body">
-      <aside class="list">
-        <div v-if="!projects.length" class="muted">暂无项目</div>
+    <main class="mission-body flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-[calc(100vh-73px)]">
+      <!-- Sidebar List -->
+      <aside class="list lg:col-span-3 border-r border-indigo-950 bg-slate-950/30 p-6 overflow-y-auto custom-scrollbar flex flex-col gap-4">
+        <div v-if="!projects.length" class="text-center py-20 text-xs font-mono font-bold text-slate-600">SYSTEM: NO INCEPTION TARGETS DETECTED.</div>
         <div
           v-for="project in projects"
           :key="project.id"
-          class="list-item"
+          class="list-item bg-slate-900/40 border border-slate-900 hover:border-cyan-500/30 hover:bg-slate-900/80 p-5 rounded-2xl cursor-pointer transition-all duration-300 relative overflow-hidden group"
           :class="{ active: project.id === selectedId }"
           @click="selectProject(project.id)"
         >
-          <div class="list-title">{{ project.name }}</div>
-          <div class="list-meta">任务进度 {{ project.taskStats.done }}/{{ project.taskStats.total }}</div>
-          <div class="progress">
-            <div class="progress-bar" :style="{ width: `${project.taskStats.progress}%` }"></div>
+          <!-- Pulsing dot for activity indication -->
+          <div class="flex items-center justify-between gap-3 mb-2">
+            <h4 class="font-extrabold text-sm text-slate-200 group-hover:text-white transition-colors truncate flex-1 flex items-center gap-2">
+              <span v-if="project.taskStats.progress > 0" class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+              </span>
+              {{ project.name }}
+            </h4>
+            <span class="text-[10px] font-mono text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20 font-bold shrink-0">
+              {{ project.taskStats.progress }}%
+            </span>
+          </div>
+
+          <div class="flex justify-between items-center text-[10px] font-mono font-bold text-slate-500">
+            <span>MILESTONES DEPLOYED</span>
+            <span>{{ project.taskStats.done }}/{{ project.taskStats.total }}</span>
+          </div>
+
+          <div class="progress h-1 bg-slate-950 rounded-full overflow-hidden mt-3">
+            <div class="progress-bar h-full bg-gradient-to-r from-indigo-500 to-cyan-400 transition-all duration-500" :style="{ width: `${project.taskStats.progress}%` }"></div>
           </div>
         </div>
       </aside>
 
-      <section class="detail">
-        <div v-if="!detail" class="empty">请选择项目查看详情</div>
-        <div v-else>
-          <div class="detail-header">
-            <div>
-              <h2>{{ detail.project.title }}</h2>
-              <p class="muted">{{ detail.project.team_members || '无成员信息' }}</p>
+      <!-- Details Area -->
+      <section class="detail lg:col-span-9 p-8 overflow-y-auto custom-scrollbar flex flex-col justify-between">
+        <div v-if="!detail" class="empty border border-dashed border-slate-800 rounded-3xl bg-slate-950/20 flex flex-col items-center justify-center py-40 text-slate-500 space-y-4">
+          <i class="fas fa-radar text-4xl text-slate-700 animate-pulse"></i>
+          <span class="text-xs font-mono font-bold uppercase tracking-widest text-slate-600">Select target node to establish telemetry connection</span>
+        </div>
+        <div v-else class="space-y-6">
+          <div class="detail-header flex flex-col md:flex-row md:items-start justify-between gap-6 border-b border-indigo-950 pb-6">
+            <div class="space-y-1">
+              <div class="flex items-center gap-3">
+                <span class="px-2.5 py-0.5 rounded text-[9px] font-mono font-black uppercase tracking-wider bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">ONLINE TELEMETRY</span>
+                <span class="text-xs font-mono font-bold text-slate-500">ID: {{ selectedId.slice(0, 8) }}</span>
+              </div>
+              <h2 class="text-2xl font-black text-white tracking-tight">{{ detail.project.title }}</h2>
+              <p class="text-xs font-bold text-indigo-400 flex items-center gap-1.5">
+                <i class="fas fa-users text-slate-500"></i> {{ detail.project.team_members || '未知成员' }}
+              </p>
             </div>
-            <div class="muted">更新时间 {{ formatDate(detail.project.updated_at) }}</div>
-          </div>
-
-          <div class="progress-wrap">
-            <div class="progress-label">
-              <span>任务完成度</span>
-              <span>{{ progress }}%</span>
-            </div>
-            <div class="progress-track">
-              <div class="progress-bar" :style="{ width: `${progress}%` }"></div>
-            </div>
-          </div>
-
-          <div class="grid">
-            <div v-for="phase in ['m1','m2','m3']" :key="phase" class="column">
-              <h4>{{ phaseLabel(phase) }}</h4>
-              <div v-if="!wbs[phase].length" class="muted">无任务</div>
-              <div v-for="task in wbs[phase]" :key="task.id" class="task">{{ task.title }}</div>
+            <div class="text-xs font-mono text-slate-500 font-bold bg-slate-950/40 border border-slate-900 px-4 py-2 rounded-xl">
+              LAST UPDATE: <span class="text-slate-300">{{ formatDate(detail.project.updated_at) }}</span>
             </div>
           </div>
 
-          <div class="logs">
-            <h3>开发日志</h3>
-            <div v-if="!detail.logs?.length" class="muted">暂无日志</div>
-            <div v-for="log in (detail.logs || []).slice(0, 6)" :key="log.id" class="log-item">
-              <span class="muted">{{ formatDate(log.created_at) }}</span>
-              <span>{{ log.content }}</span>
+          <div class="progress-wrap bg-slate-950/30 border border-indigo-950/50 p-6 rounded-2xl space-y-3">
+            <div class="progress-label flex justify-between items-center text-xs font-mono font-bold text-indigo-300">
+              <span>PROJECT OVERALL PERFORMANCE TELEMETRY</span>
+              <span class="text-cyan-400 font-black">{{ progress }}%</span>
+            </div>
+            <div class="progress-track h-2.5 bg-slate-950 rounded-full overflow-hidden border border-slate-900">
+              <div class="progress-bar h-full bg-gradient-to-r from-indigo-500 via-cyan-400 to-purple-500 transition-all duration-500" :style="{ width: `${progress}%` }"></div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div v-for="phase in ['m1','m2','m3']" :key="phase" class="column bg-slate-950/20 border border-indigo-950/50 p-6 rounded-2xl min-h-[220px]">
+              <h4 class="text-[10px] font-mono font-black uppercase tracking-wider text-indigo-400 border-b border-indigo-950 pb-3 mb-4 flex items-center justify-between">
+                <span>{{ phaseLabel(phase) }}</span>
+                <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+              </h4>
+              <div v-if="!wbs[phase].length" class="text-xs font-mono italic text-slate-600 py-6 text-center">NO DEPLOYED TASKS</div>
+              <div v-for="task in wbs[phase]" :key="task.id" class="task bg-[#111422] hover:bg-[#161a2e] border border-indigo-950/50 rounded-xl px-4 py-3 text-xs font-bold text-slate-300 hover:text-white transition-all cursor-default mb-2 flex items-center justify-between">
+                <span>{{ task.title }}</span>
+                <span class="w-1.5 h-1.5 rounded-full" :class="task.status === 'done' || task.status === 'completed' ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-amber-500 animate-pulse'"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Auto-scrolling Terminal Console -->
+          <div class="logs-console bg-slate-950 border border-cyan-500/20 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
+            <div class="console-header bg-slate-900/60 px-6 py-3 border-b border-indigo-950 flex items-center">
+              <div class="flex gap-1.5">
+                <div class="w-2.5 h-2.5 rounded-full bg-rose-500/80"></div>
+                <div class="w-2.5 h-2.5 rounded-full bg-amber-500/80"></div>
+                <div class="w-2.5 h-2.5 rounded-full bg-emerald-500/80"></div>
+              </div>
+              <span class="text-[10px] font-mono font-black uppercase tracking-widest text-slate-500 ml-4">DEVLOGS TELEMETRY STREAM</span>
+            </div>
+            <div class="console-body p-6 max-h-60 overflow-y-auto space-y-2.5 flex-1 custom-scrollbar">
+              <div v-if="!detail.logs?.length" class="console-line font-mono text-xs text-slate-500">SYSTEM: NO DEPLOYMENT LOGS DETECTED ON TARGET TELEMETRY.</div>
+              <div v-for="log in (detail.logs || [])" :key="log.id" class="console-line font-mono text-xs flex gap-3 items-start">
+                <span class="text-indigo-400 font-bold shrink-0">[{{ formatDate(log.created_at) }}]</span>
+                <span class="text-cyan-400 font-bold shrink-0">$</span>
+                <span class="text-emerald-400 leading-relaxed">{{ log.content }}</span>
+              </div>
+              <div class="console-line font-mono text-xs text-emerald-400/50 flex gap-2 items-center">
+                <span>> TELEMETRY LOG WATCHER ACTIVE [WAITING FOR STACK PULSE]</span>
+                <span class="w-1.5 h-4 bg-emerald-400 animate-blink shrink-0"></span>
+              </div>
             </div>
           </div>
         </div>
@@ -389,47 +443,41 @@ onMounted(async () => {
   border-color: rgba(99, 102, 241, 0.2);
 }
 
-.logs {
-  background: rgba(255, 255, 255, 0.02);
-  border-radius: 24px;
-  padding: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.04);
+.logs-console {
+  background: #05070f;
+  border: 1px solid rgba(6, 182, 212, 0.15);
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.8);
 }
 
-.logs h3 {
-  margin: 0 0 16px 0;
-  font-size: 1rem;
-  font-weight: 900;
-  color: #fff;
-  text-transform: uppercase;
+.console-body {
+  font-family: 'Outfit', monospace;
+  background-image: linear-gradient(rgba(16, 185, 129, 0.015) 50%, transparent 50%);
+  background-size: 100% 4px;
+}
+
+.console-line {
   letter-spacing: 0.05em;
+  text-shadow: 0 0 4px rgba(16, 185, 129, 0.3);
 }
 
-.log-item {
-  font-size: 0.82rem;
-  padding: 12px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  display: flex;
-  gap: 16px;
+.animate-blink {
+  animation: blink-cursor 1s step-end infinite;
 }
 
-.log-item:last-child {
-  border-bottom: none;
+@keyframes blink-cursor {
+  from, to { background-color: transparent; }
+  50% { background-color: currentColor; }
 }
 
-.log-item span:first-child {
-  font-family: monospace;
-  font-weight: 800;
-  color: #6366f1;
-}
-
-.log-item span:last-child {
-  color: #e2e8f0;
+.list-item.active {
+  border-color: #06b6d4;
+  background: rgba(6, 182, 212, 0.08);
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.15);
 }
 
 .muted {
   font-size: 0.8rem;
-  color: #64748b;
+  color: #475569;
   font-weight: 700;
 }
 

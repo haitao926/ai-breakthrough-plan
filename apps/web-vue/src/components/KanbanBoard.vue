@@ -35,7 +35,7 @@
             :key="task.id" 
             draggable="true"
             @dragstart="onDragStart($event, task)"
-            class="bg-white p-3 rounded-lg border border-slate-200 shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:border-indigo-400 hover:shadow-md transition-all group cursor-move select-none"
+            class="bg-white p-3 rounded-xl border border-slate-200 shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:border-indigo-500 hover:shadow-lg hover:shadow-indigo-500/5 transition-all group cursor-move select-none kanban-task-card"
           >
             <div class="flex justify-between items-start mb-2">
               <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 tracking-wide">{{ task.phase || '任务' }}</span>
@@ -89,3 +89,18 @@ const onDrop = (e, status) => {
   }
 };
 </script>
+
+<style scoped>
+.kanban-task-card {
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.kanban-task-card:hover {
+  transform: translateY(-3px) scale(1.01) rotate(0.5deg);
+  box-shadow: 0 10px 25px rgba(99, 102, 241, 0.08);
+}
+
+.kanban-task-card:active {
+  transform: translateY(1px) scale(0.98) rotate(-0.5deg);
+}
+</style>
