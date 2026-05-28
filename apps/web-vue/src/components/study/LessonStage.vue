@@ -31,20 +31,30 @@
 
         <!-- Phase Content (Knowledge / Text) -->
         <div class="px-8 py-10 lg:px-12">
-          <article v-if="phase.student?.content" class="slide-prose" v-html="phase.student.content"></article>
+          <article v-if="phase.student?.content" class="slide-prose markdown-premium" v-html="phase.student.content"></article>
 
           <!-- Code Prompts -->
           <div v-if="phase.student?.prompts?.length" class="mt-10 space-y-6">
-            <div v-for="(prompt, pIndex) in phase.student.prompts" :key="pIndex" class="relative overflow-hidden rounded-2xl bg-slate-950 p-6 shadow-2xl">
-              <div class="flex items-center gap-3 mb-4">
-                <div class="flex gap-1.5">
-                  <div class="h-3 w-3 rounded-full bg-rose-500"></div>
-                  <div class="h-3 w-3 rounded-full bg-amber-500"></div>
-                  <div class="h-3 w-3 rounded-full bg-emerald-500"></div>
+            <div v-for="(prompt, pIndex) in phase.student.prompts" :key="pIndex" class="relative overflow-hidden rounded-2xl bg-slate-950 p-6 shadow-2xl group/prompt">
+              <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+                <div class="flex items-center gap-3">
+                  <div class="flex gap-1.5">
+                    <div class="h-3 w-3 rounded-full bg-rose-500"></div>
+                    <div class="h-3 w-3 rounded-full bg-amber-500"></div>
+                    <div class="h-3 w-3 rounded-full bg-emerald-500"></div>
+                  </div>
+                  <div class="text-[10px] font-mono font-black uppercase tracking-widest text-slate-400">{{ prompt.label || 'Prompt' }}</div>
                 </div>
-                <div class="text-[10px] font-black uppercase tracking-widest text-slate-500">{{ prompt.label || 'Prompt' }}</div>
+                <button 
+                  @click="copyPrompt(prompt.text, pIndex)" 
+                  class="text-[10px] font-black flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-800 transition-all"
+                  :class="copiedIndex === pIndex ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/5' : 'text-slate-400 hover:text-emerald-400'"
+                >
+                  <i class="fas" :class="copiedIndex === pIndex ? 'fa-check' : 'fa-copy'"></i>
+                  <span>{{ copiedIndex === pIndex ? '已复制' : '复制提示词' }}</span>
+                </button>
               </div>
-              <pre class="whitespace-pre-wrap font-mono text-sm leading-7 text-emerald-400 selection:bg-emerald-500/30">{{ prompt.text }}</pre>
+              <pre class="whitespace-pre-wrap font-mono text-xs leading-6 text-emerald-400 selection:bg-emerald-500/30 pr-2">{{ prompt.text }}</pre>
             </div>
           </div>
 
@@ -83,6 +93,8 @@
 </template>
 
 <script setup>
+import { ref } from 'vue';
+
 const props = defineProps({
   lessonTitle: {
     type: String,
@@ -99,6 +111,21 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['focus-submission']);
+
+const copiedIndex = ref(null);
+async function copyPrompt(text, index) {
+  try {
+    await navigator.clipboard.writeText(text || '');
+    copiedIndex.value = index;
+    setTimeout(() => {
+      if (copiedIndex.value === index) {
+        copiedIndex.value = null;
+      }
+    }, 2000);
+  } catch (err) {
+    console.error('Failed to copy text: ', err);
+  }
+}
 
 function materialIcon(material) {
   const kind = String(material?.kind || '').toLowerCase();

@@ -103,7 +103,7 @@
           <div v-if="guideLoading" class="py-20 text-center text-slate-400">
             <i class="fas fa-spinner fa-spin text-3xl"></i>
           </div>
-          <div v-else class="prose prose-slate mt-8 max-w-none" v-html="guideHtml"></div>
+          <div v-else class="markdown-premium mt-8" v-html="guideHtml"></div>
         </div>
       </div>
     </template>
