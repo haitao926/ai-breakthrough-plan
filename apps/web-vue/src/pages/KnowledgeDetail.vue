@@ -33,66 +33,68 @@
           </RouterLink>
 
           <article v-if="learningUnit" class="kb-learning-unit">
-            <header class="kb-learning-unit__header">
-              <div>
-                <p class="knowledge-kicker">{{ categoryLabel(categoryKey(discipline)) }} · Video Challenge</p>
-                <h2>{{ learningUnit.title }}</h2>
-                <p>{{ learningUnit.summary }}</p>
-              </div>
-              <span class="kb-learning-unit__status" :class="{ 'is-complete': completed }">
-                {{ completed ? '已完成' : `${learningUnit.durationMinutes || 10} 分钟` }}
-              </span>
-            </header>
-
-            <div class="kb-video">
-              <iframe
-                v-if="activeEmbedUrl"
-                :src="activeEmbedUrl"
-                title="Bilibili Crash Course video"
-                allowfullscreen
-                sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-              ></iframe>
-              <div v-else class="kb-video-fallback">
-                <div>
-                  <strong>这个视频暂时无法嵌入</strong>
-                  <p>可以先打开 Bilibili 外链观看，再回来完成挑战。</p>
-                  <a :href="learningUnit.source?.url" target="_blank" rel="noreferrer">在 Bilibili 打开</a>
+            <div class="kb-watch-stage">
+              <div class="kb-video">
+                <iframe
+                  v-if="activeEmbedUrl"
+                  :src="activeEmbedUrl"
+                  title="Bilibili Crash Course video"
+                  allowfullscreen
+                  sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                ></iframe>
+                <div v-else class="kb-video-fallback">
+                  <div>
+                    <strong>这个视频暂时无法嵌入</strong>
+                    <p>可以先打开 Bilibili 外链观看，再回来完成挑战。</p>
+                    <a :href="activeVideoUrl || learningUnit.source?.url" target="_blank" rel="noreferrer">在 Bilibili 打开</a>
+                  </div>
                 </div>
+              </div>
+
+              <div class="kb-now-playing">
+                <button
+                  type="button"
+                  :disabled="!previousVideo"
+                  aria-label="播放上一集"
+                  @click="selectAdjacentVideo(-1)"
+                >
+                  <i class="fas fa-arrow-left"></i>
+                  上一集
+                </button>
+                <div>
+                  <p class="knowledge-kicker">{{ categoryLabel(categoryKey(discipline)) }} · {{ activeVideoPosition }}</p>
+                  <h1>{{ activeVideoTitle || learningUnit.source?.title || learningUnit.title }}</h1>
+                  <span>{{ learningUnit.title }} · 看完后完成下方挑战拿 {{ totalAvailablePoints }} 分</span>
+                </div>
+                <button
+                  type="button"
+                  :disabled="!nextVideo"
+                  aria-label="播放下一集"
+                  @click="selectAdjacentVideo(1)"
+                >
+                  下一集
+                  <i class="fas fa-arrow-right"></i>
+                </button>
               </div>
             </div>
 
-            <div class="kb-episode-controls" v-if="seriesVideos.length">
-              <button type="button" :disabled="!previousVideo" @click="selectAdjacentVideo(-1)">
-                <i class="fas fa-arrow-left"></i>
-                上一集
-              </button>
-              <div>
-                <span>{{ activeVideoPosition }}</span>
-                <strong>{{ activeVideoTitle || learningUnit.source?.title || '推荐视频' }}</strong>
-              </div>
-              <button type="button" :disabled="!nextVideo" @click="selectAdjacentVideo(1)">
-                下一集
-                <i class="fas fa-arrow-right"></i>
-              </button>
-            </div>
-
-            <section v-if="seriesVideos.length" class="kb-series-playlist">
-              <div class="kb-section-heading">
-                <div>
-                  <p class="knowledge-kicker">Crash Course Series</p>
-                  <h2>{{ seriesTitle }}</h2>
-                </div>
+            <section v-if="seriesVideos.length" class="kb-series-playlist" aria-label="系列视频目录">
+              <div class="kb-series-head">
+                <strong>{{ seriesTitle }}</strong>
+                <span>横向选择上下集</span>
                 <a v-if="seriesSourceUrl" :href="seriesSourceUrl" target="_blank" rel="noreferrer">
-                  查看原收藏夹 <i class="fas fa-up-right-from-square"></i>
+                  原收藏夹 <i class="fas fa-up-right-from-square"></i>
                 </a>
               </div>
               <div class="kb-series-list">
                 <button
                   v-for="video in seriesVideos"
                   :key="video.id || video.bvid"
+                  :ref="el => setEpisodeButtonRef(videoKey(video), el)"
                   type="button"
                   class="kb-series-item"
                   :class="{ 'is-active': videoKey(activeVideo) === videoKey(video) }"
+                  :aria-current="videoKey(activeVideo) === videoKey(video) ? 'true' : undefined"
                   @click="selectVideo(video)"
                 >
                   <span>{{ video.episode || '视频' }}</span>
@@ -102,20 +104,13 @@
               </div>
             </section>
 
-            <div class="kb-source-note">
-              <div>
-                <strong>{{ activeVideoTitle || learningUnit.source?.title || '推荐视频' }}</strong>
-                <p>{{ learningUnit.source?.note || '看完视频后完成下面的挑战题。' }}</p>
-              </div>
-              <a v-if="activeVideoUrl" :href="activeVideoUrl" target="_blank" rel="noreferrer">
-                外链观看 <i class="fas fa-up-right-from-square"></i>
-              </a>
-            </div>
-
             <section class="kb-quiz">
               <div class="kb-section-heading">
-                <p class="knowledge-kicker">Quest Check</p>
-                <h2>看完挑战</h2>
+                <div>
+                  <p class="knowledge-kicker">答题挑战</p>
+                  <h2>看完挑战</h2>
+                  <small>左右滑动或按方向键切题，答完后提交积分。</small>
+                </div>
                 <span>{{ score }} / {{ learningUnit.questions?.length || 0 }} 正确</span>
               </div>
 
@@ -132,35 +127,45 @@
                   @keydown.left.prevent="goQuestion(-1)"
                   @keydown.right.prevent="goQuestion(1)"
                 >
-                  <div class="kb-quiz-progress">
-                    <span>第 {{ activeQuestionIndex + 1 }} / {{ questionCount }} 题</span>
-                    <div>
-                      <i
-                        v-for="(question, index) in learningUnit.questions"
-                        :key="question.id"
-                        :class="{
-                          'is-active': index === activeQuestionIndex,
-                          'is-answered': answers[question.id] !== undefined
-                        }"
-                      ></i>
+                  <div class="kb-quiz-track" :style="{ transform: `translateX(-${activeQuestionIndex * 100}%)` }">
+                    <div
+                      v-for="(question, questionIndex) in learningUnit.questions"
+                      :key="question.id"
+                      class="kb-quiz-slide"
+                      :aria-hidden="questionIndex !== activeQuestionIndex"
+                    >
+                      <div class="kb-quiz-progress">
+                        <span>第 {{ questionIndex + 1 }} / {{ questionCount }} 题</span>
+                        <div>
+                          <i
+                            v-for="(dotQuestion, index) in learningUnit.questions"
+                            :key="dotQuestion.id"
+                            :class="{
+                              'is-active': index === activeQuestionIndex,
+                              'is-answered': answers[dotQuestion.id] !== undefined
+                            }"
+                          ></i>
+                        </div>
+                      </div>
+                      <h3>{{ questionIndex + 1 }}. {{ question.prompt }}</h3>
+                      <div class="kb-quiz-options">
+                        <button
+                          v-for="(option, optionIndex) in question.options"
+                          :key="option"
+                          type="button"
+                          class="kb-quiz-option"
+                          :class="optionClass(question, optionIndex)"
+                          :tabindex="questionIndex === activeQuestionIndex ? 0 : -1"
+                          @click="selectAnswer(question.id, optionIndex)"
+                        >
+                          {{ option }}
+                        </button>
+                      </div>
+                      <p v-if="answers[question.id] !== undefined" class="kb-quiz-explanation">
+                        {{ question.explanation }}
+                      </p>
                     </div>
                   </div>
-                  <h3>{{ activeQuestionIndex + 1 }}. {{ activeQuestion.prompt }}</h3>
-                  <div class="kb-quiz-options">
-                    <button
-                      v-for="(option, optionIndex) in activeQuestion.options"
-                      :key="option"
-                      type="button"
-                      class="kb-quiz-option"
-                      :class="optionClass(activeQuestion, optionIndex)"
-                      @click="selectAnswer(activeQuestion.id, optionIndex)"
-                    >
-                      {{ option }}
-                    </button>
-                  </div>
-                  <p v-if="answers[activeQuestion.id] !== undefined" class="kb-quiz-explanation">
-                    {{ activeQuestion.explanation }}
-                  </p>
                 </article>
 
                 <button type="button" class="kb-quiz-nav" :disabled="activeQuestionIndex >= questionCount - 1" @click="goQuestion(1)">
@@ -182,6 +187,7 @@
                     'is-active': index === activeQuestionIndex,
                     'is-answered': answers[question.id] !== undefined
                   }"
+                  :aria-current="index === activeQuestionIndex ? 'true' : undefined"
                   @click="activeQuestionIndex = index"
                 >
                   {{ index + 1 }}
@@ -204,28 +210,15 @@
           </article>
 
           <article v-else class="kb-panel">
-            <p class="knowledge-kicker">Coming Soon</p>
+            <p class="knowledge-kicker">即将开放</p>
             <h2>这个方向的学习挑战正在整理</h2>
             <p>你仍然可以先从下面的研究问题和项目切口开始探索。</p>
           </article>
 
-          <section class="kb-study-summary">
-            <article class="kb-study-summary-card">
-              <p class="knowledge-kicker">Learning Status</p>
-              <strong>{{ profile.totalPoints }} 分</strong>
-              <span>{{ completed ? '本方向挑战已完成' : `完成挑战可获得 ${totalAvailablePoints} 分` }}</span>
-            </article>
-            <article class="kb-study-summary-card">
-              <p class="knowledge-kicker">Current Episode</p>
-              <strong>{{ activeVideoPosition }}</strong>
-              <span>{{ activeVideoTitle || learningUnit?.source?.title || '推荐视频' }}</span>
-            </article>
-          </section>
-
           <section class="kb-explore-grid">
             <article v-if="discipline.research_questions?.length" class="kb-panel">
               <div class="kb-section-heading">
-                <p class="knowledge-kicker">Research Questions</p>
+                <p class="knowledge-kicker">研究问题</p>
                 <h2>研究问题</h2>
               </div>
               <div class="kb-question-list">
@@ -238,7 +231,7 @@
 
             <article v-if="discipline.key_concepts?.length" class="kb-panel">
               <div class="kb-section-heading">
-                <p class="knowledge-kicker">Concepts</p>
+                <p class="knowledge-kicker">关键概念</p>
                 <h2>关键概念</h2>
               </div>
               <div class="kb-concept-list">
@@ -252,7 +245,7 @@
 
           <section class="kb-next-section">
             <div class="kb-section-heading">
-              <p class="knowledge-kicker">Next Step</p>
+              <p class="knowledge-kicker">下一步</p>
               <h2>继续探索课程与项目</h2>
             </div>
             <div class="kb-next-links">
@@ -287,7 +280,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import SiteNav from '@/components/SiteNav.vue';
 import PortalFooter from '@/components/portal/PortalFooter.vue';
@@ -309,6 +302,7 @@ const quizMessage = ref('');
 const activeVideoKey = ref('');
 const activeQuestionIndex = ref(0);
 const questionTouchStartX = ref(0);
+const episodeButtonRefs = new Map();
 const progressKey = 'kbLearningProgress:v1';
 
 const palette = {
@@ -497,6 +491,7 @@ function selectVideo(video) {
   const key = videoKey(video);
   activeVideoKey.value = key;
   syncVideoQuery(key);
+  scrollActiveEpisodeIntoView();
 }
 
 function selectAdjacentVideo(delta) {
@@ -522,6 +517,22 @@ function restoreVideoFromQuery() {
     return key === requested || video?.bvid === requested || video?.id === requested;
   });
   if (found) activeVideoKey.value = videoKey(found);
+  scrollActiveEpisodeIntoView();
+}
+
+function setEpisodeButtonRef(key, el) {
+  if (!key) return;
+  if (el) episodeButtonRefs.set(key, el);
+  else episodeButtonRefs.delete(key);
+}
+
+function scrollActiveEpisodeIntoView() {
+  nextTick(() => {
+    const el = episodeButtonRefs.get(videoKey(activeVideo.value));
+    if (el && typeof el.scrollIntoView === 'function') {
+      el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  });
 }
 
 function loadProgress() {
@@ -672,8 +683,7 @@ watch(() => [route.query.video, route.query.series], () => {
 
 .kb-panel,
 .kb-learning-unit,
-.kb-next-section,
-.kb-study-summary-card {
+.kb-next-section {
   border: 1px solid rgba(75, 94, 71, 0.16);
   background: rgba(255, 253, 246, 0.82);
   backdrop-filter: blur(14px);
@@ -701,7 +711,6 @@ watch(() => [route.query.video, route.query.series], () => {
   margin-top: 0;
 }
 
-.kb-learning-unit__header,
 .kb-section-heading {
   display: flex;
   align-items: flex-start;
@@ -710,7 +719,6 @@ watch(() => [route.query.video, route.query.series], () => {
   padding: 16px 18px;
 }
 
-.kb-learning-unit__header h2,
 .kb-section-heading h2,
 .kb-panel h2 {
   margin: 6px 0 0;
@@ -719,32 +727,27 @@ watch(() => [route.query.video, route.query.series], () => {
   font-weight: 900;
 }
 
-.kb-learning-unit__header p:not(.knowledge-kicker),
 .kb-panel p {
   margin-top: 8px;
   color: #64748b;
   line-height: 1.7;
 }
 
-.kb-learning-unit__status {
-  flex: 0 0 auto;
-  border-radius: 999px;
-  padding: 8px 11px;
-  background: var(--field-bg, #eef2e8);
-  color: var(--field-color, #4d644f);
-  font-size: 0.75rem;
-  font-weight: 900;
-}
-
-.kb-learning-unit__status.is-complete {
-  background: #dcfce7;
-  color: #16a34a;
+.kb-watch-stage {
+  background:
+    radial-gradient(circle at 12% 0%, rgba(255, 255, 255, 0.18), transparent 34%),
+    linear-gradient(145deg, #16251d, #07100d 62%, #11160f);
+  padding: 14px;
 }
 
 .kb-video {
   aspect-ratio: 16 / 9;
   width: 100%;
   background: #020617;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 20px;
+  box-shadow: 0 24px 70px rgba(8, 18, 12, 0.28);
+  overflow: hidden;
 }
 
 .kb-video iframe {
@@ -763,59 +766,62 @@ watch(() => [route.query.video, route.query.series], () => {
   padding: 24px;
 }
 
-.kb-episode-controls {
+.kb-now-playing {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 12px;
+  gap: 14px;
   align-items: center;
-  border-bottom: 1px solid rgba(77, 100, 79, 0.14);
-  background: rgba(255, 253, 246, 0.9);
-  padding: 12px 16px;
+  margin-top: 12px;
+  color: #f8fafc;
 }
 
-.kb-episode-controls button {
+.kb-now-playing button {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  border: 1px solid rgba(77, 100, 79, 0.16);
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 999px;
-  background: #fffdf6;
-  color: var(--field-color, #4d644f);
-  padding: 9px 12px;
-  font-size: 0.76rem;
+  background: rgba(255, 253, 246, 0.1);
+  color: #f8fafc;
+  padding: 10px 14px;
+  font-size: 0.78rem;
   font-weight: 950;
 }
 
-.kb-episode-controls button:disabled {
-  color: #94a3b8;
-  background: #f1f5f9;
+.kb-now-playing button:disabled {
+  color: rgba(226, 232, 240, 0.46);
+  background: rgba(255, 255, 255, 0.05);
   cursor: not-allowed;
 }
 
-.kb-episode-controls div {
+.kb-now-playing div {
   min-width: 0;
   text-align: center;
 }
 
-.kb-episode-controls span {
-  display: block;
-  color: var(--field-color, #4d644f);
-  font-size: 0.72rem;
-  font-weight: 950;
-}
-
-.kb-episode-controls strong {
-  display: block;
+.kb-now-playing h1 {
   overflow: hidden;
-  color: var(--field-ink, #1f2f24);
-  font-size: 0.86rem;
+  margin: 4px 0 3px;
+  color: #fffdf6;
+  font-size: clamp(1.05rem, 2vw, 1.5rem);
   font-weight: 950;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.kb-now-playing span {
+  display: block;
+  overflow: hidden;
+  color: rgba(226, 232, 240, 0.74);
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .kb-video-fallback a,
-.kb-source-note a,
 .kb-series-playlist a {
   color: var(--field-color, #4d644f);
   font-weight: 900;
@@ -823,19 +829,39 @@ watch(() => [route.query.video, route.query.series], () => {
 
 .kb-series-playlist {
   border-bottom: 1px solid rgba(77, 100, 79, 0.14);
-  background:
-    linear-gradient(135deg, var(--field-glow, rgba(77, 100, 79, 0.1)), transparent 36%),
-    rgba(255, 253, 246, 0.95);
-  padding: 14px 16px 16px;
+  background: rgba(255, 253, 246, 0.95);
+  padding: 12px 16px 14px;
 }
 
-.kb-series-playlist .kb-section-heading {
+.kb-series-head {
+  display: flex;
   align-items: center;
-  padding: 0;
+  gap: 10px;
+  min-width: 0;
 }
 
-.kb-series-playlist .kb-section-heading a {
+.kb-series-head strong {
+  overflow: hidden;
+  color: var(--field-ink, #1f2f24);
+  font-size: 0.9rem;
+  font-weight: 950;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kb-series-head span {
   flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--field-bg, #eef2e8);
+  color: var(--field-color, #4d644f);
+  padding: 5px 8px;
+  font-size: 0.68rem;
+  font-weight: 950;
+}
+
+.kb-series-head a {
+  flex: 0 0 auto;
+  margin-left: auto;
   font-size: 0.78rem;
   text-decoration: none;
 }
@@ -851,14 +877,14 @@ watch(() => [route.query.video, route.query.series], () => {
 
 .kb-series-item {
   display: grid;
-  grid-template-columns: 38px minmax(0, 1fr);
-  gap: 10px;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 9px;
   align-items: center;
-  flex: 0 0 min(340px, 78vw);
+  flex: 0 0 min(300px, 76vw);
   border: 1px solid rgba(77, 100, 79, 0.16);
-  border-radius: 16px;
+  border-radius: 14px;
   background: rgba(250, 250, 244, 0.92);
-  padding: 11px;
+  padding: 9px;
   scroll-snap-align: start;
   text-align: left;
   transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
@@ -874,7 +900,7 @@ watch(() => [route.query.video, route.query.series], () => {
 .kb-series-item span {
   display: grid;
   place-items: center;
-  height: 30px;
+  height: 28px;
   border-radius: 999px;
   background: #ffffff;
   color: var(--field-color, #4d644f);
@@ -900,27 +926,6 @@ watch(() => [route.query.video, route.query.series], () => {
   font-weight: 800;
 }
 
-.kb-source-note {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px 20px;
-  border-bottom: 1px solid rgba(77, 100, 79, 0.14);
-}
-
-.kb-source-note strong {
-  color: var(--field-ink, #1f2f24);
-  font-size: 0.9rem;
-}
-
-.kb-source-note p {
-  margin-top: 5px;
-  color: #64748b;
-  font-size: 0.86rem;
-  line-height: 1.6;
-}
-
 .kb-quiz {
   display: grid;
   gap: 14px;
@@ -929,6 +934,14 @@ watch(() => [route.query.video, route.query.series], () => {
 
 .kb-section-heading {
   padding: 0 0 4px;
+}
+
+.kb-section-heading small {
+  display: block;
+  margin-top: 5px;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 800;
 }
 
 .kb-section-heading span {
@@ -944,8 +957,25 @@ watch(() => [route.query.video, route.query.series], () => {
   border: 1px solid rgba(77, 100, 79, 0.14);
   border-radius: 20px;
   background: rgba(250, 250, 244, 0.86);
-  padding: 18px;
+  overflow: hidden;
   touch-action: pan-y;
+}
+
+.kb-quiz-question:focus {
+  outline: 3px solid var(--field-glow, rgba(77, 100, 79, 0.18));
+  outline-offset: 3px;
+}
+
+.kb-quiz-track {
+  display: flex;
+  transition: transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  width: 100%;
+}
+
+.kb-quiz-slide {
+  flex: 0 0 100%;
+  min-width: 0;
+  padding: 18px;
 }
 
 .kb-quiz-carousel {
@@ -1153,41 +1183,6 @@ watch(() => [route.query.video, route.query.series], () => {
   font-weight: 900;
 }
 
-.kb-study-summary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 18px;
-}
-
-.kb-study-summary-card {
-  min-width: 0;
-  border-radius: 20px;
-  padding: 16px;
-}
-
-.kb-study-summary-card strong {
-  display: block;
-  overflow: hidden;
-  margin-top: 6px;
-  color: var(--field-ink, #1f2f24);
-  font-size: 1.15rem;
-  font-weight: 950;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.kb-study-summary-card span {
-  display: block;
-  overflow: hidden;
-  margin-top: 5px;
-  color: #64748b;
-  font-size: 0.8rem;
-  font-weight: 850;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .kb-explore-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1288,41 +1283,36 @@ watch(() => [route.query.video, route.query.series], () => {
     padding: 10px 12px 42px;
   }
 
-  .kb-learning-unit__header,
   .kb-points,
-  .kb-series-playlist .kb-section-heading,
-  .kb-source-note {
+  .kb-series-head {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .kb-watch-stage {
+    padding: 10px;
   }
 
   .kb-next-links {
     grid-template-columns: 1fr;
   }
 
-  .kb-study-summary {
-    grid-template-columns: 1fr;
-  }
-
-  .kb-learning-unit__header {
-    padding: 14px;
-  }
-
-  .kb-learning-unit__header p:not(.knowledge-kicker) {
-    display: none;
-  }
-
   .kb-video {
     aspect-ratio: 16 / 10;
+    border-radius: 16px;
   }
 
-  .kb-episode-controls {
+  .kb-now-playing {
     grid-template-columns: 1fr;
     text-align: center;
   }
 
-  .kb-episode-controls button {
+  .kb-now-playing button {
     justify-content: center;
+  }
+
+  .kb-series-head a {
+    margin-left: 0;
   }
 
   .kb-quiz-carousel {
