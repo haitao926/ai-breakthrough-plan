@@ -1,33 +1,32 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import HomePage from '@/pages/Home.vue';
-import WorkspacePage from '@/pages/Workspace.vue';
-import ProjectsPage from '@/pages/Projects.vue';
-import CompetitionsPage from '@/pages/Competitions.vue';
-import CompetitionDetailPage from '@/pages/CompetitionDetail.vue';
-import ToolsPage from '@/pages/Tools.vue';
-import TeacherPage from '@/pages/Teacher.vue';
-import ShowcasePage from '@/pages/Showcase.vue';
-import LoginPage from '@/pages/Login.vue';
-import RegisterPage from '@/pages/Register.vue';
-import KnowledgePage from '@/pages/Knowledge.vue';
-import DownloadsPage from '@/pages/Downloads.vue';
-import CoursePage from '@/pages/Course.vue';
-import StudyPage from '@/pages/Study.vue';
-import MissionControlPage from '@/pages/MissionControl.vue';
-import SmartWorkspacePage from '@/pages/SmartWorkspace.vue';
-import AccountPage from '@/pages/Account.vue';
-import CharterTool from '@/pages/tools/Charter.vue';
-import PreResearchTool from '@/pages/tools/PreResearch.vue';
-import LiteratureTool from '@/pages/tools/Literature.vue';
-import InnovationTool from '@/pages/tools/Innovation.vue';
-
-import KanbanTool from '@/pages/tools/Kanban.vue';
-import DevLogTool from '@/pages/tools/DevLog.vue';
-import ArchitectGuideTool from '@/pages/tools/ArchitectGuide.vue';
-import ArchitectTool from '@/pages/tools/Architect.vue';
-import AssessmentPage from '@/pages/Assessment.vue';
 import pinia from '@/stores';
 import { useAuthStore } from '@/stores/auth';
+
+const WorkspacePage = () => import('@/pages/Workspace.vue');
+const ProjectsPage = () => import('@/pages/Projects.vue');
+const CompetitionsPage = () => import('@/pages/Competitions.vue');
+const CompetitionDetailPage = () => import('@/pages/CompetitionDetail.vue');
+const ToolsPage = () => import('@/pages/Tools.vue');
+const TeacherPage = () => import('@/pages/Teacher.vue');
+const LoginPage = () => import('@/pages/Login.vue');
+const RegisterPage = () => import('@/pages/Register.vue');
+const KnowledgePage = () => import('@/pages/Knowledge.vue');
+const KnowledgeDetailPage = () => import('@/pages/KnowledgeDetail.vue');
+const DownloadsPage = () => import('@/pages/Downloads.vue');
+const CoursePage = () => import('@/pages/Course.vue');
+const StudyPage = () => import('@/pages/Study.vue');
+const MissionControlPage = () => import('@/pages/MissionControl.vue');
+const AccountPage = () => import('@/pages/Account.vue');
+const CharterTool = () => import('@/pages/tools/Charter.vue');
+const PreResearchTool = () => import('@/pages/tools/PreResearch.vue');
+const LiteratureTool = () => import('@/pages/tools/Literature.vue');
+const InnovationTool = () => import('@/pages/tools/Innovation.vue');
+const KanbanTool = () => import('@/pages/tools/Kanban.vue');
+const DevLogTool = () => import('@/pages/tools/DevLog.vue');
+const ArchitectGuideTool = () => import('@/pages/tools/ArchitectGuide.vue');
+const ArchitectTool = () => import('@/pages/tools/Architect.vue');
+const AssessmentPage = () => import('@/pages/Assessment.vue');
 
 const routes = [
   { path: '/', component: HomePage, meta: { public: true } },
@@ -49,22 +48,29 @@ const routes = [
   { path: '/teacher', component: TeacherPage, meta: { requiresAuth: true, roles: ['teacher', 'judge'] } },
   { path: '/teacher/assessment', component: AssessmentPage, meta: { requiresAuth: true, roles: ['teacher', 'judge'] } },
   { path: '/mission-control', component: MissionControlPage, meta: { requiresAuth: true, roles: ['teacher', 'judge'] } },
-  { path: '/showcase', component: ShowcasePage, meta: { public: true } },
+  { path: '/showcase', redirect: '/projects', meta: { public: true } },
   { path: '/knowledge', component: KnowledgePage, meta: { public: true } },
+  { path: '/knowledge/:disciplineId', component: KnowledgeDetailPage, meta: { public: true } },
   { path: '/competencies', redirect: '/courses/common', meta: { public: true } },
-  { path: '/downloads', component: DownloadsPage, meta: { public: true } },
+  { path: '/courses', component: DownloadsPage, meta: { public: true } },
+  { path: '/downloads', redirect: '/courses', meta: { public: true } },
   { path: '/courses/:courseId', component: CoursePage, meta: { public: true } },
   { path: '/courses/:courseId/lessons/:lessonId', component: StudyPage, meta: { public: true } },
   { path: '/study', component: StudyPage, meta: { public: true } },
   { path: '/account', component: AccountPage, meta: { requiresAuth: true } },
-  { path: '/smart-workspace', component: SmartWorkspacePage, meta: { requiresAuth: true } },
+  { path: '/smart-workspace', redirect: to => ({ path: '/workspace', query: to.query }), meta: { requiresAuth: true } },
   { path: '/login', component: LoginPage, meta: { public: true } },
   { path: '/register', component: RegisterPage, meta: { public: true } }
 ];
 
 const router = createRouter({
   history: createWebHistory(),
-  routes
+  routes,
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) return savedPosition;
+    if (to.path !== from.path) return { top: 0 };
+    return false;
+  }
 });
 
 router.beforeEach((to, from, next) => {

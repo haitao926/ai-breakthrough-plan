@@ -1,0 +1,377 @@
+[
+  {
+    "disciplineId": "ai",
+    "title": "人工智能到底在解决什么问题？",
+    "summary": "用一集 Crash Course 建立 AI 的任务视角，再判断一个校园场景是否适合用 AI 解决。",
+    "source": {
+      "provider": "Bilibili",
+      "tag": "Crash Course Artificial Intelligence",
+      "title": "Crash Course Artificial Intelligence",
+      "url": "https://www.bilibili.com/video/BV1cp4y1X764/",
+      "embedUrl": "https://player.bilibili.com/player.html?bvid=BV1cp4y1X764&page=1&high_quality=1&autoplay=0",
+      "note": "先看 #1《What Is Artificial Intelligence》，建立“AI 研究到底在解决什么问题”的基本框架。"
+    },
+    "durationMinutes": 10,
+    "points": 10,
+    "bonus": {
+      "firstCompletion": 5,
+      "weeklyStreak": 3,
+      "crossDiscipline": 5
+    },
+    "passingScore": 3,
+    "questions": [
+      {
+        "id": "ai-q1",
+        "type": "single-choice",
+        "prompt": "在这个学习单元里，人工智能最适合被理解为哪类能力？",
+        "options": [
+          "让机器在特定任务中表现出智能行为",
+          "让机器拥有和人完全一样的意识",
+          "让所有程序自动变成正确答案"
+        ],
+        "answerIndex": 0,
+        "explanation": "首要目标是区分“任务能力”和“人类意识”。"
+      },
+      {
+        "id": "ai-q2",
+        "type": "single-choice",
+        "prompt": "如果要判断校园问题是否适合用 AI，第一步更应该问什么？",
+        "options": [
+          "有没有足够清晰的输入、输出和判断标准",
+          "能不能把所有功能一次做完",
+          "界面颜色是否足够炫酷"
+        ],
+        "answerIndex": 0,
+        "explanation": "AI 项目首先要有可观察数据和可验证目标。"
+      },
+      {
+        "id": "ai-q3",
+        "type": "single-choice",
+        "prompt": "下面哪个更像适合 AI 入门项目的任务？",
+        "options": [
+          "根据图片判断垃圾分类类别",
+          "让机器人理解人生意义",
+          "写一篇完全没有评价标准的作文"
+        ],
+        "answerIndex": 0,
+        "explanation": "图像分类有明确输入、输出和评价方式，适合入门。"
+      }
+    ],
+    "next": {
+      "researchQuestionIds": ["ai-rq-1"],
+      "courseIds": ["project4"],
+      "projectPrompts": [
+        "选择一个校园场景，写出它是否适合用 AI 解决，以及为什么。",
+        "列出一个 AI 项目的输入、输出、评价标准和潜在风险。"
+      ]
+    }
+  },
+  {
+    "disciplineId": "cs",
+    "title": "网页和程序为什么能协作？",
+    "summary": "从计算机科学视角理解网页、图形界面和系统协作，为全栈项目打底。",
+    "source": {
+      "provider": "Bilibili",
+      "tag": "Crash Course Computer Science",
+      "title": "Crash Course Computer Science",
+      "url": "https://www.bilibili.com/video/BV1EW411u7th/",
+      "embedUrl": "https://player.bilibili.com/player.html?bvid=BV1EW411u7th&page=1&high_quality=1&autoplay=0",
+      "note": "建议看图形界面、Web 与网络相关单集，建立“前端不是画图，而是信息系统入口”的直觉。"
+    },
+    "durationMinutes": 12,
+    "points": 10,
+    "bonus": { "firstCompletion": 5, "weeklyStreak": 3, "crossDiscipline": 5 },
+    "passingScore": 3,
+    "questions": [
+      {
+        "id": "cs-q1",
+        "type": "single-choice",
+        "prompt": "一个 Web 应用通常不只包含页面，还需要什么？",
+        "options": ["数据和交互逻辑", "只要一张背景图", "只要一个标题"], "answerIndex": 0,
+        "explanation": "Web 应用的价值来自界面、数据和交互协作。"
+      },
+      {
+        "id": "cs-q2",
+        "type": "single-choice",
+        "prompt": "API 更像系统之间的什么？",
+        "options": ["约定好的通信接口", "随机生成的颜色", "只能老师看的答案"], "answerIndex": 0,
+        "explanation": "API 负责定义程序之间如何交换信息。"
+      },
+      {
+        "id": "cs-q3",
+        "type": "single-choice",
+        "prompt": "做错题本项目时，先做 MVP 的意义是什么？",
+        "options": ["尽快验证核心流程是否成立", "一次性做完所有功能", "避免让用户试用"], "answerIndex": 0,
+        "explanation": "MVP 用最小成本验证真实需求。"
+      }
+    ],
+    "next": {
+      "courseIds": ["project3"],
+      "projectPrompts": ["把一个学习问题拆成页面、数据、交互三个部分。"]
+    }
+  },
+  {
+    "disciplineId": "tech",
+    "title": "工程为什么强调系统设计？",
+    "summary": "理解输入、输出、约束和反馈，让学生把想法变成能运行的工程系统。",
+    "source": {
+      "provider": "Bilibili",
+      "tag": "Crash Course Engineering",
+      "title": "Crash Course Engineering",
+      "url": "https://www.bilibili.com/video/BV1d4411M7zP/",
+      "embedUrl": "https://player.bilibili.com/player.html?bvid=BV1d4411M7zP&page=1&high_quality=1&autoplay=0",
+      "note": "建议看 #1《What is Engineering》和机器人、计算机工程相关单集。"
+    },
+    "durationMinutes": 10,
+    "points": 10,
+    "bonus": { "firstCompletion": 5, "weeklyStreak": 3, "crossDiscipline": 5 },
+    "passingScore": 3,
+    "questions": [
+      {
+        "id": "tech-q1",
+        "type": "single-choice",
+        "prompt": "工程项目和单纯想法最大的区别是什么？",
+        "options": ["需要在约束下做出可测试方案", "只需要一句口号", "完全不需要验证"], "answerIndex": 0,
+        "explanation": "工程强调可实现、可测试和可优化。"
+      },
+      {
+        "id": "tech-q2",
+        "type": "single-choice",
+        "prompt": "智能感应灯的输入更可能是什么？",
+        "options": ["摄像头或传感器读数", "项目海报颜色", "课程名称"], "answerIndex": 0,
+        "explanation": "输入来自系统可以感知的数据。"
+      },
+      {
+        "id": "tech-q3",
+        "type": "single-choice",
+        "prompt": "系统设计图最有助于说明什么？",
+        "options": ["部件之间如何连接和协作", "谁的字写得好看", "视频标题有多长"], "answerIndex": 0,
+        "explanation": "系统设计图表达模块、接口和数据流。"
+      }
+    ],
+    "next": {
+      "courseIds": ["project5", "maker-camp"],
+      "projectPrompts": ["画出一个校园智能装置的输入、处理、输出链路。"]
+    }
+  },
+  {
+    "disciplineId": "robotics",
+    "title": "机器人怎样把感知变成行动？",
+    "summary": "从工程系统角度理解机器人：传感器输入、控制决策、执行机构输出。",
+    "source": {
+      "provider": "Bilibili",
+      "tag": "Crash Course Engineering",
+      "title": "Crash Course Engineering",
+      "url": "https://www.bilibili.com/video/BV1d4411M7zP/",
+      "embedUrl": "https://player.bilibili.com/player.html?bvid=BV1d4411M7zP&page=1&high_quality=1&autoplay=0",
+      "note": "看机器人与系统设计相关单集，再对照移动机器人底盘、传感器和控制任务。"
+    },
+    "durationMinutes": 10,
+    "points": 10,
+    "bonus": { "firstCompletion": 5, "weeklyStreak": 3, "crossDiscipline": 5 },
+    "passingScore": 3,
+    "questions": [
+      {
+        "id": "robotics-q1",
+        "type": "single-choice",
+        "prompt": "移动机器人避障时，最关键的闭环是什么？",
+        "options": ["感知环境、判断路径、控制运动", "只把外壳做漂亮", "只写项目标题"], "answerIndex": 0,
+        "explanation": "机器人需要感知、决策和执行闭环。"
+      },
+      {
+        "id": "robotics-q2",
+        "type": "single-choice",
+        "prompt": "传感器在机器人中主要承担什么角色？",
+        "options": ["获取环境或自身状态信息", "装饰机器人", "替代所有程序"], "answerIndex": 0,
+        "explanation": "传感器让机器人知道外部和自身状态。"
+      },
+      {
+        "id": "robotics-q3",
+        "type": "single-choice",
+        "prompt": "一个机器人挑战任务最好具备什么标准？",
+        "options": ["可以观察、计时或测量", "只能凭感觉判断", "永远不能失败"], "answerIndex": 0,
+        "explanation": "可验证标准才能支持调试和改进。"
+      }
+    ],
+    "next": {
+      "courseIds": ["robotics-club", "ros2-training-robot"],
+      "projectPrompts": ["设计一个机器人从起点到终点的任务，并写出成功判据。"]
+    }
+  },
+  {
+    "disciplineId": "physics",
+    "title": "物理如何帮助工程项目可靠运行？",
+    "summary": "把力、能量、运动和测量变成项目设计时的约束条件。",
+    "source": {
+      "provider": "Bilibili",
+      "tag": "Crash Course Physics",
+      "title": "Crash Course Physics",
+      "url": "https://www.bilibili.com/video/BV1d4411M7zP/",
+      "embedUrl": "https://player.bilibili.com/player.html?bvid=BV1d4411M7zP&page=1&high_quality=1&autoplay=0",
+      "note": "当前先挂接最接近的工程学视频作为入口；后续可替换为物理系列具体单集。"
+    },
+    "durationMinutes": 10,
+    "points": 8,
+    "bonus": { "firstCompletion": 4, "weeklyStreak": 3, "crossDiscipline": 5 },
+    "passingScore": 3,
+    "questions": [
+      {
+        "id": "physics-q1",
+        "type": "single-choice",
+        "prompt": "工程装置不稳定时，物理分析最先帮助我们关注什么？",
+        "options": ["力、能量、运动和误差来源", "标题是否押韵", "按钮颜色"], "answerIndex": 0,
+        "explanation": "可靠性通常来自对物理约束的理解。"
+      },
+      {
+        "id": "physics-q2",
+        "type": "single-choice",
+        "prompt": "做小车项目时，速度测试属于什么？",
+        "options": ["可测量的物理指标", "不可验证的感受", "网页样式"], "answerIndex": 0,
+        "explanation": "速度、距离、时间都是可验证指标。"
+      },
+      {
+        "id": "physics-q3",
+        "type": "single-choice",
+        "prompt": "为什么原型需要重复测试？",
+        "options": ["找到误差并改进设计", "让项目看起来更复杂", "避免记录数据"], "answerIndex": 0,
+        "explanation": "测试让物理表现从猜测变成证据。"
+      }
+    ],
+    "next": {
+      "courseIds": ["project5", "robotics-club"],
+      "projectPrompts": ["为一个工程原型列出 3 个可测量物理指标。"]
+    }
+  },
+  {
+    "disciplineId": "psych",
+    "title": "人为什么会被交互设计影响？",
+    "summary": "从认知、注意力和反馈机制理解产品体验，不只看界面好不好看。",
+    "source": {
+      "provider": "Bilibili",
+      "tag": "Crash Course Psychology",
+      "title": "Crash Course Psychology",
+      "url": "https://www.bilibili.com/video/BV1r741167Kd/",
+      "embedUrl": "https://player.bilibili.com/player.html?bvid=BV1r741167Kd&page=1&high_quality=1&autoplay=0",
+      "note": "当前先挂接 MVP/反馈相关视频作为项目入口；后续可替换为心理学系列注意力、学习和动机单集。"
+    },
+    "durationMinutes": 10,
+    "points": 8,
+    "bonus": { "firstCompletion": 4, "weeklyStreak": 3, "crossDiscipline": 5 },
+    "passingScore": 3,
+    "questions": [
+      {
+        "id": "psych-q1",
+        "type": "single-choice",
+        "prompt": "产品设计中用户反馈最主要帮助我们理解什么？",
+        "options": ["真实行为和真实困惑", "设计者自己的想象", "页面文件名"], "answerIndex": 0,
+        "explanation": "用户研究要看真实行为，而不是只看设计者假设。"
+      },
+      {
+        "id": "psych-q2",
+        "type": "single-choice",
+        "prompt": "一个按钮让人不敢点，可能涉及什么问题？",
+        "options": ["认知负担或反馈不清晰", "服务器一定坏了", "课程目录太短"], "answerIndex": 0,
+        "explanation": "交互问题常常来自理解成本和反馈不足。"
+      },
+      {
+        "id": "psych-q3",
+        "type": "single-choice",
+        "prompt": "为什么要做可用性测试？",
+        "options": ["观察用户是否能完成任务", "证明设计永远正确", "替代所有课程学习"], "answerIndex": 0,
+        "explanation": "可用性测试验证用户能否顺利完成目标。"
+      }
+    ],
+    "next": {
+      "courseIds": ["project2"],
+      "projectPrompts": ["采访 3 位同学，记录他们使用一个校园工具时卡住的地方。"]
+    }
+  },
+  {
+    "disciplineId": "econ",
+    "title": "为什么好项目也需要商业逻辑？",
+    "summary": "理解资源、激励和 MVP，让创新项目从想法走向可持续方案。",
+    "source": {
+      "provider": "Bilibili",
+      "tag": "Crash Course Entrepreneurship",
+      "title": "Crash Course Entrepreneurship",
+      "url": "https://www.bilibili.com/video/BV1r741167Kd/",
+      "embedUrl": "https://player.bilibili.com/player.html?bvid=BV1r741167Kd&page=1&high_quality=1&autoplay=0",
+      "note": "建议看 MVP、反馈和商业模式相关单集，理解创业实战中的资源约束。"
+    },
+    "durationMinutes": 10,
+    "points": 8,
+    "bonus": { "firstCompletion": 4, "weeklyStreak": 3, "crossDiscipline": 5 },
+    "passingScore": 3,
+    "questions": [
+      {
+        "id": "econ-q1",
+        "type": "single-choice",
+        "prompt": "MVP 的核心价值是什么？",
+        "options": ["用最低成本验证关键假设", "一次性做完所有梦想功能", "不需要用户反馈"], "answerIndex": 0,
+        "explanation": "MVP 帮助团队低成本验证需求。"
+      },
+      {
+        "id": "econ-q2",
+        "type": "single-choice",
+        "prompt": "商业模式首先要回答什么？",
+        "options": ["为谁创造价值以及如何持续运行", "按钮放左边还是右边", "视频有多长"], "answerIndex": 0,
+        "explanation": "商业逻辑关注价值、用户、资源和可持续性。"
+      },
+      {
+        "id": "econ-q3",
+        "type": "single-choice",
+        "prompt": "校园二手平台失败可能首先要查什么？",
+        "options": ["供需、信任和交易成本", "只查页面背景色", "只换一个名字"], "answerIndex": 0,
+        "explanation": "经济问题常来自激励、信息和交易成本。"
+      }
+    ],
+    "next": {
+      "courseIds": ["project6"],
+      "projectPrompts": ["为一个校园服务项目写出用户、痛点、价值和收入/资源来源。"]
+    }
+  },
+  {
+    "disciplineId": "env",
+    "title": "校园环境问题怎样变成研究项目？",
+    "summary": "把环境现象转化为可测量数据和可改进方案。",
+    "source": {
+      "provider": "Bilibili",
+      "tag": "Crash Course Ecology",
+      "title": "Crash Course Ecology",
+      "url": "https://www.bilibili.com/video/BV1d4411M7zP/",
+      "embedUrl": "https://player.bilibili.com/player.html?bvid=BV1d4411M7zP&page=1&high_quality=1&autoplay=0",
+      "note": "当前先挂接工程学入口，强调传感器和系统方案；后续可替换为生态学或地理学具体单集。"
+    },
+    "durationMinutes": 10,
+    "points": 8,
+    "bonus": { "firstCompletion": 4, "weeklyStreak": 3, "crossDiscipline": 5 },
+    "passingScore": 3,
+    "questions": [
+      {
+        "id": "env-q1",
+        "type": "single-choice",
+        "prompt": "把校园噪声变成研究项目，第一步更应该做什么？",
+        "options": ["确定测量地点、时间和记录方法", "直接写结论", "只拍一张照片"], "answerIndex": 0,
+        "explanation": "环境研究需要可重复的数据采集方案。"
+      },
+      {
+        "id": "env-q2",
+        "type": "single-choice",
+        "prompt": "环境项目为什么常需要传感器？",
+        "options": ["持续采集温度、噪声、光照等数据", "替代研究问题", "让海报更漂亮"], "answerIndex": 0,
+        "explanation": "传感器让环境现象变成可分析数据。"
+      },
+      {
+        "id": "env-q3",
+        "type": "single-choice",
+        "prompt": "一个好的环境改进方案应该具备什么？",
+        "options": ["前后对比指标", "只有口号", "不能被验证"], "answerIndex": 0,
+        "explanation": "改进必须能通过数据或观察被验证。"
+      }
+    ],
+    "next": {
+      "courseIds": ["project5", "maker-camp"],
+      "projectPrompts": ["选择校园一个地点，设计一周环境数据采集计划。"]
+    }
+  }
+]

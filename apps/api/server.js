@@ -41,6 +41,8 @@ const AI_TIMEOUT_MS = Number.parseInt(process.env.AI_TIMEOUT_MS || '20000', 10);
 const COURSES_DIR = path.join(__dirname, '../../content/courses');
 const COURSE_CATALOG_PATH = path.join(COURSES_DIR, 'catalog.json');
 const DISCIPLINE_DATA_PATH = path.join(__dirname, '../../content/courses/disciplines/index.json');
+const DISCIPLINE_LEARNING_UNITS_PATH = path.join(__dirname, '../../content/courses/disciplines/learning-units.json');
+const CRASH_COURSE_SERIES_PATH = path.join(__dirname, '../../content/courses/disciplines/crash-course-series.json');
 const MATERIALS_DIR = path.join(__dirname, '../../content/materials');
 const PORTAL_DIR = process.env.PORTAL_DIR
   ? path.resolve(process.env.PORTAL_DIR)
@@ -734,7 +736,17 @@ fastify.get('/favicon.ico', (request, reply) => {
 if (WEB_SPA) {
   fastify.setNotFoundHandler((request, reply) => {
     const url = request.raw?.url || '';
-    if (url.startsWith(API_PREFIX) || url.startsWith('/uploads/') || url.startsWith('/assessment/')) {
+    const pathname = url.split('?')[0] || '';
+    const looksLikeStaticAsset =
+      pathname.startsWith('/assets/') ||
+      pathname.startsWith('/course-covers/') ||
+      pathname.startsWith('/data/') ||
+      pathname.startsWith('/js/') ||
+      pathname.startsWith('/uploads/') ||
+      pathname.startsWith('/assessment/') ||
+      /\.[a-z0-9]+$/i.test(pathname);
+
+    if (url.startsWith(API_PREFIX) || looksLikeStaticAsset) {
       reply.code(404).send({ error: 'Not Found' });
       return;
     }
@@ -961,17 +973,79 @@ function getProjectScores(projectId) {
 }
 
 // --- Knowledge APIs ---
+function loadDisciplines() {
+  const data = readJsonFile(DISCIPLINE_DATA_PATH, []);
+  return Array.isArray(data) ? data : [];
+}
+
+function loadKnowledgeLearningUnits() {
+  const data = readJsonFile(DISCIPLINE_LEARNING_UNITS_PATH, []);
+  return Array.isArray(data) ? data : [];
+}
+
+function loadCrashCourseSeries() {
+  const data = readJsonFile(CRASH_COURSE_SERIES_PATH, []);
+  return Array.isArray(data) ? data : [];
+}
+
+function findKnowledgeDetail(disciplineId) {
+  const id = String(disciplineId || '').trim();
+  if (!id) return null;
+  const disciplines = loadDisciplines();
+  const learningUnits = loadKnowledgeLearningUnits();
+  const discipline = disciplines.find(item => String(item.id || '') === id);
+  if (!discipline) return null;
+  const learningUnit = learningUnits.find(item => String(item.disciplineId || '') === id) || null;
+  const courseIds = Array.isArray(learningUnit?.next?.courseIds) ? learningUnit.next.courseIds : [];
+  const catalog = loadCourseCatalog();
+  const courses = courseIds
+    .map(courseId => catalog.find(course => String(course.id || '') === String(courseId)))
+    .filter(Boolean);
+  return { discipline, learningUnit, relatedCourses: courses };
+}
+
 fastify.get(`${API_PREFIX}/knowledge/disciplines`, async (request, reply) => {
   try {
-    if (!fs.existsSync(DISCIPLINE_DATA_PATH)) {
-      return { disciplines: [] };
-    }
-    const data = JSON.parse(fs.readFileSync(DISCIPLINE_DATA_PATH, 'utf8'));
-    return { disciplines: data };
+    return { disciplines: loadDisciplines() };
   } catch (err) {
     fastify.log.error(err);
     reply.code(500);
     return { error: 'Failed to load disciplines' };
+  }
+});
+
+fastify.get(`${API_PREFIX}/knowledge/learning-units`, async (request, reply) => {
+  try {
+    return { learningUnits: loadKnowledgeLearningUnits() };
+  } catch (err) {
+    fastify.log.error(err);
+    reply.code(500);
+    return { error: 'Failed to load knowledge learning units' };
+  }
+});
+
+fastify.get(`${API_PREFIX}/knowledge/crash-course-series`, async (request, reply) => {
+  try {
+    return { series: loadCrashCourseSeries() };
+  } catch (err) {
+    fastify.log.error(err);
+    reply.code(500);
+    return { error: 'Failed to load Crash Course series' };
+  }
+});
+
+fastify.get(`${API_PREFIX}/knowledge/disciplines/:id`, async (request, reply) => {
+  try {
+    const detail = findKnowledgeDetail(request.params.id);
+    if (!detail) {
+      reply.code(404);
+      return { error: 'Knowledge discipline not found' };
+    }
+    return detail;
+  } catch (err) {
+    fastify.log.error(err);
+    reply.code(500);
+    return { error: 'Failed to load knowledge discipline' };
   }
 });
 
