@@ -153,6 +153,7 @@ import CategorySearchBar from '@/components/CategorySearchBar.vue';
 import { apiFetch, readJsonResponse } from '@/api/client';
 import staticLearningUnits from '@/data/knowledgeLearningUnits.json';
 import staticCrashCourseSeries from '@/data/crashCourseSeries.json';
+import bilibiliSeriesVideos from '@/data/bilibiliSeriesVideos.json';
 
 const route = useRoute();
 const router = useRouter();
@@ -293,10 +294,22 @@ const knowledgeSearchPlaceholder = computed(() => {
 });
 
 function openSeries(series) {
+  const unit = unitFor(series.disciplineId);
+  const videoKey = firstVideoKeyForUnit(unit);
+  const query = { filter: series.category };
+  if (videoKey) query.video = videoKey;
   router.push({
     path: `/knowledge/${encodeURIComponent(series.disciplineId)}`,
-    query: { filter: series.category, series: series.id }
+    query
   }).catch(() => {});
+}
+
+function firstVideoKeyForUnit(unit) {
+  const key = String(unit?.series?.key || '').trim();
+  const firstVideo = key ? bilibiliSeriesVideos[key]?.videos?.[0] : null;
+  if (firstVideo) return String(firstVideo.id || firstVideo.bvid || firstVideo.url || '');
+  const source = unit?.source || {};
+  return String(source.id || source.bvid || source.url || '').trim();
 }
 
 function scrollToCatalog() {
