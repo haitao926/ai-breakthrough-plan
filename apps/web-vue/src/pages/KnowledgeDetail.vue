@@ -288,7 +288,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import SiteNav from '@/components/SiteNav.vue';
 import PortalFooter from '@/components/portal/PortalFooter.vue';
 import { apiFetch, readJsonResponse } from '@/api/client';
@@ -296,6 +296,7 @@ import staticLearningUnits from '@/data/knowledgeLearningUnits.json';
 import bilibiliSeriesVideos from '@/data/bilibiliSeriesVideos.json';
 
 const route = useRoute();
+const router = useRouter();
 const loading = ref(true);
 const error = ref('');
 const discipline = ref({});
@@ -493,12 +494,34 @@ function videoKey(video) {
 }
 
 function selectVideo(video) {
-  activeVideoKey.value = videoKey(video);
+  const key = videoKey(video);
+  activeVideoKey.value = key;
+  syncVideoQuery(key);
 }
 
 function selectAdjacentVideo(delta) {
   const target = delta < 0 ? previousVideo.value : nextVideo.value;
   if (target) selectVideo(target);
+}
+
+function syncVideoQuery(key) {
+  if (!key || String(route.query.video || '') === key) return;
+  router.replace({
+    query: {
+      ...route.query,
+      video: key
+    }
+  }).catch(() => {});
+}
+
+function restoreVideoFromQuery() {
+  const requested = String(route.query.video || route.query.series || '').trim();
+  if (!requested) return;
+  const found = seriesVideos.value.find(video => {
+    const key = videoKey(video);
+    return key === requested || video?.bvid === requested || video?.id === requested;
+  });
+  if (found) activeVideoKey.value = videoKey(found);
 }
 
 function loadProgress() {
@@ -590,6 +613,7 @@ async function loadDetail() {
     discipline.value = detail.discipline || {};
     learningUnit.value = detail.learningUnit || null;
     relatedCourses.value = Array.isArray(detail.relatedCourses) ? detail.relatedCourses : [];
+    restoreVideoFromQuery();
   } catch (err) {
     console.error(err);
     error.value = '这个知识方向暂时不存在，或者内容还没有发布。';
@@ -602,6 +626,9 @@ async function loadDetail() {
 }
 
 watch(() => route.params.disciplineId, loadDetail, { immediate: true });
+watch(() => [route.query.video, route.query.series], () => {
+  if (!loading.value) restoreVideoFromQuery();
+});
 </script>
 
 <style scoped>
