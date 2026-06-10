@@ -5,7 +5,9 @@
       '--field-color': fieldColor.text,
       '--field-bg': fieldColor.bg,
       '--field-ink': fieldColor.ink,
-      '--field-glow': fieldColor.glow
+      '--field-glow': fieldColor.glow,
+      '--field-line': fieldColor.line,
+      '--field-soft': fieldColor.soft
     }"
   >
     <SiteNav active="knowledge" />
@@ -37,12 +39,62 @@
               <p class="kb-detail-hero__en">{{ discipline.en }}</p>
               <p class="kb-detail-hero__definition">{{ discipline.definition }}</p>
             </div>
-            <div class="kb-detail-hero__score">
-              <span>{{ completed ? '已完成挑战' : '本次可获得' }}</span>
-              <strong>{{ totalAvailablePoints }}</strong>
-              <em>知识积分</em>
+            <div class="kb-field-map" aria-label="知识观测地图">
+              <div class="kb-field-map__grid">
+                <span class="kb-field-map__station is-home"></span>
+                <span class="kb-field-map__station is-course"></span>
+                <span class="kb-field-map__station is-project"></span>
+                <span class="kb-field-map__route"></span>
+              </div>
+              <div class="kb-field-map__meta">
+                <span>{{ completed ? 'Challenge logged' : 'Field mission' }}</span>
+                <strong>{{ totalAvailablePoints }}</strong>
+                <em>knowledge points</em>
+              </div>
             </div>
           </article>
+
+          <section class="kb-observation-deck" aria-label="知识积分与探索榜单">
+            <article class="kb-observation-card is-score">
+              <p class="knowledge-kicker">My Field Points</p>
+              <strong>{{ profile.totalPoints }}</strong>
+              <span>累计知识积分 · 本周 {{ profile.weeklyPoints }} 分</span>
+            </article>
+
+            <article class="kb-observation-card is-rank">
+              <div class="kb-observation-heading">
+                <div>
+                  <p class="knowledge-kicker">Knowledge Leaderboard</p>
+                  <h2>知识观测榜单</h2>
+                </div>
+                <span>{{ rankingItems.length ? '真实记录' : '暂无记录' }}</span>
+              </div>
+              <div v-if="rankingItems.length" class="kb-observation-ranks">
+                <div
+                  v-for="(item, index) in rankingItems"
+                  :key="item.id"
+                  class="kb-observation-rank"
+                  :class="{ 'is-current': item.id === discipline.id }"
+                >
+                  <span>#{{ index + 1 }}</span>
+                  <strong>{{ item.name }}</strong>
+                  <em>{{ item.points }} 分</em>
+                </div>
+              </div>
+              <p v-else class="kb-observation-empty">
+                完成任意视频挑战后，这里会用你的真实本地记录生成榜单，不放虚构同学或假积分。
+              </p>
+            </article>
+
+            <article class="kb-observation-card is-route">
+              <p class="knowledge-kicker">Exploration Route</p>
+              <ol class="kb-route-list">
+                <li :class="{ 'is-active': !completed }">看完系列视频</li>
+                <li :class="{ 'is-active': !completed && score > 0 }">完成挑战题</li>
+                <li :class="{ 'is-active': completed }">解锁课程与项目</li>
+              </ol>
+            </article>
+          </section>
 
           <article v-if="learningUnit" class="kb-learning-unit">
             <header class="kb-learning-unit__header">
@@ -299,11 +351,11 @@ const activeVideoKey = ref('');
 const progressKey = 'kbLearningProgress:v1';
 
 const palette = {
-  science: { bg: '#e8f5ec', text: '#207a54', ink: '#12352a', glow: 'rgba(32, 122, 84, 0.16)' },
-  engineering: { bg: '#edf3ee', text: '#3f6f5d', ink: '#1f352c', glow: 'rgba(63, 111, 93, 0.16)' },
-  social: { bg: '#eef4ea', text: '#6b7f2a', ink: '#32391c', glow: 'rgba(107, 127, 42, 0.16)' },
-  humanities: { bg: '#f7f0e4', text: '#9a5b2f', ink: '#3d2a1b', glow: 'rgba(154, 91, 47, 0.16)' },
-  all: { bg: '#eef2e8', text: '#4d644f', ink: '#1f2f24', glow: 'rgba(77, 100, 79, 0.16)' }
+  science: { bg: '#e8f5ec', soft: '#f4f8ed', text: '#207a54', ink: '#12352a', line: '#86a873', glow: 'rgba(32, 122, 84, 0.16)' },
+  engineering: { bg: '#edf3ee', soft: '#f5f7ef', text: '#3f6f5d', ink: '#1f352c', line: '#8aa18a', glow: 'rgba(63, 111, 93, 0.16)' },
+  social: { bg: '#eef4ea', soft: '#f7f6ec', text: '#6b7f2a', ink: '#32391c', line: '#a2a85c', glow: 'rgba(107, 127, 42, 0.16)' },
+  humanities: { bg: '#f7f0e4', soft: '#fbf5e9', text: '#9a5b2f', ink: '#3d2a1b', line: '#c7925e', glow: 'rgba(154, 91, 47, 0.16)' },
+  all: { bg: '#eef2e8', soft: '#f7f7ed', text: '#4d644f', ink: '#1f2f24', line: '#91a27c', glow: 'rgba(77, 100, 79, 0.16)' }
 };
 
 function categoryKey(field) {
@@ -572,10 +624,12 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
 .knowledge-detail-page {
   min-height: 100vh;
   background:
-    radial-gradient(circle at 12% 8%, rgba(61, 112, 83, 0.14), transparent 28%),
-    radial-gradient(circle at 86% 18%, rgba(160, 117, 61, 0.12), transparent 26%),
-    linear-gradient(115deg, rgba(64, 88, 58, 0.035) 25%, transparent 25%) 0 0 / 52px 52px,
-    linear-gradient(65deg, rgba(64, 88, 58, 0.03) 25%, transparent 25%) 0 0 / 52px 52px,
+    radial-gradient(circle at 12% 8%, var(--field-glow), transparent 28%),
+    radial-gradient(circle at 88% 14%, rgba(160, 117, 61, 0.13), transparent 27%),
+    linear-gradient(115deg, rgba(64, 88, 58, 0.04) 25%, transparent 25%) 0 0 / 52px 52px,
+    linear-gradient(65deg, rgba(64, 88, 58, 0.035) 25%, transparent 25%) 0 0 / 52px 52px,
+    linear-gradient(rgba(77, 100, 79, 0.04) 1px, transparent 1px) 0 0 / 28px 28px,
+    linear-gradient(90deg, rgba(77, 100, 79, 0.035) 1px, transparent 1px) 0 0 / 28px 28px,
     #f5f7ef;
 }
 
@@ -622,13 +676,13 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
 .kb-detail-hero {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 180px;
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+  gap: 24px;
   border-radius: 28px;
   background:
-    radial-gradient(circle at 82% 16%, var(--field-glow), transparent 34%),
-    linear-gradient(135deg, rgba(255, 253, 246, 0.95), rgba(238, 242, 232, 0.9));
-  padding: 26px;
+    radial-gradient(circle at 78% 16%, var(--field-glow), transparent 34%),
+    linear-gradient(135deg, rgba(255, 253, 246, 0.96), rgba(238, 242, 232, 0.92));
+  padding: 28px;
   overflow: hidden;
 }
 
@@ -639,7 +693,8 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
   pointer-events: none;
   background:
     repeating-linear-gradient(32deg, transparent 0 18px, rgba(77, 100, 79, 0.045) 18px 19px),
-    radial-gradient(circle at 18% 70%, transparent 0 48px, rgba(77, 100, 79, 0.08) 49px 50px, transparent 51px);
+    radial-gradient(circle at 18% 70%, transparent 0 48px, rgba(77, 100, 79, 0.08) 49px 50px, transparent 51px),
+    linear-gradient(90deg, transparent 0 47%, rgba(77, 100, 79, 0.08) 47% 48%, transparent 48% 100%);
   opacity: 0.55;
 }
 
@@ -678,31 +733,259 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
   line-height: 1.8;
 }
 
-.kb-detail-hero__score {
+.kb-field-map {
+  position: relative;
   display: grid;
-  place-items: center;
+  grid-template-rows: minmax(160px, 1fr) auto;
+  min-height: 250px;
   border: 1px solid rgba(77, 100, 79, 0.24);
-  border-radius: 22px;
+  border-radius: 24px;
   background:
-    linear-gradient(135deg, var(--field-bg), #fffdf6),
-    repeating-linear-gradient(90deg, rgba(77, 100, 79, 0.06) 0 1px, transparent 1px 12px);
+    radial-gradient(circle at 22% 24%, rgba(255, 253, 246, 0.95), transparent 18%),
+    radial-gradient(circle at 74% 32%, var(--field-glow), transparent 30%),
+    linear-gradient(135deg, var(--field-bg), #fffdf6);
   color: var(--field-color);
-  text-align: center;
-  padding: 18px;
+  overflow: hidden;
 }
 
-.kb-detail-hero__score span,
-.kb-detail-hero__score em {
+.kb-field-map::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(rgba(77, 100, 79, 0.11) 1px, transparent 1px) 0 0 / 22px 22px,
+    linear-gradient(90deg, rgba(77, 100, 79, 0.09) 1px, transparent 1px) 0 0 / 22px 22px,
+    radial-gradient(circle, transparent 0 54px, rgba(77, 100, 79, 0.18) 55px 56px, transparent 57px) 38% 30% / 180px 180px no-repeat;
+  mask-image: linear-gradient(to bottom, #000, transparent 92%);
+}
+
+.kb-field-map__grid {
+  position: relative;
+  min-height: 176px;
+}
+
+.kb-field-map__station {
+  position: absolute;
+  z-index: 1;
+  width: 18px;
+  height: 18px;
+  border: 3px solid #fffdf6;
+  border-radius: 999px;
+  background: var(--field-color);
+  box-shadow: 0 0 0 8px var(--field-glow), 0 18px 32px rgba(31, 47, 36, 0.16);
+}
+
+.kb-field-map__station::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: inherit;
+  background: #fffdf6;
+}
+
+.kb-field-map__station.is-home {
+  left: 18%;
+  top: 58%;
+}
+
+.kb-field-map__station.is-course {
+  left: 54%;
+  top: 24%;
+}
+
+.kb-field-map__station.is-project {
+  right: 15%;
+  bottom: 20%;
+}
+
+.kb-field-map__route {
+  position: absolute;
+  inset: 24px;
+  background:
+    linear-gradient(28deg, transparent 0 25%, var(--field-line) 25.5% 26.5%, transparent 27% 100%),
+    linear-gradient(148deg, transparent 0 42%, var(--field-line) 42.5% 43.5%, transparent 44% 100%);
+  opacity: 0.55;
+}
+
+.kb-field-map__meta {
+  position: relative;
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  margin: 0 16px 16px;
+  border: 1px solid rgba(77, 100, 79, 0.14);
+  border-radius: 18px;
+  background: rgba(255, 253, 246, 0.78);
+  padding: 14px;
+  backdrop-filter: blur(10px);
+}
+
+.kb-field-map__meta span,
+.kb-field-map__meta em {
   font-size: 0.76rem;
   font-style: normal;
   font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
-.kb-detail-hero__score strong {
+.kb-field-map__meta strong {
   color: var(--field-ink, #1f2f24);
-  font-size: 2.4rem;
+  font-size: 2.35rem;
   font-weight: 950;
   line-height: 1;
+}
+
+.kb-observation-deck {
+  display: grid;
+  grid-template-columns: minmax(160px, 0.72fr) minmax(260px, 1.5fr) minmax(180px, 0.95fr);
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.kb-observation-card {
+  position: relative;
+  min-height: 150px;
+  border: 1px solid rgba(77, 100, 79, 0.16);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 14% 18%, var(--field-glow), transparent 38%),
+    linear-gradient(135deg, rgba(255, 253, 246, 0.92), rgba(247, 247, 237, 0.84));
+  box-shadow: 0 18px 42px rgba(51, 67, 45, 0.06);
+  padding: 18px;
+  overflow: hidden;
+}
+
+.kb-observation-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(77, 100, 79, 0.045) 1px, transparent 1px) 0 0 / 20px 20px,
+    linear-gradient(90deg, rgba(77, 100, 79, 0.04) 1px, transparent 1px) 0 0 / 20px 20px;
+  opacity: 0.75;
+}
+
+.kb-observation-card > * {
+  position: relative;
+}
+
+.kb-observation-card.is-score strong {
+  display: block;
+  margin-top: 12px;
+  color: var(--field-ink);
+  font-size: 3rem;
+  font-weight: 950;
+  line-height: 0.95;
+}
+
+.kb-observation-card.is-score span {
+  display: block;
+  margin-top: 10px;
+  color: #65725f;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.kb-observation-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.kb-observation-heading h2 {
+  margin: 4px 0 0;
+  color: var(--field-ink);
+  font-size: 1.18rem;
+  font-weight: 950;
+}
+
+.kb-observation-heading > span {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--field-bg);
+  color: var(--field-color);
+  padding: 7px 9px;
+  font-size: 0.7rem;
+  font-weight: 950;
+}
+
+.kb-observation-ranks {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.kb-observation-rank {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  border: 1px solid rgba(77, 100, 79, 0.13);
+  border-radius: 16px;
+  background: rgba(255, 253, 246, 0.78);
+  padding: 11px;
+}
+
+.kb-observation-rank.is-current {
+  border-color: var(--field-color);
+  background: var(--field-bg);
+}
+
+.kb-observation-rank span,
+.kb-observation-rank em {
+  color: var(--field-color);
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 950;
+}
+
+.kb-observation-rank strong {
+  overflow: hidden;
+  color: var(--field-ink);
+  font-size: 0.86rem;
+  font-weight: 950;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kb-observation-empty {
+  margin: 16px 0 0;
+  border: 1px dashed rgba(77, 100, 79, 0.24);
+  border-radius: 18px;
+  background: rgba(255, 253, 246, 0.56);
+  color: #65725f;
+  padding: 14px;
+  font-size: 0.84rem;
+  font-weight: 850;
+  line-height: 1.65;
+}
+
+.kb-route-list {
+  position: relative;
+  display: grid;
+  gap: 9px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kb-route-list li {
+  border: 1px solid rgba(77, 100, 79, 0.13);
+  border-radius: 999px;
+  background: rgba(255, 253, 246, 0.72);
+  color: #5f6f5e;
+  padding: 9px 11px;
+  font-size: 0.78rem;
+  font-weight: 950;
+}
+
+.kb-route-list li.is-active {
+  border-color: var(--field-color);
+  background: var(--field-bg);
+  color: var(--field-ink);
 }
 
 .kb-learning-unit,
@@ -1218,7 +1501,8 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
 @media (max-width: 980px) {
   .kb-detail-shell,
   .kb-detail-hero,
-  .kb-explore-grid {
+  .kb-explore-grid,
+  .kb-observation-deck {
     grid-template-columns: 1fr;
   }
 
@@ -1228,6 +1512,10 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
 
   .kb-series-list {
     grid-template-columns: 1fr;
+  }
+
+  .kb-field-map {
+    min-height: 230px;
   }
 }
 
@@ -1245,6 +1533,18 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
   }
 
   .kb-next-links {
+    grid-template-columns: 1fr;
+  }
+
+  .kb-detail-hero {
+    padding: 20px;
+  }
+
+  .kb-field-map {
+    min-height: 210px;
+  }
+
+  .kb-observation-ranks {
     grid-template-columns: 1fr;
   }
 }
