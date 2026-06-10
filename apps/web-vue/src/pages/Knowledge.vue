@@ -3,15 +3,6 @@
     <SiteNav active="knowledge" />
 
     <main class="knowledge-shell">
-      <header class="knowledge-page-header">
-        <div>
-          <p class="knowledge-kicker">创新知识库</p>
-          <h1>Crash Course 系列知识任务</h1>
-          <p>选择一个方向进入视频学习、答题挑战和后续项目探索。</p>
-        </div>
-        <span>{{ headerMeta }}</span>
-      </header>
-
       <section class="knowledge-control-panel">
         <CategorySearchBar
           :meta="headerMeta"
@@ -426,43 +417,7 @@ onMounted(async () => {
   max-width: 1320px;
   min-height: 100vh;
   margin: 0 auto;
-  padding: 56px 20px 56px;
-}
-
-.knowledge-page-header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 18px;
-  margin-bottom: 18px;
-}
-
-.knowledge-page-header h1 {
-  margin: 7px 0 0;
-  color: var(--map-ink);
-  font-size: clamp(2rem, 4vw, 3.1rem);
-  font-weight: 950;
-  letter-spacing: -0.055em;
-  line-height: 1.05;
-}
-
-.knowledge-page-header p:not(.knowledge-kicker) {
-  margin-top: 10px;
-  color: var(--map-muted);
-  font-size: 0.98rem;
-  font-weight: 700;
-  line-height: 1.7;
-}
-
-.knowledge-page-header > span {
-  flex: 0 0 auto;
-  border: 1px solid rgba(77, 100, 79, 0.16);
-  border-radius: 999px;
-  background: rgba(255, 253, 246, 0.75);
-  color: #65725f;
-  padding: 9px 12px;
-  font-size: 0.8rem;
-  font-weight: 900;
+  padding: 32px 20px 56px;
 }
 
 .knowledge-control-panel {
@@ -796,11 +751,6 @@ onMounted(async () => {
 
   .knowledge-shell {
     padding: 20px 14px 42px;
-  }
-
-  .knowledge-page-header {
-    display: grid;
-    align-items: start;
   }
 
   .knowledge-catalog-heading {
