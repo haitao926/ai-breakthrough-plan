@@ -1,5 +1,13 @@
 <template>
-  <div class="knowledge-detail-page text-slate-800">
+  <div
+    class="knowledge-detail-page text-slate-800"
+    :style="{
+      '--field-color': fieldColor.text,
+      '--field-bg': fieldColor.bg,
+      '--field-ink': fieldColor.ink,
+      '--field-glow': fieldColor.glow
+    }"
+  >
     <SiteNav active="knowledge" />
 
     <main class="kb-detail-shell">
@@ -22,7 +30,7 @@
             <i class="fas fa-arrow-left"></i> 返回创新知识库
           </RouterLink>
 
-          <article class="kb-detail-hero" :style="{ '--field-color': fieldColor.text, '--field-bg': fieldColor.bg }">
+          <article class="kb-detail-hero">
             <div class="kb-detail-hero__copy">
               <p class="knowledge-kicker">{{ categoryLabel(categoryKey(discipline)) }} · Knowledge Quest</p>
               <h1>{{ discipline.name }}</h1>
@@ -211,13 +219,39 @@
 
         <aside class="kb-detail-sidebar">
           <article class="kb-sidebar-card">
-            <p class="knowledge-kicker">My Progress</p>
+            <p class="knowledge-kicker">Knowledge Rank</p>
             <strong>{{ profile.totalPoints }}</strong>
             <span>累计知识积分</span>
             <div class="kb-sidebar-stats">
+              <span>本周 {{ profile.weeklyPoints }} 分</span>
               <span>{{ profile.completedUnits }} 个挑战</span>
               <span>{{ profile.streakDays }} 天连续</span>
             </div>
+          </article>
+
+          <article class="kb-sidebar-card kb-rank-board">
+            <div class="kb-sidebar-heading">
+              <p class="knowledge-kicker">探索榜单</p>
+              <span>{{ rankingItems.length ? '真实完成记录' : '等待首个挑战' }}</span>
+            </div>
+            <div v-if="rankingItems.length" class="kb-rank-list">
+              <div
+                v-for="(item, index) in rankingItems"
+                :key="item.id"
+                class="kb-rank-row"
+                :class="{ 'is-current': item.id === discipline.id }"
+              >
+                <span>#{{ index + 1 }}</span>
+                <div>
+                  <strong>{{ item.name }}</strong>
+                  <p>{{ item.action }}</p>
+                </div>
+                <em>{{ item.points }} 分</em>
+              </div>
+            </div>
+            <p v-else class="kb-rank-empty">
+              完成任意知识挑战后，这里会按你的真实本地积分生成榜单；不会显示虚构同学。
+            </p>
           </article>
 
           <article class="kb-sidebar-card">
@@ -265,11 +299,11 @@ const activeVideoKey = ref('');
 const progressKey = 'kbLearningProgress:v1';
 
 const palette = {
-  science: { bg: '#eff6ff', text: '#2563eb' },
-  engineering: { bg: '#eef2ff', text: '#4f46e5' },
-  social: { bg: '#ecfeff', text: '#0891b2' },
-  humanities: { bg: '#fff7ed', text: '#ea580c' },
-  all: { bg: '#f3f4f6', text: '#4b5563' }
+  science: { bg: '#e8f5ec', text: '#207a54', ink: '#12352a', glow: 'rgba(32, 122, 84, 0.16)' },
+  engineering: { bg: '#edf3ee', text: '#3f6f5d', ink: '#1f352c', glow: 'rgba(63, 111, 93, 0.16)' },
+  social: { bg: '#eef4ea', text: '#6b7f2a', ink: '#32391c', glow: 'rgba(107, 127, 42, 0.16)' },
+  humanities: { bg: '#f7f0e4', text: '#9a5b2f', ink: '#3d2a1b', glow: 'rgba(154, 91, 47, 0.16)' },
+  all: { bg: '#eef2e8', text: '#4d644f', ink: '#1f2f24', glow: 'rgba(77, 100, 79, 0.16)' }
 };
 
 function categoryKey(field) {
@@ -373,10 +407,39 @@ const profile = computed(() => {
     || completedEntries.reduce((sum, [, value]) => sum + Number(value.points || 0), 0);
   return {
     totalPoints,
+    weeklyPoints: Number(saved.weeklyPoints || 0),
     completedUnits: Number(saved.completedUnits || completedEntries.length),
     streakDays: Number(saved.streakDays || 0)
   };
 });
+
+const rankingItems = computed(() => {
+  return Object.entries(progress.value || {})
+    .filter(([key, value]) => key !== '_profile' && value?.completed)
+    .map(([id, value]) => ({
+      id,
+      name: id === discipline.value?.id ? discipline.value.name : knowledgeName(id),
+      action: id === discipline.value?.id ? '当前知识方向已完成' : '已完成知识挑战',
+      points: Number(value.points || 0),
+      completedAt: value.completedAt || ''
+    }))
+    .sort((a, b) => b.points - a.points || String(b.completedAt).localeCompare(String(a.completedAt)))
+    .slice(0, 5);
+});
+
+function knowledgeName(id) {
+  const names = {
+    ai: '人工智能',
+    cs: '计算机科学',
+    tech: '科技与工程',
+    robotics: '机器人学',
+    physics: '物理与天文',
+    psych: '心理与认知',
+    econ: '经济与商业',
+    env: '环境科学'
+  };
+  return names[id] || '知识方向';
+}
 
 function selectAnswer(questionId, optionIndex) {
   if (completed.value) return;
@@ -509,11 +572,11 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
 .knowledge-detail-page {
   min-height: 100vh;
   background:
-    linear-gradient(90deg, rgba(15, 23, 42, 0.025) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(15, 23, 42, 0.025) 1px, transparent 1px),
-    radial-gradient(circle at top left, rgba(79, 70, 229, 0.1), transparent 32%),
-    #f8fafc;
-  background-size: 42px 42px, 42px 42px, 100% 100%, 100% 100%;
+    radial-gradient(circle at 12% 8%, rgba(61, 112, 83, 0.14), transparent 28%),
+    radial-gradient(circle at 86% 18%, rgba(160, 117, 61, 0.12), transparent 26%),
+    linear-gradient(115deg, rgba(64, 88, 58, 0.035) 25%, transparent 25%) 0 0 / 52px 52px,
+    linear-gradient(65deg, rgba(64, 88, 58, 0.03) 25%, transparent 25%) 0 0 / 52px 52px,
+    #f5f7ef;
 }
 
 .kb-detail-shell {
@@ -534,7 +597,7 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: #4f46e5;
+  color: #4d644f;
   font-size: 0.82rem;
   font-weight: 800;
   text-decoration: none;
@@ -550,23 +613,43 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
 .kb-learning-unit,
 .kb-next-section,
 .kb-sidebar-card {
-  border: 1px solid rgba(255, 255, 255, 0.66);
-  background: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.035);
+  border: 1px solid rgba(75, 94, 71, 0.16);
+  background: rgba(255, 253, 246, 0.82);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 45px rgba(51, 67, 45, 0.07);
 }
 
 .kb-detail-hero {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 180px;
   gap: 18px;
   border-radius: 28px;
+  background:
+    radial-gradient(circle at 82% 16%, var(--field-glow), transparent 34%),
+    linear-gradient(135deg, rgba(255, 253, 246, 0.95), rgba(238, 242, 232, 0.9));
   padding: 26px;
+  overflow: hidden;
+}
+
+.kb-detail-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(32deg, transparent 0 18px, rgba(77, 100, 79, 0.045) 18px 19px),
+    radial-gradient(circle at 18% 70%, transparent 0 48px, rgba(77, 100, 79, 0.08) 49px 50px, transparent 51px);
+  opacity: 0.55;
+}
+
+.kb-detail-hero > * {
+  position: relative;
 }
 
 .knowledge-kicker {
   margin: 0;
-  color: #4f46e5;
+  color: var(--field-color, #4d644f);
   font-size: 0.72rem;
   font-weight: 900;
   letter-spacing: 0.12em;
@@ -575,7 +658,7 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
 
 .kb-detail-hero h1 {
   margin: 10px 0 0;
-  color: #0f172a;
+  color: var(--field-ink, #1f2f24);
   font-size: clamp(2rem, 5vw, 3.1rem);
   font-weight: 900;
   letter-spacing: -0.04em;
@@ -584,23 +667,25 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
 
 .kb-detail-hero__en {
   margin-top: 8px;
-  color: #94a3b8;
+  color: #7e8b78;
   font-size: 0.95rem;
   font-weight: 700;
 }
 
 .kb-detail-hero__definition {
   margin-top: 18px;
-  color: #475569;
+  color: #4c5b4d;
   line-height: 1.8;
 }
 
 .kb-detail-hero__score {
   display: grid;
   place-items: center;
-  border: 1px solid #c7d2fe;
+  border: 1px solid rgba(77, 100, 79, 0.24);
   border-radius: 22px;
-  background: linear-gradient(135deg, var(--field-bg), #ffffff);
+  background:
+    linear-gradient(135deg, var(--field-bg), #fffdf6),
+    repeating-linear-gradient(90deg, rgba(77, 100, 79, 0.06) 0 1px, transparent 1px 12px);
   color: var(--field-color);
   text-align: center;
   padding: 18px;
@@ -614,7 +699,7 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
 }
 
 .kb-detail-hero__score strong {
-  color: #0f172a;
+  color: var(--field-ink, #1f2f24);
   font-size: 2.4rem;
   font-weight: 950;
   line-height: 1;
@@ -657,8 +742,8 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
   flex: 0 0 auto;
   border-radius: 999px;
   padding: 8px 11px;
-  background: #eef2ff;
-  color: #4f46e5;
+  background: var(--field-bg, #eef2e8);
+  color: var(--field-color, #4d644f);
   font-size: 0.75rem;
   font-weight: 900;
 }
@@ -693,15 +778,15 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
 .kb-video-fallback a,
 .kb-source-note a,
 .kb-series-playlist a {
-  color: #4f46e5;
+  color: var(--field-color, #4d644f);
   font-weight: 900;
 }
 
 .kb-series-playlist {
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid rgba(77, 100, 79, 0.14);
   background:
-    linear-gradient(135deg, rgba(79, 70, 229, 0.045), transparent 36%),
-    #ffffff;
+    linear-gradient(135deg, var(--field-glow, rgba(77, 100, 79, 0.1)), transparent 36%),
+    rgba(255, 253, 246, 0.95);
   padding: 18px 20px 20px;
 }
 
@@ -728,9 +813,9 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
   grid-template-columns: 42px minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgba(77, 100, 79, 0.16);
   border-radius: 16px;
-  background: rgba(248, 250, 252, 0.9);
+  background: rgba(250, 250, 244, 0.92);
   padding: 11px;
   text-align: left;
   transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
@@ -738,8 +823,8 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
 
 .kb-series-item:hover,
 .kb-series-item.is-active {
-  border-color: #4f46e5;
-  background: #eef2ff;
+  border-color: var(--field-color, #4d644f);
+  background: var(--field-bg, #eef2e8);
   transform: translateY(-1px);
 }
 
@@ -749,7 +834,7 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
   height: 30px;
   border-radius: 999px;
   background: #ffffff;
-  color: #4f46e5;
+  color: var(--field-color, #4d644f);
   font-size: 0.72rem;
   font-weight: 950;
 }
@@ -757,7 +842,7 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
 .kb-series-item strong {
   min-width: 0;
   overflow: hidden;
-  color: #0f172a;
+  color: var(--field-ink, #1f2f24);
   font-size: 0.84rem;
   font-weight: 900;
   text-overflow: ellipsis;
@@ -777,11 +862,11 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
   justify-content: space-between;
   gap: 16px;
   padding: 16px 20px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid rgba(77, 100, 79, 0.14);
 }
 
 .kb-source-note strong {
-  color: #0f172a;
+  color: var(--field-ink, #1f2f24);
   font-size: 0.9rem;
 }
 
@@ -804,23 +889,23 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
 
 .kb-section-heading span {
   border-radius: 999px;
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--field-bg, #eef2e8);
+  color: var(--field-color, #4d644f);
   padding: 8px 10px;
   font-size: 0.75rem;
   font-weight: 900;
 }
 
 .kb-quiz-question {
-  border: 1px solid #f1f5f9;
+  border: 1px solid rgba(77, 100, 79, 0.14);
   border-radius: 18px;
-  background: #f8fafc;
+  background: rgba(250, 250, 244, 0.86);
   padding: 16px;
 }
 
 .kb-quiz-question h3 {
   margin: 0 0 12px;
-  color: #0f172a;
+  color: var(--field-ink, #1f2f24);
   font-size: 0.96rem;
   font-weight: 900;
   line-height: 1.5;
@@ -834,10 +919,10 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
 .kb-quiz-option {
   width: 100%;
   min-height: 42px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgba(77, 100, 79, 0.15);
   border-radius: 13px;
   background: #ffffff;
-  color: #334155;
+  color: #334236;
   padding: 10px 12px;
   text-align: left;
   font-weight: 800;
@@ -845,8 +930,8 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
 }
 
 .kb-quiz-option:hover {
-  border-color: #c7d2fe;
-  background: #eef2ff;
+  border-color: var(--field-color, #4d644f);
+  background: var(--field-bg, #eef2e8);
 }
 
 .kb-quiz-option:active {
@@ -878,9 +963,11 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
   justify-content: space-between;
   gap: 14px;
   margin: 0 20px 20px;
-  border: 1px solid #c7d2fe;
+  border: 1px solid rgba(77, 100, 79, 0.22);
   border-radius: 18px;
-  background: linear-gradient(135deg, #eef2ff, #ffffff);
+  background:
+    radial-gradient(circle at 12% 20%, var(--field-glow, rgba(77, 100, 79, 0.12)), transparent 38%),
+    linear-gradient(135deg, var(--field-bg, #eef2e8), #fffdf6);
   padding: 16px;
 }
 
@@ -909,7 +996,7 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
 .kb-points button {
   border: 0;
   border-radius: 999px;
-  background: #4f46e5;
+  background: var(--field-color, #4d644f);
   color: #ffffff;
   padding: 11px 16px;
   font-size: 0.78rem;
@@ -945,15 +1032,15 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
 
 .kb-question-card,
 .kb-concept-card {
-  border: 1px solid #f1f5f9;
+  border: 1px solid rgba(77, 100, 79, 0.14);
   border-radius: 16px;
-  background: #ffffff;
+  background: rgba(255, 253, 246, 0.9);
   padding: 14px;
 }
 
 .kb-question-card strong,
 .kb-concept-card strong {
-  color: #0f172a;
+  color: var(--field-ink, #1f2f24);
   font-size: 0.9rem;
 }
 
@@ -974,21 +1061,21 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
 }
 
 .kb-next-link {
-  border: 1px solid #f1f5f9;
+  border: 1px solid rgba(77, 100, 79, 0.14);
   border-radius: 18px;
-  background: #f8fafc;
+  background: rgba(250, 250, 244, 0.9);
   padding: 16px;
-  color: #0f172a;
+  color: var(--field-ink, #1f2f24);
   text-decoration: none;
 }
 
 .kb-next-link:hover {
-  border-color: #c7d2fe;
-  background: #ffffff;
+  border-color: var(--field-color, #4d644f);
+  background: #fffdf6;
 }
 
 .kb-next-link span {
-  color: #4f46e5;
+  color: var(--field-color, #4d644f);
   font-size: 0.72rem;
   font-weight: 900;
 }
@@ -1020,6 +1107,23 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
   padding: 18px;
 }
 
+.kb-sidebar-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.kb-sidebar-heading > span {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--field-bg, #eef2e8);
+  color: var(--field-color, #4d644f);
+  padding: 5px 8px;
+  font-size: 0.68rem;
+  font-weight: 950;
+}
+
 .kb-sidebar-stats {
   display: flex;
   gap: 8px;
@@ -1029,8 +1133,79 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
 
 .kb-sidebar-stats span {
   border-radius: 999px;
-  background: #f1f5f9;
+  background: rgba(238, 242, 232, 0.9);
   padding: 7px 9px;
+}
+
+.kb-rank-board {
+  background:
+    linear-gradient(135deg, var(--field-glow, rgba(77, 100, 79, 0.12)), transparent 34%),
+    rgba(255, 253, 246, 0.84);
+}
+
+.kb-rank-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.kb-rank-row {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid rgba(77, 100, 79, 0.12);
+  border-radius: 16px;
+  background: rgba(250, 250, 244, 0.76);
+  padding: 10px;
+}
+
+.kb-rank-row.is-current {
+  border-color: var(--field-color, #4d644f);
+  background: var(--field-bg, #eef2e8);
+}
+
+.kb-rank-row > span {
+  display: grid;
+  place-items: center;
+  height: 30px;
+  border-radius: 999px;
+  background: #fffdf6;
+  color: var(--field-color, #4d644f);
+  font-weight: 950;
+}
+
+.kb-rank-row strong {
+  display: block;
+  color: var(--field-ink, #1f2f24);
+  font-size: 0.84rem;
+  font-weight: 950;
+}
+
+.kb-rank-row p {
+  margin: 2px 0 0;
+  color: #697568;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.kb-rank-row em {
+  color: var(--field-ink, #1f2f24);
+  font-size: 0.78rem;
+  font-style: normal;
+  font-weight: 950;
+}
+
+.kb-rank-empty {
+  margin: 12px 0 0;
+  border: 1px dashed rgba(77, 100, 79, 0.24);
+  border-radius: 16px;
+  background: rgba(250, 250, 244, 0.62);
+  color: #697568;
+  padding: 12px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  line-height: 1.6;
 }
 
 .kb-empty-state {
