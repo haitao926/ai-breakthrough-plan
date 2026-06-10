@@ -50,8 +50,8 @@
 
             <div class="kb-video">
               <iframe
-                v-if="embedUrl"
-                :src="embedUrl"
+                v-if="activeEmbedUrl"
+                :src="activeEmbedUrl"
                 title="Bilibili Crash Course video"
                 allowfullscreen
                 sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
@@ -65,12 +65,38 @@
               </div>
             </div>
 
+            <section v-if="seriesVideos.length" class="kb-series-playlist">
+              <div class="kb-section-heading">
+                <div>
+                  <p class="knowledge-kicker">Crash Course Series</p>
+                  <h2>{{ seriesTitle }}</h2>
+                </div>
+                <a v-if="seriesSourceUrl" :href="seriesSourceUrl" target="_blank" rel="noreferrer">
+                  查看原收藏夹 <i class="fas fa-up-right-from-square"></i>
+                </a>
+              </div>
+              <div class="kb-series-list">
+                <button
+                  v-for="video in seriesVideos"
+                  :key="video.id || video.bvid"
+                  type="button"
+                  class="kb-series-item"
+                  :class="{ 'is-active': activeVideoKey === videoKey(video) }"
+                  @click="selectVideo(video)"
+                >
+                  <span>{{ video.episode || '视频' }}</span>
+                  <strong>{{ video.title }}</strong>
+                  <em>{{ video.durationMinutes ? `${video.durationMinutes} 分钟` : 'Crash Course' }}</em>
+                </button>
+              </div>
+            </section>
+
             <div class="kb-source-note">
               <div>
-                <strong>{{ learningUnit.source?.title || '推荐视频' }}</strong>
+                <strong>{{ activeVideoTitle || learningUnit.source?.title || '推荐视频' }}</strong>
                 <p>{{ learningUnit.source?.note || '看完视频后完成下面的挑战题。' }}</p>
               </div>
-              <a v-if="learningUnit.source?.url" :href="learningUnit.source.url" target="_blank" rel="noreferrer">
+              <a v-if="activeVideoUrl" :href="activeVideoUrl" target="_blank" rel="noreferrer">
                 外链观看 <i class="fas fa-up-right-from-square"></i>
               </a>
             </div>
@@ -195,14 +221,12 @@
           </article>
 
           <article class="kb-sidebar-card">
-            <p class="knowledge-kicker">Discipline Board</p>
-            <div class="kb-mini-rank" v-for="(item, index) in detailLeaderboard" :key="item.id">
-              <span>#{{ index + 1 }}</span>
-              <div>
-                <strong>{{ item.name }}</strong>
-                <p>{{ item.action }}</p>
-              </div>
-              <em>{{ item.points }}</em>
+            <p class="knowledge-kicker">Series Course</p>
+            <strong>{{ seriesVideos.length || 1 }}</strong>
+            <span>{{ seriesVideos.length ? '个可选视频' : '个推荐视频' }}</span>
+            <div class="kb-sidebar-stats">
+              <span>{{ activeVideoTitle || learningUnit?.source?.title || '推荐入口' }}</span>
+              <span>{{ completed ? '挑战已完成' : '挑战未完成' }}</span>
             </div>
           </article>
 
@@ -225,6 +249,7 @@ import SiteNav from '@/components/SiteNav.vue';
 import PortalFooter from '@/components/portal/PortalFooter.vue';
 import { apiFetch, readJsonResponse } from '@/api/client';
 import staticLearningUnits from '@/data/knowledgeLearningUnits.json';
+import bilibiliSeriesVideos from '@/data/bilibiliSeriesVideos.json';
 
 const route = useRoute();
 const loading = ref(true);
@@ -236,6 +261,7 @@ const answers = ref({});
 const progress = ref({});
 const justAwarded = ref(false);
 const quizMessage = ref('');
+const activeVideoKey = ref('');
 const progressKey = 'kbLearningProgress:v1';
 
 const palette = {
@@ -272,7 +298,47 @@ function categoryLabel(key) {
 
 const fieldColor = computed(() => palette[categoryKey(discipline.value)] || palette.all);
 
-const embedUrl = computed(() => String(learningUnit.value?.source?.embedUrl || '').trim());
+const seriesData = computed(() => {
+  const key = String(learningUnit.value?.series?.key || '').trim();
+  return key ? (bilibiliSeriesVideos[key] || null) : null;
+});
+
+const seriesVideos = computed(() => {
+  const videos = Array.isArray(seriesData.value?.videos) ? seriesData.value.videos : [];
+  if (videos.length) return videos;
+  const source = learningUnit.value?.source || {};
+  if (!source.embedUrl && !source.url) return [];
+  return [{
+    id: 'source',
+    episode: '推荐',
+    title: source.title || '推荐视频',
+    url: source.url,
+    embedUrl: source.embedUrl,
+    durationMinutes: learningUnit.value?.durationMinutes
+  }];
+});
+
+const seriesTitle = computed(() => seriesData.value?.title || learningUnit.value?.source?.title || 'Crash Course 系列');
+
+const seriesSourceUrl = computed(() => seriesData.value?.sourceUrl || learningUnit.value?.series?.sourceUrl || '');
+
+const activeVideo = computed(() => {
+  const videos = seriesVideos.value;
+  if (!videos.length) return null;
+  return videos.find(video => videoKey(video) === activeVideoKey.value) || videos[0];
+});
+
+const activeEmbedUrl = computed(() => (
+  String(activeVideo.value?.embedUrl || learningUnit.value?.source?.embedUrl || '').trim()
+));
+
+const activeVideoUrl = computed(() => (
+  String(activeVideo.value?.url || learningUnit.value?.source?.url || '').trim()
+));
+
+const activeVideoTitle = computed(() => (
+  String(activeVideo.value?.title || '').trim()
+));
 
 const passingScore = computed(() => Number(learningUnit.value?.passingScore || learningUnit.value?.questions?.length || 0));
 
@@ -312,24 +378,6 @@ const profile = computed(() => {
   };
 });
 
-const detailLeaderboard = computed(() => {
-  const fieldName = discipline.value?.name || '知识';
-  const mine = completed.value
-    ? [{
-        id: 'me',
-        name: '我的探索',
-        action: `完成 ${fieldName} 挑战`,
-        points: Number(progress.value?.[discipline.value.id]?.points || totalAvailablePoints.value)
-      }]
-    : [];
-  return [
-    ...mine,
-    { id: 'seed-1', name: '知识先锋', action: `正在探索 ${fieldName}`, points: 42 },
-    { id: 'seed-2', name: '跨界小队', action: '完成跨学科挑战', points: 35 },
-    { id: 'seed-3', name: '项目发起人', action: '从知识进入项目', points: 28 }
-  ].sort((a, b) => b.points - a.points).slice(0, 3);
-});
-
 function selectAnswer(questionId, optionIndex) {
   if (completed.value) return;
   quizMessage.value = '';
@@ -345,6 +393,14 @@ function optionClass(question, optionIndex) {
   if (optionIndex === question.answerIndex) return 'is-correct';
   if (selected === optionIndex) return 'is-wrong';
   return '';
+}
+
+function videoKey(video) {
+  return String(video?.id || video?.bvid || video?.url || '');
+}
+
+function selectVideo(video) {
+  activeVideoKey.value = videoKey(video);
 }
 
 function loadProgress() {
@@ -425,6 +481,7 @@ async function loadDetail() {
   answers.value = {};
   justAwarded.value = false;
   quizMessage.value = '';
+  activeVideoKey.value = '';
   loadProgress();
   try {
     const id = String(route.params.disciplineId || '');
@@ -634,9 +691,84 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
 }
 
 .kb-video-fallback a,
-.kb-source-note a {
+.kb-source-note a,
+.kb-series-playlist a {
   color: #4f46e5;
   font-weight: 900;
+}
+
+.kb-series-playlist {
+  border-bottom: 1px solid #f1f5f9;
+  background:
+    linear-gradient(135deg, rgba(79, 70, 229, 0.045), transparent 36%),
+    #ffffff;
+  padding: 18px 20px 20px;
+}
+
+.kb-series-playlist .kb-section-heading {
+  align-items: center;
+  padding: 0;
+}
+
+.kb-series-playlist .kb-section-heading a {
+  flex: 0 0 auto;
+  font-size: 0.78rem;
+  text-decoration: none;
+}
+
+.kb-series-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.kb-series-item {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: rgba(248, 250, 252, 0.9);
+  padding: 11px;
+  text-align: left;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.kb-series-item:hover,
+.kb-series-item.is-active {
+  border-color: #4f46e5;
+  background: #eef2ff;
+  transform: translateY(-1px);
+}
+
+.kb-series-item span {
+  display: grid;
+  place-items: center;
+  height: 30px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #4f46e5;
+  font-size: 0.72rem;
+  font-weight: 950;
+}
+
+.kb-series-item strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #0f172a;
+  font-size: 0.84rem;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kb-series-item em {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 800;
 }
 
 .kb-source-note {
@@ -901,40 +1033,6 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
   padding: 7px 9px;
 }
 
-.kb-mini-rank {
-  display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: center;
-  margin-top: 12px;
-}
-
-.kb-mini-rank > span {
-  display: grid;
-  place-items: center;
-  height: 30px;
-  border-radius: 999px;
-  background: #eef2ff;
-  color: #4f46e5;
-}
-
-.kb-mini-rank strong {
-  display: block;
-  color: #0f172a;
-  font-size: 0.86rem;
-}
-
-.kb-mini-rank p {
-  color: #64748b;
-  font-size: 0.76rem;
-}
-
-.kb-mini-rank em {
-  color: #0f172a;
-  font-style: normal;
-  font-weight: 950;
-}
-
 .kb-empty-state {
   min-height: 320px;
   display: grid;
@@ -952,6 +1050,10 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
   .kb-detail-sidebar {
     position: static;
   }
+
+  .kb-series-list {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 720px) {
@@ -961,6 +1063,7 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
 
   .kb-learning-unit__header,
   .kb-points,
+  .kb-series-playlist .kb-section-heading,
   .kb-source-note {
     flex-direction: column;
     align-items: stretch;

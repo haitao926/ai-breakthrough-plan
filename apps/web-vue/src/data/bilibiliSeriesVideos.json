@@ -1,0 +1,302 @@
+{
+  "artificial_intelligence": {
+    "title": "人工智能速成课",
+    "sourceUrl": "https://space.bilibili.com/290704043/favlist?fid=7630030&ftype=create",
+    "videos": [
+      {
+        "id": "ai-01",
+        "episode": "01",
+        "title": "什么是人工智能",
+        "bvid": "BV1mE411t7uS",
+        "durationMinutes": 12,
+        "url": "https://www.bilibili.com/video/BV1mE411t7uS/",
+        "embedUrl": "https://player.bilibili.com/player.html?bvid=BV1mE411t7uS&page=1&high_quality=1&autoplay=0"
+      },
+      {
+        "id": "ai-02",
+        "episode": "02",
+        "title": "监督式学习",
+        "bvid": "BV1YJ411D7Ap",
+        "durationMinutes": 15,
+        "url": "https://www.bilibili.com/video/BV1YJ411D7Ap/",
+        "embedUrl": "https://player.bilibili.com/player.html?bvid=BV1YJ411D7Ap&page=1&high_quality=1&autoplay=0"
+      },
+      {
+        "id": "ai-12",
+        "episode": "12",
+        "title": "人工智能玩游戏",
+        "bvid": "BV157411876W",
+        "durationMinutes": 12,
+        "url": "https://www.bilibili.com/video/BV157411876W/",
+        "embedUrl": "https://player.bilibili.com/player.html?bvid=BV157411876W&page=1&high_quality=1&autoplay=0"
+      }
+    ]
+  },
+  "business": {
+    "title": "商业技能与创业",
+    "sourceUrl": "https://space.bilibili.com/290704043/favlist?fid=4931617&ftype=create",
+    "videos": [
+      {
+        "id": "business-entrepreneurship",
+        "episode": "18集",
+        "title": "创业 Entrepreneurship 合集",
+        "bvid": "BV1r741167Kd",
+        "durationMinutes": 201,
+        "url": "https://www.bilibili.com/video/BV1r741167Kd/",
+        "embedUrl": "https://player.bilibili.com/player.html?bvid=BV1r741167Kd&page=1&high_quality=1&autoplay=0"
+      },
+      {
+        "id": "business-05",
+        "episode": "05",
+        "title": "找工作的那些事：求职与简历制作",
+        "bvid": "BV127411P7pH",
+        "durationMinutes": 11,
+        "url": "https://www.bilibili.com/video/BV127411P7pH/",
+        "embedUrl": "https://player.bilibili.com/player.html?bvid=BV127411P7pH&page=1&high_quality=1&autoplay=0"
+      },
+      {
+        "id": "business-11",
+        "episode": "11",
+        "title": "学会做艰难抉择",
+        "bvid": "BV1JE411L7cq",
+        "durationMinutes": 11,
+        "url": "https://www.bilibili.com/video/BV1JE411L7cq/",
+        "embedUrl": "https://player.bilibili.com/player.html?bvid=BV1JE411L7cq&page=1&high_quality=1&autoplay=0"
+      },
+      {
+        "id": "business-12",
+        "episode": "12",
+        "title": "如何进行团队协作",
+        "bvid": "BV1t7411f7XH",
+        "durationMinutes": 11,
+        "url": "https://www.bilibili.com/video/BV1t7411f7XH/",
+        "embedUrl": "https://player.bilibili.com/player.html?bvid=BV1t7411f7XH&page=1&high_quality=1&autoplay=0"
+      }
+    ]
+  },
+  "engineering": {
+    "title": "工程学速成课",
+    "sourceUrl": "https://space.bilibili.com/290704043/favlist?fid=2120261&ftype=create",
+    "videos": [
+      {
+        "id": "engineering-11",
+        "episode": "11",
+        "title": "热机、冰箱和循环",
+        "bvid": "BV1t4411g7EW",
+        "durationMinutes": 11,
+        "url": "https://www.bilibili.com/video/BV1t4411g7EW/",
+        "embedUrl": "https://player.bilibili.com/player.html?bvid=BV1t4411g7EW&page=1&high_quality=1&autoplay=0"
+      },
+      {
+        "id": "engineering-14",
+        "episode": "14",
+        "title": "传热",
+        "bvid": "BV19t411A7gf",
+        "durationMinutes": 9,
+        "url": "https://www.bilibili.com/video/BV19t411A7gf/",
+        "embedUrl": "https://player.bilibili.com/player.html?bvid=BV19t411A7gf&page=1&high_quality=1&autoplay=0"
+      },
+      {
+        "id": "engineering-16",
+        "episode": "16",
+        "title": "药物、染料及传质",
+        "bvid": "BV1HE41187um",
+        "durationMinutes": 8,
+        "url": "https://www.bilibili.com/video/BV1HE41187um/",
+        "embedUrl": "https://player.bilibili.com/player.html?bvid=BV1HE41187um&page=1&high_quality=1&autoplay=0"
+      },
+      {
+        "id": "engineering-45",
+        "episode": "45",
+        "title": "如何成为一名工程师",
+        "bvid": "BV1B7411h7Vv",
+        "durationMinutes": 9,
+        "url": "https://www.bilibili.com/video/BV1B7411h7Vv/",
+        "embedUrl": "https://player.bilibili.com/player.html?bvid=BV1B7411h7Vv&page=1&high_quality=1&autoplay=0"
+      }
+    ]
+  },
+  "geography": {
+    "title": "地理学速成课",
+    "sourceUrl": "https://space.bilibili.com/290704043/favlist?fid=11878065&ftype=create",
+    "videos": [
+      {
+        "id": "geography-01",
+        "episode": "01",
+        "title": "什么是地理学",
+        "bvid": "BV18a411F7Da",
+        "durationMinutes": 11,
+        "url": "https://www.bilibili.com/video/BV18a411F7Da/",
+        "embedUrl": "https://player.bilibili.com/player.html?bvid=BV18a411F7Da&page=1&high_quality=1&autoplay=0"
+      },
+      {
+        "id": "geography-02",
+        "episode": "02",
+        "title": "什么是地图",
+        "bvid": "BV1254y147BX",
+        "durationMinutes": 11,
+        "url": "https://www.bilibili.com/video/BV1254y147BX/",
+        "embedUrl": "https://player.bilibili.com/player.html?bvid=BV1254y147BX&page=1&high_quality=1&autoplay=0"
+      },
+      {
+        "id": "geography-03",
+        "episode": "03",
+        "title": "什么是空间？我们如何学习它？",
+        "bvid": "BV1cp4y1z7fQ",
+        "durationMinutes": 10,
+        "url": "https://www.bilibili.com/video/BV1cp4y1z7fQ/",
+        "embedUrl": "https://player.bilibili.com/player.html?bvid=BV1cp4y1z7fQ&page=1&high_quality=1&autoplay=0"
+      },
+      {
+        "id": "geography-04",
+        "episode": "04",
+        "title": "什么是自然地理？",
+        "bvid": "BV1yv4y1f7g3",
+        "durationMinutes": 11,
+        "url": "https://www.bilibili.com/video/BV1yv4y1f7g3/",
+        "embedUrl": "https://player.bilibili.com/player.html?bvid=BV1yv4y1f7g3&page=1&high_quality=1&autoplay=0"
+      },
+      {
+        "id": "geography-06",
+        "episode": "06",
+        "title": "大气层有什么作用？",
+        "bvid": "BV1kK4y1n7bN",
+        "durationMinutes": 11,
+        "url": "https://www.bilibili.com/video/BV1kK4y1n7bN/",
+        "embedUrl": "https://player.bilibili.com/player.html?bvid=BV1kK4y1n7bN&page=1&high_quality=1&autoplay=0"
+      }
+    ]
+  },
+  "physics": {
+    "title": "物理学速成课",
+    "sourceUrl": "https://space.bilibili.com/290704043/favlist?fid=3098270&ftype=create",
+    "videos": [
+      {
+        "id": "physics-full",
+        "episode": "合集",
+        "title": "10分钟速成课：物理学",
+        "bvid": "BV1Nb411L7fQ",
+        "durationMinutes": 449,
+        "url": "https://www.bilibili.com/video/BV1Nb411L7fQ/",
+        "embedUrl": "https://player.bilibili.com/player.html?bvid=BV1Nb411L7fQ&page=1&high_quality=1&autoplay=0"
+      },
+      {
+        "id": "physics-22",
+        "episode": "22",
+        "title": "热",
+        "bvid": "BV1Jt411H7PG",
+        "durationMinutes": 9,
+        "url": "https://www.bilibili.com/video/BV1Jt411H7PG/",
+        "embedUrl": "https://player.bilibili.com/player.html?bvid=BV1Jt411H7PG&page=1&high_quality=1&autoplay=0"
+      },
+      {
+        "id": "physics-40",
+        "episode": "40",
+        "title": "光的干涉",
+        "bvid": "BV1t4411T7Ti",
+        "durationMinutes": 8,
+        "url": "https://www.bilibili.com/video/BV1t4411T7Ti/",
+        "embedUrl": "https://player.bilibili.com/player.html?bvid=BV1t4411T7Ti&page=1&high_quality=1&autoplay=0"
+      },
+      {
+        "id": "physics-42",
+        "episode": "42",
+        "title": "狭义相对论",
+        "bvid": "BV1jE41117md",
+        "durationMinutes": 9,
+        "url": "https://www.bilibili.com/video/BV1jE41117md/",
+        "embedUrl": "https://player.bilibili.com/player.html?bvid=BV1jE41117md&page=1&high_quality=1&autoplay=0"
+      }
+    ]
+  },
+  "statistics": {
+    "title": "统计学速成课",
+    "sourceUrl": "https://space.bilibili.com/290704043/favlist?fid=4659433&ftype=create",
+    "videos": [
+      {
+        "id": "statistics-25",
+        "episode": "25",
+        "title": "贝叶斯定理（下）",
+        "bvid": "BV1ot411J76P",
+        "durationMinutes": 11,
+        "url": "https://www.bilibili.com/video/BV1ot411J76P/",
+        "embedUrl": "https://player.bilibili.com/player.html?bvid=BV1ot411J76P&page=1&high_quality=1&autoplay=0"
+      },
+      {
+        "id": "statistics-28",
+        "episode": "28",
+        "title": "自由度与效应值",
+        "bvid": "BV1VJ41117k3",
+        "durationMinutes": 14,
+        "url": "https://www.bilibili.com/video/BV1VJ41117k3/",
+        "embedUrl": "https://player.bilibili.com/player.html?bvid=BV1VJ41117k3&page=1&high_quality=1&autoplay=0"
+      },
+      {
+        "id": "statistics-33",
+        "episode": "33",
+        "title": "方差分析（上）",
+        "bvid": "BV1Mz4y1d72f",
+        "durationMinutes": 13,
+        "url": "https://www.bilibili.com/video/BV1Mz4y1d72f/",
+        "embedUrl": "https://player.bilibili.com/player.html?bvid=BV1Mz4y1d72f&page=1&high_quality=1&autoplay=0"
+      }
+    ]
+  },
+  "media_literacy": {
+    "title": "媒介素养与传播学",
+    "sourceUrl": "https://space.bilibili.com/290704043/favlist?fid=2119949&ftype=create",
+    "videos": [
+      {
+        "id": "media-06",
+        "episode": "06",
+        "title": "广告的影响与决定",
+        "bvid": "BV1js411A7u2",
+        "durationMinutes": 10,
+        "url": "https://www.bilibili.com/video/BV1js411A7u2/",
+        "embedUrl": "https://player.bilibili.com/player.html?bvid=BV1js411A7u2&page=1&high_quality=1&autoplay=0"
+      },
+      {
+        "id": "media-08",
+        "episode": "08",
+        "title": "媒体版权与拥有权",
+        "bvid": "BV12s411F7GW",
+        "durationMinutes": 12,
+        "url": "https://www.bilibili.com/video/BV12s411F7GW/",
+        "embedUrl": "https://player.bilibili.com/player.html?bvid=BV12s411F7GW&page=1&high_quality=1&autoplay=0"
+      },
+      {
+        "id": "media-10",
+        "episode": "10",
+        "title": "媒体的黑暗面",
+        "bvid": "BV12s411F7yA",
+        "durationMinutes": 10,
+        "url": "https://www.bilibili.com/video/BV12s411F7yA/",
+        "embedUrl": "https://player.bilibili.com/player.html?bvid=BV12s411F7yA&page=1&high_quality=1&autoplay=0"
+      }
+    ]
+  },
+  "psychology": {
+    "title": "心理学速成课",
+    "sourceUrl": "https://crashcourse.club/category/psychology",
+    "videos": [
+      {
+        "id": "psychology-01",
+        "episode": "01",
+        "title": "心理学简介",
+        "bvid": "BV1Ys411Y7Yr",
+        "durationMinutes": 10,
+        "url": "https://www.bilibili.com/video/BV1Ys411Y7Yr/",
+        "embedUrl": "https://player.bilibili.com/player.html?bvid=BV1Ys411Y7Yr&page=1&high_quality=1&autoplay=0"
+      },
+      {
+        "id": "psychology-course",
+        "episode": "40集",
+        "title": "心理学完整目录",
+        "bvid": "BV1X4411d7Z9",
+        "durationMinutes": 400,
+        "url": "https://www.bilibili.com/video/BV1X4411d7Z9/",
+        "embedUrl": "https://player.bilibili.com/player.html?bvid=BV1X4411d7Z9&page=1&high_quality=1&autoplay=0"
+      }
+    ]
+  }
+}
