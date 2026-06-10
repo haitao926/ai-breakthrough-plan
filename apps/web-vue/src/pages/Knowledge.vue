@@ -305,6 +305,8 @@ function openSeries(series) {
 }
 
 function firstVideoKeyForUnit(unit) {
+  const recommended = String(unit?.series?.recommendedVideoId || '').trim();
+  if (recommended) return recommended;
   const key = String(unit?.series?.key || '').trim();
   const firstVideo = key ? bilibiliSeriesVideos[key]?.videos?.[0] : null;
   if (firstVideo) return String(firstVideo.id || firstVideo.bvid || firstVideo.url || '');
