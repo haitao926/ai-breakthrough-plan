@@ -124,7 +124,11 @@
                   <i class="fas fa-chevron-left"></i>
                 </button>
 
-                <article class="kb-quiz-question">
+                <article
+                  class="kb-quiz-question"
+                  @touchstart.passive="onQuestionTouchStart"
+                  @touchend.passive="onQuestionTouchEnd"
+                >
                   <div class="kb-quiz-progress">
                     <span>第 {{ activeQuestionIndex + 1 }} / {{ questionCount }} 题</span>
                     <div>
@@ -186,7 +190,7 @@
               <div>
                 <span>{{ completed ? '已计入你的知识积分' : '完成挑战后获得积分' }}</span>
                 <strong>+{{ totalAvailablePoints }}</strong>
-                <p v-if="completed" class="kb-rank-change">当前探索记录已保存，本周榜单会优先展示近期完成。</p>
+                <p v-if="completed" class="kb-rank-change">当前探索记录已保存，可以继续看下一集或进入项目。</p>
                 <p v-else-if="quizMessage" class="kb-quiz-message">{{ quizMessage }}</p>
                 <p v-else>答对至少 {{ passingScore }} 题即可获得积分。</p>
               </div>
@@ -201,6 +205,19 @@
             <h2>这个方向的学习挑战正在整理</h2>
             <p>你仍然可以先从下面的研究问题和项目切口开始探索。</p>
           </article>
+
+          <section class="kb-study-summary">
+            <article class="kb-study-summary-card">
+              <p class="knowledge-kicker">Learning Status</p>
+              <strong>{{ profile.totalPoints }} 分</strong>
+              <span>{{ completed ? '本方向挑战已完成' : `完成挑战可获得 ${totalAvailablePoints} 分` }}</span>
+            </article>
+            <article class="kb-study-summary-card">
+              <p class="knowledge-kicker">Current Episode</p>
+              <strong>{{ activeVideoPosition }}</strong>
+              <span>{{ activeVideoTitle || learningUnit?.source?.title || '推荐视频' }}</span>
+            </article>
+          </section>
 
           <section class="kb-explore-grid">
             <article v-if="discipline.research_questions?.length" class="kb-panel">
@@ -259,58 +276,6 @@
           </section>
         </section>
 
-        <aside class="kb-detail-sidebar">
-          <article class="kb-sidebar-card">
-            <p class="knowledge-kicker">Knowledge Rank</p>
-            <strong>{{ profile.totalPoints }}</strong>
-            <span>累计知识积分</span>
-            <div class="kb-sidebar-stats">
-              <span>本周 {{ profile.weeklyPoints }} 分</span>
-              <span>{{ profile.completedUnits }} 个挑战</span>
-              <span>{{ profile.streakDays }} 天连续</span>
-            </div>
-          </article>
-
-          <article class="kb-sidebar-card kb-rank-board">
-            <div class="kb-sidebar-heading">
-              <p class="knowledge-kicker">探索榜单</p>
-              <span>{{ rankingItems.length ? '真实完成记录' : '等待首个挑战' }}</span>
-            </div>
-            <div v-if="rankingItems.length" class="kb-rank-list">
-              <div
-                v-for="(item, index) in rankingItems"
-                :key="item.id"
-                class="kb-rank-row"
-                :class="{ 'is-current': item.id === discipline.id }"
-              >
-                <span>#{{ index + 1 }}</span>
-                <div>
-                  <strong>{{ item.name }}</strong>
-                  <p>{{ item.action }}</p>
-                </div>
-                <em>{{ item.points }} 分</em>
-              </div>
-            </div>
-            <p v-else class="kb-rank-empty">
-              完成任意知识挑战后，这里会按你的真实本地积分生成榜单；不会显示虚构同学。
-            </p>
-          </article>
-
-          <article class="kb-sidebar-card">
-            <p class="knowledge-kicker">Series Course</p>
-            <strong>{{ seriesVideos.length || 1 }}</strong>
-            <span>{{ seriesVideos.length ? '个可选视频' : '个推荐视频' }}</span>
-            <div class="kb-sidebar-stats">
-              <span>{{ activeVideoTitle || learningUnit?.source?.title || '推荐入口' }}</span>
-              <span>{{ completed ? '挑战已完成' : '挑战未完成' }}</span>
-            </div>
-          </article>
-
-          <article class="kb-sidebar-card">
-            <p class="knowledge-kicker">Why It Matters</p>
-            <p>{{ discipline.why_matters || discipline.tagline || '从真实问题中寻找研究与实践切口。' }}</p>
-          </article>
-        </aside>
       </template>
     </main>
 
@@ -339,6 +304,7 @@ const justAwarded = ref(false);
 const quizMessage = ref('');
 const activeVideoKey = ref('');
 const activeQuestionIndex = ref(0);
+const questionTouchStartX = ref(0);
 const progressKey = 'kbLearningProgress:v1';
 
 const palette = {
@@ -486,34 +452,6 @@ const profile = computed(() => {
   };
 });
 
-const rankingItems = computed(() => {
-  return Object.entries(progress.value || {})
-    .filter(([key, value]) => key !== '_profile' && value?.completed)
-    .map(([id, value]) => ({
-      id,
-      name: id === discipline.value?.id ? discipline.value.name : knowledgeName(id),
-      action: id === discipline.value?.id ? '当前知识方向已完成' : '已完成知识挑战',
-      points: Number(value.points || 0),
-      completedAt: value.completedAt || ''
-    }))
-    .sort((a, b) => b.points - a.points || String(b.completedAt).localeCompare(String(a.completedAt)))
-    .slice(0, 5);
-});
-
-function knowledgeName(id) {
-  const names = {
-    ai: '人工智能',
-    cs: '计算机科学',
-    tech: '科技与工程',
-    robotics: '机器人学',
-    physics: '物理与天文',
-    psych: '心理与认知',
-    econ: '经济与商业',
-    env: '环境科学'
-  };
-  return names[id] || '知识方向';
-}
-
 function selectAnswer(questionId, optionIndex) {
   if (completed.value) return;
   quizMessage.value = '';
@@ -526,6 +464,17 @@ function selectAnswer(questionId, optionIndex) {
 function goQuestion(delta) {
   const nextIndex = activeQuestionIndex.value + delta;
   activeQuestionIndex.value = Math.min(Math.max(nextIndex, 0), Math.max(questionCount.value - 1, 0));
+}
+
+function onQuestionTouchStart(event) {
+  questionTouchStartX.value = Number(event.changedTouches?.[0]?.clientX || 0);
+}
+
+function onQuestionTouchEnd(event) {
+  const endX = Number(event.changedTouches?.[0]?.clientX || 0);
+  const delta = endX - questionTouchStartX.value;
+  if (Math.abs(delta) < 48) return;
+  goQuestion(delta < 0 ? 1 : -1);
 }
 
 function optionClass(question, optionIndex) {
@@ -666,10 +615,7 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
 }
 
 .kb-detail-shell {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
-  gap: 18px;
-  max-width: 1220px;
+  max-width: 980px;
   margin: 0 auto;
   padding: 14px 20px 56px;
 }
@@ -697,7 +643,7 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
 .kb-panel,
 .kb-learning-unit,
 .kb-next-section,
-.kb-sidebar-card {
+.kb-study-summary-card {
   border: 1px solid rgba(75, 94, 71, 0.16);
   background: rgba(255, 253, 246, 0.82);
   backdrop-filter: blur(14px);
@@ -969,6 +915,7 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
   border-radius: 20px;
   background: rgba(250, 250, 244, 0.86);
   padding: 18px;
+  touch-action: pan-y;
 }
 
 .kb-quiz-carousel {
@@ -1136,15 +1083,13 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
   padding: 16px;
 }
 
-.kb-points span,
-.kb-sidebar-card span {
+.kb-points span {
   color: #64748b;
   font-size: 0.78rem;
   font-weight: 900;
 }
 
-.kb-points strong,
-.kb-sidebar-card > strong {
+.kb-points strong {
   display: block;
   color: #0f172a;
   font-size: 2rem;
@@ -1176,6 +1121,41 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
 .kb-rank-change {
   color: #16a34a !important;
   font-weight: 900;
+}
+
+.kb-study-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.kb-study-summary-card {
+  min-width: 0;
+  border-radius: 20px;
+  padding: 16px;
+}
+
+.kb-study-summary-card strong {
+  display: block;
+  overflow: hidden;
+  margin-top: 6px;
+  color: var(--field-ink, #1f2f24);
+  font-size: 1.15rem;
+  font-weight: 950;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kb-study-summary-card span {
+  display: block;
+  overflow: hidden;
+  margin-top: 5px;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .kb-explore-grid {
@@ -1259,120 +1239,6 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
   line-height: 1.6;
 }
 
-.kb-detail-sidebar {
-  position: sticky;
-  top: 96px;
-  align-self: start;
-  display: grid;
-  gap: 14px;
-}
-
-.kb-sidebar-card {
-  border-radius: 22px;
-  padding: 18px;
-}
-
-.kb-sidebar-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.kb-sidebar-heading > span {
-  flex: 0 0 auto;
-  border-radius: 999px;
-  background: var(--field-bg, #eef2e8);
-  color: var(--field-color, #4d644f);
-  padding: 5px 8px;
-  font-size: 0.68rem;
-  font-weight: 950;
-}
-
-.kb-sidebar-stats {
-  display: flex;
-  gap: 8px;
-  margin-top: 12px;
-  flex-wrap: wrap;
-}
-
-.kb-sidebar-stats span {
-  border-radius: 999px;
-  background: rgba(238, 242, 232, 0.9);
-  padding: 7px 9px;
-}
-
-.kb-rank-board {
-  background:
-    linear-gradient(135deg, var(--field-glow, rgba(77, 100, 79, 0.12)), transparent 34%),
-    rgba(255, 253, 246, 0.84);
-}
-
-.kb-rank-list {
-  display: grid;
-  gap: 10px;
-  margin-top: 14px;
-}
-
-.kb-rank-row {
-  display: grid;
-  grid-template-columns: 36px minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: center;
-  border: 1px solid rgba(77, 100, 79, 0.12);
-  border-radius: 16px;
-  background: rgba(250, 250, 244, 0.76);
-  padding: 10px;
-}
-
-.kb-rank-row.is-current {
-  border-color: var(--field-color, #4d644f);
-  background: var(--field-bg, #eef2e8);
-}
-
-.kb-rank-row > span {
-  display: grid;
-  place-items: center;
-  height: 30px;
-  border-radius: 999px;
-  background: #fffdf6;
-  color: var(--field-color, #4d644f);
-  font-weight: 950;
-}
-
-.kb-rank-row strong {
-  display: block;
-  color: var(--field-ink, #1f2f24);
-  font-size: 0.84rem;
-  font-weight: 950;
-}
-
-.kb-rank-row p {
-  margin: 2px 0 0;
-  color: #697568;
-  font-size: 0.72rem;
-  font-weight: 800;
-}
-
-.kb-rank-row em {
-  color: var(--field-ink, #1f2f24);
-  font-size: 0.78rem;
-  font-style: normal;
-  font-weight: 950;
-}
-
-.kb-rank-empty {
-  margin: 12px 0 0;
-  border: 1px dashed rgba(77, 100, 79, 0.24);
-  border-radius: 16px;
-  background: rgba(250, 250, 244, 0.62);
-  color: #697568;
-  padding: 12px;
-  font-size: 0.8rem;
-  font-weight: 800;
-  line-height: 1.6;
-}
-
 .kb-empty-state {
   min-height: 320px;
   display: grid;
@@ -1384,10 +1250,6 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
   .kb-detail-shell,
   .kb-explore-grid {
     grid-template-columns: 1fr;
-  }
-
-  .kb-detail-sidebar {
-    position: static;
   }
 }
 
@@ -1405,6 +1267,10 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
   }
 
   .kb-next-links {
+    grid-template-columns: 1fr;
+  }
+
+  .kb-study-summary {
     grid-template-columns: 1fr;
   }
 
