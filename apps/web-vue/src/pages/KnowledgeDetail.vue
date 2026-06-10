@@ -92,7 +92,7 @@
                   :key="video.id || video.bvid"
                   type="button"
                   class="kb-series-item"
-                  :class="{ 'is-active': activeVideoKey === videoKey(video) }"
+                  :class="{ 'is-active': videoKey(activeVideo) === videoKey(video) }"
                   @click="selectVideo(video)"
                 >
                   <span>{{ video.episode || '视频' }}</span>
@@ -126,8 +126,11 @@
 
                 <article
                   class="kb-quiz-question"
+                  tabindex="0"
                   @touchstart.passive="onQuestionTouchStart"
                   @touchend.passive="onQuestionTouchEnd"
+                  @keydown.left.prevent="goQuestion(-1)"
+                  @keydown.right.prevent="goQuestion(1)"
                 >
                   <div class="kb-quiz-progress">
                     <span>第 {{ activeQuestionIndex + 1 }} / {{ questionCount }} 题</span>
