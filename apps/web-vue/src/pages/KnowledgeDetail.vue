@@ -32,74 +32,10 @@
             <i class="fas fa-arrow-left"></i> 返回创新知识库
           </RouterLink>
 
-          <article class="kb-detail-hero">
-            <div class="kb-detail-hero__copy">
-              <p class="knowledge-kicker">{{ categoryLabel(categoryKey(discipline)) }} · Knowledge Quest</p>
-              <h1>{{ discipline.name }}</h1>
-              <p class="kb-detail-hero__en">{{ discipline.en }}</p>
-              <p class="kb-detail-hero__definition">{{ discipline.definition }}</p>
-            </div>
-            <div class="kb-field-map" aria-label="知识观测地图">
-              <div class="kb-field-map__grid">
-                <span class="kb-field-map__station is-home"></span>
-                <span class="kb-field-map__station is-course"></span>
-                <span class="kb-field-map__station is-project"></span>
-                <span class="kb-field-map__route"></span>
-              </div>
-              <div class="kb-field-map__meta">
-                <span>{{ completed ? 'Challenge logged' : 'Field mission' }}</span>
-                <strong>{{ totalAvailablePoints }}</strong>
-                <em>knowledge points</em>
-              </div>
-            </div>
-          </article>
-
-          <section class="kb-observation-deck" aria-label="知识积分与探索榜单">
-            <article class="kb-observation-card is-score">
-              <p class="knowledge-kicker">My Field Points</p>
-              <strong>{{ profile.totalPoints }}</strong>
-              <span>累计知识积分 · 本周 {{ profile.weeklyPoints }} 分</span>
-            </article>
-
-            <article class="kb-observation-card is-rank">
-              <div class="kb-observation-heading">
-                <div>
-                  <p class="knowledge-kicker">Knowledge Leaderboard</p>
-                  <h2>知识观测榜单</h2>
-                </div>
-                <span>{{ rankingItems.length ? '真实记录' : '暂无记录' }}</span>
-              </div>
-              <div v-if="rankingItems.length" class="kb-observation-ranks">
-                <div
-                  v-for="(item, index) in rankingItems"
-                  :key="item.id"
-                  class="kb-observation-rank"
-                  :class="{ 'is-current': item.id === discipline.id }"
-                >
-                  <span>#{{ index + 1 }}</span>
-                  <strong>{{ item.name }}</strong>
-                  <em>{{ item.points }} 分</em>
-                </div>
-              </div>
-              <p v-else class="kb-observation-empty">
-                完成任意视频挑战后，这里会用你的真实本地记录生成榜单，不放虚构同学或假积分。
-              </p>
-            </article>
-
-            <article class="kb-observation-card is-route">
-              <p class="knowledge-kicker">Exploration Route</p>
-              <ol class="kb-route-list">
-                <li :class="{ 'is-active': !completed }">看完系列视频</li>
-                <li :class="{ 'is-active': !completed && score > 0 }">完成挑战题</li>
-                <li :class="{ 'is-active': completed }">解锁课程与项目</li>
-              </ol>
-            </article>
-          </section>
-
           <article v-if="learningUnit" class="kb-learning-unit">
             <header class="kb-learning-unit__header">
               <div>
-                <p class="knowledge-kicker">Video Challenge</p>
+                <p class="knowledge-kicker">{{ categoryLabel(categoryKey(discipline)) }} · Video Challenge</p>
                 <h2>{{ learningUnit.title }}</h2>
                 <p>{{ learningUnit.summary }}</p>
               </div>
@@ -123,6 +59,21 @@
                   <a :href="learningUnit.source?.url" target="_blank" rel="noreferrer">在 Bilibili 打开</a>
                 </div>
               </div>
+            </div>
+
+            <div class="kb-episode-controls" v-if="seriesVideos.length">
+              <button type="button" :disabled="!previousVideo" @click="selectAdjacentVideo(-1)">
+                <i class="fas fa-arrow-left"></i>
+                上一集
+              </button>
+              <div>
+                <span>{{ activeVideoPosition }}</span>
+                <strong>{{ activeVideoTitle || learningUnit.source?.title || '推荐视频' }}</strong>
+              </div>
+              <button type="button" :disabled="!nextVideo" @click="selectAdjacentVideo(1)">
+                下一集
+                <i class="fas fa-arrow-right"></i>
+              </button>
             </div>
 
             <section v-if="seriesVideos.length" class="kb-series-playlist">
@@ -168,28 +119,67 @@
                 <span>{{ score }} / {{ learningUnit.questions?.length || 0 }} 正确</span>
               </div>
 
-              <article
-                v-for="(question, questionIndex) in learningUnit.questions"
-                :key="question.id"
-                class="kb-quiz-question"
-              >
-                <h3>{{ questionIndex + 1 }}. {{ question.prompt }}</h3>
-                <div class="kb-quiz-options">
-                  <button
-                    v-for="(option, optionIndex) in question.options"
-                    :key="option"
-                    type="button"
-                    class="kb-quiz-option"
-                    :class="optionClass(question, optionIndex)"
-                    @click="selectAnswer(question.id, optionIndex)"
-                  >
-                    {{ option }}
-                  </button>
-                </div>
-                <p v-if="answers[question.id] !== undefined" class="kb-quiz-explanation">
-                  {{ question.explanation }}
-                </p>
-              </article>
+              <div v-if="activeQuestion" class="kb-quiz-carousel">
+                <button type="button" class="kb-quiz-nav" :disabled="activeQuestionIndex === 0" @click="goQuestion(-1)">
+                  <i class="fas fa-chevron-left"></i>
+                </button>
+
+                <article class="kb-quiz-question">
+                  <div class="kb-quiz-progress">
+                    <span>第 {{ activeQuestionIndex + 1 }} / {{ questionCount }} 题</span>
+                    <div>
+                      <i
+                        v-for="(question, index) in learningUnit.questions"
+                        :key="question.id"
+                        :class="{
+                          'is-active': index === activeQuestionIndex,
+                          'is-answered': answers[question.id] !== undefined
+                        }"
+                      ></i>
+                    </div>
+                  </div>
+                  <h3>{{ activeQuestionIndex + 1 }}. {{ activeQuestion.prompt }}</h3>
+                  <div class="kb-quiz-options">
+                    <button
+                      v-for="(option, optionIndex) in activeQuestion.options"
+                      :key="option"
+                      type="button"
+                      class="kb-quiz-option"
+                      :class="optionClass(activeQuestion, optionIndex)"
+                      @click="selectAnswer(activeQuestion.id, optionIndex)"
+                    >
+                      {{ option }}
+                    </button>
+                  </div>
+                  <p v-if="answers[activeQuestion.id] !== undefined" class="kb-quiz-explanation">
+                    {{ activeQuestion.explanation }}
+                  </p>
+                </article>
+
+                <button type="button" class="kb-quiz-nav" :disabled="activeQuestionIndex >= questionCount - 1" @click="goQuestion(1)">
+                  <i class="fas fa-chevron-right"></i>
+                </button>
+              </div>
+
+              <div class="kb-quiz-mobile-controls" v-if="questionCount > 1">
+                <button type="button" :disabled="activeQuestionIndex === 0" @click="goQuestion(-1)">上一题</button>
+                <button type="button" :disabled="activeQuestionIndex >= questionCount - 1" @click="goQuestion(1)">下一题</button>
+              </div>
+
+              <div class="kb-quiz-dots" v-if="questionCount > 1">
+                <button
+                  v-for="(question, index) in learningUnit.questions"
+                  :key="question.id"
+                  type="button"
+                  :class="{
+                    'is-active': index === activeQuestionIndex,
+                    'is-answered': answers[question.id] !== undefined
+                  }"
+                  @click="activeQuestionIndex = index"
+                >
+                  {{ index + 1 }}
+                </button>
+              </div>
             </section>
 
             <section class="kb-points" :class="{ 'is-awarded': justAwarded }">
@@ -348,6 +338,7 @@ const progress = ref({});
 const justAwarded = ref(false);
 const quizMessage = ref('');
 const activeVideoKey = ref('');
+const activeQuestionIndex = ref(0);
 const progressKey = 'kbLearningProgress:v1';
 
 const palette = {
@@ -414,6 +405,29 @@ const activeVideo = computed(() => {
   return videos.find(video => videoKey(video) === activeVideoKey.value) || videos[0];
 });
 
+const activeVideoIndex = computed(() => {
+  const videos = seriesVideos.value;
+  if (!videos.length) return -1;
+  const index = videos.findIndex(video => videoKey(video) === videoKey(activeVideo.value));
+  return index >= 0 ? index : 0;
+});
+
+const previousVideo = computed(() => (
+  activeVideoIndex.value > 0 ? seriesVideos.value[activeVideoIndex.value - 1] : null
+));
+
+const nextVideo = computed(() => (
+  activeVideoIndex.value >= 0 && activeVideoIndex.value < seriesVideos.value.length - 1
+    ? seriesVideos.value[activeVideoIndex.value + 1]
+    : null
+));
+
+const activeVideoPosition = computed(() => {
+  const total = seriesVideos.value.length;
+  if (!total) return '推荐视频';
+  return `第 ${activeVideoIndex.value + 1} / ${total} 集`;
+});
+
 const activeEmbedUrl = computed(() => (
   String(activeVideo.value?.embedUrl || learningUnit.value?.source?.embedUrl || '').trim()
 ));
@@ -427,6 +441,13 @@ const activeVideoTitle = computed(() => (
 ));
 
 const passingScore = computed(() => Number(learningUnit.value?.passingScore || learningUnit.value?.questions?.length || 0));
+
+const questionCount = computed(() => learningUnit.value?.questions?.length || 0);
+
+const activeQuestion = computed(() => {
+  const questions = learningUnit.value?.questions || [];
+  return questions[activeQuestionIndex.value] || questions[0] || null;
+});
 
 const score = computed(() => {
   const questions = learningUnit.value?.questions || [];
@@ -502,6 +523,11 @@ function selectAnswer(questionId, optionIndex) {
   };
 }
 
+function goQuestion(delta) {
+  const nextIndex = activeQuestionIndex.value + delta;
+  activeQuestionIndex.value = Math.min(Math.max(nextIndex, 0), Math.max(questionCount.value - 1, 0));
+}
+
 function optionClass(question, optionIndex) {
   const selected = answers.value[question.id];
   if (selected === undefined) return '';
@@ -516,6 +542,11 @@ function videoKey(video) {
 
 function selectVideo(video) {
   activeVideoKey.value = videoKey(video);
+}
+
+function selectAdjacentVideo(delta) {
+  const target = delta < 0 ? previousVideo.value : nextVideo.value;
+  if (target) selectVideo(target);
 }
 
 function loadProgress() {
@@ -594,6 +625,7 @@ async function loadDetail() {
   loading.value = true;
   error.value = '';
   answers.value = {};
+  activeQuestionIndex.value = 0;
   justAwarded.value = false;
   quizMessage.value = '';
   activeVideoKey.value = '';
@@ -635,11 +667,11 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
 
 .kb-detail-shell {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 24px;
-  max-width: 1180px;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 18px;
+  max-width: 1220px;
   margin: 0 auto;
-  padding: 24px 20px 56px;
+  padding: 14px 20px 56px;
 }
 
 .kb-detail-main {
@@ -655,14 +687,13 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
   font-size: 0.82rem;
   font-weight: 800;
   text-decoration: none;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 }
 
 .kb-primary-link {
   margin-top: 18px;
 }
 
-.kb-detail-hero,
 .kb-panel,
 .kb-learning-unit,
 .kb-next-section,
@@ -671,35 +702,6 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
   background: rgba(255, 253, 246, 0.82);
   backdrop-filter: blur(14px);
   box-shadow: 0 18px 45px rgba(51, 67, 45, 0.07);
-}
-
-.kb-detail-hero {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
-  gap: 24px;
-  border-radius: 28px;
-  background:
-    radial-gradient(circle at 78% 16%, var(--field-glow), transparent 34%),
-    linear-gradient(135deg, rgba(255, 253, 246, 0.96), rgba(238, 242, 232, 0.92));
-  padding: 28px;
-  overflow: hidden;
-}
-
-.kb-detail-hero::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    repeating-linear-gradient(32deg, transparent 0 18px, rgba(77, 100, 79, 0.045) 18px 19px),
-    radial-gradient(circle at 18% 70%, transparent 0 48px, rgba(77, 100, 79, 0.08) 49px 50px, transparent 51px),
-    linear-gradient(90deg, transparent 0 47%, rgba(77, 100, 79, 0.08) 47% 48%, transparent 48% 100%);
-  opacity: 0.55;
-}
-
-.kb-detail-hero > * {
-  position: relative;
 }
 
 .knowledge-kicker {
@@ -711,289 +713,16 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
   text-transform: uppercase;
 }
 
-.kb-detail-hero h1 {
-  margin: 10px 0 0;
-  color: var(--field-ink, #1f2f24);
-  font-size: clamp(2rem, 5vw, 3.1rem);
-  font-weight: 900;
-  letter-spacing: -0.04em;
-  line-height: 1.05;
-}
-
-.kb-detail-hero__en {
-  margin-top: 8px;
-  color: #7e8b78;
-  font-size: 0.95rem;
-  font-weight: 700;
-}
-
-.kb-detail-hero__definition {
-  margin-top: 18px;
-  color: #4c5b4d;
-  line-height: 1.8;
-}
-
-.kb-field-map {
-  position: relative;
-  display: grid;
-  grid-template-rows: minmax(160px, 1fr) auto;
-  min-height: 250px;
-  border: 1px solid rgba(77, 100, 79, 0.24);
-  border-radius: 24px;
-  background:
-    radial-gradient(circle at 22% 24%, rgba(255, 253, 246, 0.95), transparent 18%),
-    radial-gradient(circle at 74% 32%, var(--field-glow), transparent 30%),
-    linear-gradient(135deg, var(--field-bg), #fffdf6);
-  color: var(--field-color);
-  overflow: hidden;
-}
-
-.kb-field-map::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(rgba(77, 100, 79, 0.11) 1px, transparent 1px) 0 0 / 22px 22px,
-    linear-gradient(90deg, rgba(77, 100, 79, 0.09) 1px, transparent 1px) 0 0 / 22px 22px,
-    radial-gradient(circle, transparent 0 54px, rgba(77, 100, 79, 0.18) 55px 56px, transparent 57px) 38% 30% / 180px 180px no-repeat;
-  mask-image: linear-gradient(to bottom, #000, transparent 92%);
-}
-
-.kb-field-map__grid {
-  position: relative;
-  min-height: 176px;
-}
-
-.kb-field-map__station {
-  position: absolute;
-  z-index: 1;
-  width: 18px;
-  height: 18px;
-  border: 3px solid #fffdf6;
-  border-radius: 999px;
-  background: var(--field-color);
-  box-shadow: 0 0 0 8px var(--field-glow), 0 18px 32px rgba(31, 47, 36, 0.16);
-}
-
-.kb-field-map__station::after {
-  content: '';
-  position: absolute;
-  inset: 4px;
-  border-radius: inherit;
-  background: #fffdf6;
-}
-
-.kb-field-map__station.is-home {
-  left: 18%;
-  top: 58%;
-}
-
-.kb-field-map__station.is-course {
-  left: 54%;
-  top: 24%;
-}
-
-.kb-field-map__station.is-project {
-  right: 15%;
-  bottom: 20%;
-}
-
-.kb-field-map__route {
-  position: absolute;
-  inset: 24px;
-  background:
-    linear-gradient(28deg, transparent 0 25%, var(--field-line) 25.5% 26.5%, transparent 27% 100%),
-    linear-gradient(148deg, transparent 0 42%, var(--field-line) 42.5% 43.5%, transparent 44% 100%);
-  opacity: 0.55;
-}
-
-.kb-field-map__meta {
-  position: relative;
-  display: grid;
-  justify-items: start;
-  gap: 2px;
-  margin: 0 16px 16px;
-  border: 1px solid rgba(77, 100, 79, 0.14);
-  border-radius: 18px;
-  background: rgba(255, 253, 246, 0.78);
-  padding: 14px;
-  backdrop-filter: blur(10px);
-}
-
-.kb-field-map__meta span,
-.kb-field-map__meta em {
-  font-size: 0.76rem;
-  font-style: normal;
-  font-weight: 900;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.kb-field-map__meta strong {
-  color: var(--field-ink, #1f2f24);
-  font-size: 2.35rem;
-  font-weight: 950;
-  line-height: 1;
-}
-
-.kb-observation-deck {
-  display: grid;
-  grid-template-columns: minmax(160px, 0.72fr) minmax(260px, 1.5fr) minmax(180px, 0.95fr);
-  gap: 14px;
-  margin-top: 18px;
-}
-
-.kb-observation-card {
-  position: relative;
-  min-height: 150px;
-  border: 1px solid rgba(77, 100, 79, 0.16);
-  border-radius: 24px;
-  background:
-    radial-gradient(circle at 14% 18%, var(--field-glow), transparent 38%),
-    linear-gradient(135deg, rgba(255, 253, 246, 0.92), rgba(247, 247, 237, 0.84));
-  box-shadow: 0 18px 42px rgba(51, 67, 45, 0.06);
-  padding: 18px;
-  overflow: hidden;
-}
-
-.kb-observation-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    linear-gradient(rgba(77, 100, 79, 0.045) 1px, transparent 1px) 0 0 / 20px 20px,
-    linear-gradient(90deg, rgba(77, 100, 79, 0.04) 1px, transparent 1px) 0 0 / 20px 20px;
-  opacity: 0.75;
-}
-
-.kb-observation-card > * {
-  position: relative;
-}
-
-.kb-observation-card.is-score strong {
-  display: block;
-  margin-top: 12px;
-  color: var(--field-ink);
-  font-size: 3rem;
-  font-weight: 950;
-  line-height: 0.95;
-}
-
-.kb-observation-card.is-score span {
-  display: block;
-  margin-top: 10px;
-  color: #65725f;
-  font-size: 0.78rem;
-  font-weight: 900;
-}
-
-.kb-observation-heading {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
-}
-
-.kb-observation-heading h2 {
-  margin: 4px 0 0;
-  color: var(--field-ink);
-  font-size: 1.18rem;
-  font-weight: 950;
-}
-
-.kb-observation-heading > span {
-  flex: 0 0 auto;
-  border-radius: 999px;
-  background: var(--field-bg);
-  color: var(--field-color);
-  padding: 7px 9px;
-  font-size: 0.7rem;
-  font-weight: 950;
-}
-
-.kb-observation-ranks {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 16px;
-}
-
-.kb-observation-rank {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-  border: 1px solid rgba(77, 100, 79, 0.13);
-  border-radius: 16px;
-  background: rgba(255, 253, 246, 0.78);
-  padding: 11px;
-}
-
-.kb-observation-rank.is-current {
-  border-color: var(--field-color);
-  background: var(--field-bg);
-}
-
-.kb-observation-rank span,
-.kb-observation-rank em {
-  color: var(--field-color);
-  font-size: 0.72rem;
-  font-style: normal;
-  font-weight: 950;
-}
-
-.kb-observation-rank strong {
-  overflow: hidden;
-  color: var(--field-ink);
-  font-size: 0.86rem;
-  font-weight: 950;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.kb-observation-empty {
-  margin: 16px 0 0;
-  border: 1px dashed rgba(77, 100, 79, 0.24);
-  border-radius: 18px;
-  background: rgba(255, 253, 246, 0.56);
-  color: #65725f;
-  padding: 14px;
-  font-size: 0.84rem;
-  font-weight: 850;
-  line-height: 1.65;
-}
-
-.kb-route-list {
-  position: relative;
-  display: grid;
-  gap: 9px;
-  margin: 16px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.kb-route-list li {
-  border: 1px solid rgba(77, 100, 79, 0.13);
-  border-radius: 999px;
-  background: rgba(255, 253, 246, 0.72);
-  color: #5f6f5e;
-  padding: 9px 11px;
-  font-size: 0.78rem;
-  font-weight: 950;
-}
-
-.kb-route-list li.is-active {
-  border-color: var(--field-color);
-  background: var(--field-bg);
-  color: var(--field-ink);
-}
-
 .kb-learning-unit,
 .kb-panel,
 .kb-next-section {
-  margin-top: 24px;
+  margin-top: 18px;
   border-radius: 24px;
   overflow: hidden;
+}
+
+.kb-learning-unit {
+  margin-top: 0;
 }
 
 .kb-learning-unit__header,
@@ -1002,7 +731,7 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  padding: 20px;
+  padding: 16px 18px;
 }
 
 .kb-learning-unit__header h2,
@@ -1010,7 +739,7 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
 .kb-panel h2 {
   margin: 6px 0 0;
   color: #0f172a;
-  font-size: 1.25rem;
+  font-size: 1.16rem;
   font-weight: 900;
 }
 
@@ -1058,6 +787,57 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
   padding: 24px;
 }
 
+.kb-episode-controls {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border-bottom: 1px solid rgba(77, 100, 79, 0.14);
+  background: rgba(255, 253, 246, 0.9);
+  padding: 12px 16px;
+}
+
+.kb-episode-controls button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(77, 100, 79, 0.16);
+  border-radius: 999px;
+  background: #fffdf6;
+  color: var(--field-color, #4d644f);
+  padding: 9px 12px;
+  font-size: 0.76rem;
+  font-weight: 950;
+}
+
+.kb-episode-controls button:disabled {
+  color: #94a3b8;
+  background: #f1f5f9;
+  cursor: not-allowed;
+}
+
+.kb-episode-controls div {
+  min-width: 0;
+  text-align: center;
+}
+
+.kb-episode-controls span {
+  display: block;
+  color: var(--field-color, #4d644f);
+  font-size: 0.72rem;
+  font-weight: 950;
+}
+
+.kb-episode-controls strong {
+  display: block;
+  overflow: hidden;
+  color: var(--field-ink, #1f2f24);
+  font-size: 0.86rem;
+  font-weight: 950;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .kb-video-fallback a,
 .kb-source-note a,
 .kb-series-playlist a {
@@ -1070,7 +850,7 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
   background:
     linear-gradient(135deg, var(--field-glow, rgba(77, 100, 79, 0.1)), transparent 36%),
     rgba(255, 253, 246, 0.95);
-  padding: 18px 20px 20px;
+  padding: 14px 16px 16px;
 }
 
 .kb-series-playlist .kb-section-heading {
@@ -1085,21 +865,25 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
 }
 
 .kb-series-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
   gap: 10px;
   margin-top: 14px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scroll-snap-type: x proximity;
 }
 
 .kb-series-item {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) auto;
+  grid-template-columns: 38px minmax(0, 1fr);
   gap: 10px;
   align-items: center;
+  flex: 0 0 min(340px, 78vw);
   border: 1px solid rgba(77, 100, 79, 0.16);
   border-radius: 16px;
   background: rgba(250, 250, 244, 0.92);
   padding: 11px;
+  scroll-snap-align: start;
   text-align: left;
   transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
 }
@@ -1133,6 +917,7 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
 }
 
 .kb-series-item em {
+  grid-column: 2;
   color: #64748b;
   font-size: 0.72rem;
   font-style: normal;
@@ -1163,7 +948,7 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
 .kb-quiz {
   display: grid;
   gap: 14px;
-  padding: 20px;
+  padding: 18px;
 }
 
 .kb-section-heading {
@@ -1181,9 +966,67 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
 
 .kb-quiz-question {
   border: 1px solid rgba(77, 100, 79, 0.14);
-  border-radius: 18px;
+  border-radius: 20px;
   background: rgba(250, 250, 244, 0.86);
-  padding: 16px;
+  padding: 18px;
+}
+
+.kb-quiz-carousel {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.kb-quiz-nav {
+  border: 1px solid rgba(77, 100, 79, 0.16);
+  border-radius: 18px;
+  background: #fffdf6;
+  color: var(--field-color, #4d644f);
+  font-weight: 950;
+}
+
+.kb-quiz-nav:disabled {
+  color: #cbd5e1;
+  background: rgba(241, 245, 249, 0.72);
+  cursor: not-allowed;
+}
+
+.kb-quiz-progress {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.kb-quiz-progress span {
+  color: var(--field-color, #4d644f);
+  font-size: 0.76rem;
+  font-weight: 950;
+}
+
+.kb-quiz-progress div,
+.kb-quiz-dots {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.kb-quiz-progress i {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #cbd5e1;
+}
+
+.kb-quiz-progress i.is-answered {
+  background: #86a873;
+}
+
+.kb-quiz-progress i.is-active {
+  width: 22px;
+  background: var(--field-color, #4d644f);
 }
 
 .kb-quiz-question h3 {
@@ -1238,6 +1081,45 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
   color: #64748b;
   font-size: 0.84rem;
   line-height: 1.6;
+}
+
+.kb-quiz-mobile-controls {
+  display: none;
+  gap: 10px;
+}
+
+.kb-quiz-mobile-controls button,
+.kb-quiz-dots button {
+  border: 1px solid rgba(77, 100, 79, 0.16);
+  border-radius: 999px;
+  background: #fffdf6;
+  color: var(--field-color, #4d644f);
+  padding: 8px 11px;
+  font-size: 0.76rem;
+  font-weight: 950;
+}
+
+.kb-quiz-mobile-controls button:disabled {
+  color: #cbd5e1;
+  background: rgba(241, 245, 249, 0.72);
+}
+
+.kb-quiz-dots {
+  justify-content: center;
+}
+
+.kb-quiz-dots button {
+  min-width: 34px;
+  padding: 8px 10px;
+}
+
+.kb-quiz-dots button.is-answered {
+  background: var(--field-bg, #eef2e8);
+}
+
+.kb-quiz-dots button.is-active {
+  background: var(--field-color, #4d644f);
+  color: #ffffff;
 }
 
 .kb-points {
@@ -1500,28 +1382,18 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
 
 @media (max-width: 980px) {
   .kb-detail-shell,
-  .kb-detail-hero,
-  .kb-explore-grid,
-  .kb-observation-deck {
+  .kb-explore-grid {
     grid-template-columns: 1fr;
   }
 
   .kb-detail-sidebar {
     position: static;
   }
-
-  .kb-series-list {
-    grid-template-columns: 1fr;
-  }
-
-  .kb-field-map {
-    min-height: 230px;
-  }
 }
 
 @media (max-width: 720px) {
   .kb-detail-shell {
-    padding: 18px 14px 42px;
+    padding: 10px 12px 42px;
   }
 
   .kb-learning-unit__header,
@@ -1536,16 +1408,42 @@ watch(() => route.params.disciplineId, loadDetail, { immediate: true });
     grid-template-columns: 1fr;
   }
 
-  .kb-detail-hero {
-    padding: 20px;
+  .kb-learning-unit__header {
+    padding: 14px;
   }
 
-  .kb-field-map {
-    min-height: 210px;
+  .kb-learning-unit__header p:not(.knowledge-kicker) {
+    display: none;
   }
 
-  .kb-observation-ranks {
+  .kb-video {
+    aspect-ratio: 16 / 10;
+  }
+
+  .kb-episode-controls {
     grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .kb-episode-controls button {
+    justify-content: center;
+  }
+
+  .kb-quiz-carousel {
+    grid-template-columns: 1fr;
+  }
+
+  .kb-quiz-carousel > .kb-quiz-nav {
+    display: none;
+  }
+
+  .kb-quiz-mobile-controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kb-quiz-mobile-controls button {
+    justify-content: center;
   }
 }
 </style>

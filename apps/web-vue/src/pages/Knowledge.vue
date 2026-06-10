@@ -2,76 +2,58 @@
   <div class="knowledge-page text-slate-800">
     <SiteNav active="knowledge" />
 
-    <PublicPageHeader
-      eyebrow="Knowledge"
-      title="创新知识库"
-      description="以 Crash Course 系列作为入口，把公开视频目录映射到本地知识挑战、课程和项目。"
-      :meta="headerMeta"
-    />
-
-    <main class="max-w-[1320px] mx-auto px-5 sm:px-6 lg:px-8 py-4 min-h-screen">
-      <CategorySearchBar
-        :meta="headerMeta"
-        :category="filter"
-        :search="searchTerm"
-        :options="knowledgeCategoryOptions"
-        :placeholder="knowledgeSearchPlaceholder"
-        :clear-disabled="!searchTerm && filter === 'all'"
-        @update:category="applyFilter"
-        @update:search="searchTerm = $event"
-        @clear="resetKnowledgeSearch"
-      />
-
-      <section ref="catalogRef" class="scroll-anchor">
-        <div class="grid gap-7 md:grid-cols-2 lg:grid-cols-4">
-          <div
-            v-for="series in filteredSeries"
-            :key="series.id"
-            class="knowledge-card group"
-            :style="{ '--field-color': series.colorText, '--field-bg': series.colorBg }"
-            @click="openSeries(series)"
-          >
-            <div class="knowledge-cover">
-              <img v-if="series.image" :src="series.image" :alt="series.title" class="knowledge-cover-image" />
-              <div v-else class="knowledge-cover-fallback" :style="{ backgroundColor: series.colorBg, color: series.colorText }">
-                <i class="fas" :class="series.icon"></i>
-              </div>
-            </div>
-            <div class="p-5">
-              <div class="knowledge-node">
-                <span>Crash Course · {{ categoryLabel(series.category) }}</span>
-                <strong>{{ series.episodeText || '系列课程' }}</strong>
-              </div>
-              <div class="knowledge-icon" :style="{ backgroundColor: series.colorBg, color: series.colorText }">
-                <i class="fas" :class="series.icon"></i>
-              </div>
-              <h3 class="font-bold text-slate-900 mt-4 group-hover:text-indigo-600 transition-colors">{{ series.title }}</h3>
-              <p class="text-xs text-slate-400">{{ series.englishName }}</p>
-              <p class="text-xs text-slate-500 mt-3 leading-relaxed">{{ seriesCardSummary(series) }}</p>
-              <div class="knowledge-card__meta-row">
-                <span class="knowledge-task-pill">
-                  <i class="fas fa-map-signs"></i> 映射到 {{ series.disciplineName }}
-                </span>
-                <span v-if="unitFor(series.disciplineId)" class="knowledge-task-pill">
-                  <i class="fas fa-play"></i> 可进入挑战
-                </span>
-                <span v-if="isCompleted(series.disciplineId)" class="knowledge-task-pill is-complete">
-                  <i class="fas fa-check"></i> 已完成
-                </span>
-              </div>
-              <span class="inline-flex items-center text-xs font-bold text-indigo-600 mt-4 opacity-80 group-hover:opacity-100 transition-opacity">
-                进入探索 <i class="fas fa-arrow-right ml-2 text-[10px]"></i>
-              </span>
-            </div>
-          </div>
+    <header class="knowledge-hero">
+      <div class="knowledge-hero__copy">
+        <p class="knowledge-kicker">Knowledge Observatory</p>
+        <h1>创新知识库</h1>
+        <p>
+          以 Crash Course 系列作为知识入口，学生先看视频、完成挑战、获得积分，再沿着课程和项目路线继续探索。
+        </p>
+        <div class="knowledge-hero__actions">
+          <button type="button" @click="scrollToCatalog">
+            开始探索 <i class="fas fa-arrow-down"></i>
+          </button>
+          <span>{{ headerMeta }}</span>
         </div>
+      </div>
+
+      <div class="knowledge-hero__map" aria-label="知识库观测地图">
+        <div class="knowledge-hero__station is-video">
+          <span>01</span>
+          <strong>视频观测</strong>
+        </div>
+        <div class="knowledge-hero__station is-quest">
+          <span>02</span>
+          <strong>挑战答题</strong>
+        </div>
+        <div class="knowledge-hero__station is-project">
+          <span>03</span>
+          <strong>项目延展</strong>
+        </div>
+        <div class="knowledge-hero__route"></div>
+      </div>
+    </header>
+
+    <main class="knowledge-shell">
+      <section class="knowledge-control-panel">
+        <CategorySearchBar
+          :meta="headerMeta"
+          :category="filter"
+          :search="searchTerm"
+          :options="knowledgeCategoryOptions"
+          :placeholder="knowledgeSearchPlaceholder"
+          :clear-disabled="!searchTerm && filter === 'all'"
+          @update:category="applyFilter"
+          @update:search="searchTerm = $event"
+          @clear="resetKnowledgeSearch"
+        />
       </section>
 
       <section class="knowledge-progress-panel">
         <div class="knowledge-progress-panel__copy">
-          <p class="knowledge-kicker">Learning Progress</p>
-          <h2>我的知识探索进度</h2>
-          <span>积分和榜单应该来自真实完成记录。先进入任意方向，看视频并完成挑战后，这里会生成你的探索动态。</span>
+          <p class="knowledge-kicker">Field Progress</p>
+          <h2>知识观测榜单</h2>
+          <span>榜单只使用你的真实本地完成记录。先进入任意方向，看视频并完成挑战后，这里会生成积分和探索排名。</span>
         </div>
         <div class="knowledge-progress-panel__stats">
           <div>
@@ -99,8 +81,61 @@
           </article>
         </div>
         <div v-else class="knowledge-progress-empty">
-          <i class="fas fa-compass"></i>
+          <i class="fas fa-location-crosshairs"></i>
           <span>还没有探索记录。完成第一个视频挑战后，再显示你的真实排名和积分变化。</span>
+        </div>
+      </section>
+
+      <section ref="catalogRef" class="scroll-anchor">
+        <div class="knowledge-catalog-heading">
+          <div>
+            <p class="knowledge-kicker">Crash Course Field Map</p>
+            <h2>选择一个系列进入知识任务</h2>
+          </div>
+          <span>{{ filteredSeries.length }} 个可见系列</span>
+        </div>
+
+        <div class="knowledge-grid">
+          <div
+            v-for="series in filteredSeries"
+            :key="series.id"
+            class="knowledge-card group"
+            :style="{ '--field-color': series.colorText, '--field-bg': series.colorBg }"
+            @click="openSeries(series)"
+          >
+            <div class="knowledge-cover">
+              <img v-if="series.image" :src="series.image" :alt="series.title" class="knowledge-cover-image" />
+              <div v-else class="knowledge-cover-fallback" :style="{ backgroundColor: series.colorBg, color: series.colorText }">
+                <i class="fas" :class="series.icon"></i>
+              </div>
+            </div>
+            <div class="p-5">
+              <div class="knowledge-node">
+                <span>Crash Course · {{ categoryLabel(series.category) }}</span>
+                <strong>{{ series.episodeText || '系列课程' }}</strong>
+              </div>
+              <div class="knowledge-icon" :style="{ backgroundColor: series.colorBg, color: series.colorText }">
+                <i class="fas" :class="series.icon"></i>
+              </div>
+              <h3 class="knowledge-card__title">{{ series.title }}</h3>
+              <p class="text-xs text-slate-400">{{ series.englishName }}</p>
+              <p class="text-xs text-slate-500 mt-3 leading-relaxed">{{ seriesCardSummary(series) }}</p>
+              <div class="knowledge-card__meta-row">
+                <span class="knowledge-task-pill">
+                  <i class="fas fa-map-signs"></i> 映射到 {{ series.disciplineName }}
+                </span>
+                <span v-if="unitFor(series.disciplineId)" class="knowledge-task-pill">
+                  <i class="fas fa-play"></i> 可进入挑战
+                </span>
+                <span v-if="isCompleted(series.disciplineId)" class="knowledge-task-pill is-complete">
+                  <i class="fas fa-check"></i> 已完成
+                </span>
+              </div>
+              <span class="knowledge-card__action">
+                进入探索 <i class="fas fa-arrow-right ml-2 text-[10px]"></i>
+              </span>
+            </div>
+          </div>
         </div>
       </section>
     </main>
@@ -114,7 +149,6 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import SiteNav from '@/components/SiteNav.vue';
 import PortalFooter from '@/components/portal/PortalFooter.vue';
-import PublicPageHeader from '@/components/PublicPageHeader.vue';
 import CategorySearchBar from '@/components/CategorySearchBar.vue';
 import { apiFetch, readJsonResponse } from '@/api/client';
 import staticLearningUnits from '@/data/knowledgeLearningUnits.json';
@@ -132,11 +166,11 @@ const catalogRef = ref(null);
 const progressKey = 'kbLearningProgress:v1';
 
 const palette = {
-  science: { bg: '#eff6ff', text: '#2563eb', icon: 'fa-flask' },
-  engineering: { bg: '#eef2ff', text: '#4f46e5', icon: 'fa-microchip' },
-  social: { bg: '#ecfeff', text: '#0891b2', icon: 'fa-users' },
-  humanities: { bg: '#fff7ed', text: '#ea580c', icon: 'fa-feather-pointed' },
-  all: { bg: '#f3f4f6', text: '#4b5563', icon: 'fa-book' }
+  science: { bg: '#e8f5ec', text: '#207a54', icon: 'fa-flask' },
+  engineering: { bg: '#edf3ee', text: '#3f6f5d', icon: 'fa-microchip' },
+  social: { bg: '#eef4ea', text: '#6b7f2a', icon: 'fa-users' },
+  humanities: { bg: '#f7f0e4', text: '#9a5b2f', icon: 'fa-feather-pointed' },
+  all: { bg: '#eef2e8', text: '#4d644f', icon: 'fa-book' }
 };
 
 function categoryKey(field) {
@@ -378,52 +412,295 @@ onMounted(async () => {
 
 <style scoped>
 .knowledge-page {
+  --map-ink: #1f2f24;
+  --map-muted: #65725f;
+  --map-line: rgba(77, 100, 79, 0.16);
+  --map-green: #4d644f;
+  --map-earth: #9a6b3e;
   background:
-    linear-gradient(90deg, rgba(15, 23, 42, 0.025) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(15, 23, 42, 0.025) 1px, transparent 1px),
-    radial-gradient(circle at top left, rgba(99, 102, 241, 0.08), transparent 30%),
-    #f8fafc;
-  background-size: 42px 42px, 42px 42px, 100% 100%, 100% 100%;
+    radial-gradient(circle at 12% 6%, rgba(77, 100, 79, 0.16), transparent 28%),
+    radial-gradient(circle at 88% 16%, rgba(154, 107, 62, 0.14), transparent 28%),
+    linear-gradient(115deg, rgba(64, 88, 58, 0.04) 25%, transparent 25%) 0 0 / 52px 52px,
+    linear-gradient(65deg, rgba(64, 88, 58, 0.035) 25%, transparent 25%) 0 0 / 52px 52px,
+    linear-gradient(rgba(77, 100, 79, 0.04) 1px, transparent 1px) 0 0 / 28px 28px,
+    linear-gradient(90deg, rgba(77, 100, 79, 0.035) 1px, transparent 1px) 0 0 / 28px 28px,
+    #f5f7ef;
   min-height: 100vh;
+}
+
+.knowledge-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 460px);
+  gap: 28px;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 34px 20px 18px;
+}
+
+.knowledge-hero__copy,
+.knowledge-hero__map,
+.knowledge-control-panel,
+.knowledge-progress-panel {
+  border: 1px solid rgba(77, 100, 79, 0.16);
+  background: rgba(255, 253, 246, 0.78);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 45px rgba(51, 67, 45, 0.07);
+}
+
+.knowledge-hero__copy {
+  position: relative;
+  min-height: 310px;
+  border-radius: 32px;
+  background:
+    radial-gradient(circle at 82% 18%, rgba(77, 100, 79, 0.15), transparent 34%),
+    linear-gradient(135deg, rgba(255, 253, 246, 0.96), rgba(238, 242, 232, 0.92));
+  padding: clamp(24px, 4vw, 42px);
+  overflow: hidden;
+}
+
+.knowledge-hero__copy::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(32deg, transparent 0 18px, rgba(77, 100, 79, 0.045) 18px 19px),
+    radial-gradient(circle at 18% 70%, transparent 0 48px, rgba(77, 100, 79, 0.08) 49px 50px, transparent 51px);
+  opacity: 0.64;
+}
+
+.knowledge-hero__copy > * {
+  position: relative;
+}
+
+.knowledge-kicker {
+  margin: 0;
+  color: var(--map-green);
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.knowledge-hero h1 {
+  margin: 12px 0 0;
+  color: var(--map-ink);
+  font-size: clamp(2.6rem, 7vw, 5.5rem);
+  font-weight: 950;
+  letter-spacing: -0.07em;
+  line-height: 0.96;
+}
+
+.knowledge-hero__copy p:not(.knowledge-kicker) {
+  max-width: 740px;
+  margin-top: 18px;
+  color: #4c5b4d;
+  font-size: 1.02rem;
+  font-weight: 700;
+  line-height: 1.85;
+}
+
+.knowledge-hero__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 28px;
+  flex-wrap: wrap;
+}
+
+.knowledge-hero__actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--map-green);
+  color: #fffdf6;
+  padding: 12px 17px;
+  font-size: 0.86rem;
+  font-weight: 950;
+}
+
+.knowledge-hero__actions span {
+  border: 1px solid rgba(77, 100, 79, 0.15);
+  border-radius: 999px;
+  background: rgba(255, 253, 246, 0.7);
+  color: #65725f;
+  padding: 10px 13px;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.knowledge-hero__map {
+  position: relative;
+  min-height: 310px;
+  border-radius: 32px;
+  background:
+    radial-gradient(circle at 22% 24%, rgba(255, 253, 246, 0.95), transparent 18%),
+    radial-gradient(circle at 74% 32%, rgba(77, 100, 79, 0.14), transparent 30%),
+    linear-gradient(135deg, #e8f5ec, #fffdf6);
+  overflow: hidden;
+}
+
+.knowledge-hero__map::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(rgba(77, 100, 79, 0.11) 1px, transparent 1px) 0 0 / 24px 24px,
+    linear-gradient(90deg, rgba(77, 100, 79, 0.09) 1px, transparent 1px) 0 0 / 24px 24px,
+    radial-gradient(circle, transparent 0 70px, rgba(77, 100, 79, 0.18) 71px 72px, transparent 73px) 46% 42% / 220px 220px no-repeat;
+  mask-image: linear-gradient(to bottom, #000, transparent 96%);
+}
+
+.knowledge-hero__route {
+  position: absolute;
+  inset: 36px;
+  background:
+    linear-gradient(26deg, transparent 0 26%, rgba(77, 100, 79, 0.58) 26.2% 27%, transparent 27.2% 100%),
+    linear-gradient(142deg, transparent 0 43%, rgba(154, 107, 62, 0.44) 43.2% 44%, transparent 44.2% 100%);
+  opacity: 0.7;
+}
+
+.knowledge-hero__station {
+  position: absolute;
+  z-index: 1;
+  display: grid;
+  gap: 4px;
+  min-width: 116px;
+  border: 1px solid rgba(77, 100, 79, 0.18);
+  border-radius: 18px;
+  background: rgba(255, 253, 246, 0.82);
+  padding: 12px;
+  box-shadow: 0 18px 38px rgba(31, 47, 36, 0.14);
+  backdrop-filter: blur(12px);
+}
+
+.knowledge-hero__station span {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: #e8f5ec;
+  color: var(--map-green);
+  font-size: 0.78rem;
+  font-weight: 950;
+}
+
+.knowledge-hero__station strong {
+  color: var(--map-ink);
+  font-size: 0.86rem;
+  font-weight: 950;
+}
+
+.knowledge-hero__station.is-video {
+  left: 10%;
+  top: 56%;
+}
+
+.knowledge-hero__station.is-quest {
+  left: 42%;
+  top: 20%;
+}
+
+.knowledge-hero__station.is-project {
+  right: 8%;
+  bottom: 17%;
+}
+
+.knowledge-shell {
+  max-width: 1320px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 4px 20px 56px;
+}
+
+.knowledge-control-panel {
+  border-radius: 24px;
+  padding: 12px;
+}
+
+.knowledge-control-panel :deep(.category-search-bar) {
+  margin: 0;
+}
+
+.knowledge-catalog-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 28px 0 16px;
+}
+
+.knowledge-catalog-heading h2 {
+  margin: 6px 0 0;
+  color: var(--map-ink);
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.knowledge-catalog-heading > span {
+  flex: 0 0 auto;
+  border: 1px solid rgba(77, 100, 79, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 253, 246, 0.75);
+  color: #65725f;
+  padding: 9px 12px;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.knowledge-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 22px;
 }
 
 .knowledge-card {
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(10px);
+  border: 1px solid rgba(77, 100, 79, 0.14);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 18% 0%, var(--field-bg), transparent 42%),
+    rgba(255, 253, 246, 0.82);
+  backdrop-filter: blur(12px);
   cursor: pointer;
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 12px 32px rgba(51, 67, 45, 0.055);
 }
 
 .knowledge-card::before {
   content: '';
   position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(77, 100, 79, 0.06) 1px, transparent 1px) 0 0 / 20px 20px,
+    linear-gradient(90deg, rgba(77, 100, 79, 0.045) 1px, transparent 1px) 0 0 / 20px 20px;
+  opacity: 0;
+  transition: opacity 0.28s ease;
+}
+
+.knowledge-card::after {
+  content: '';
+  position: absolute;
   inset: 0 auto 0 0;
-  width: 4px;
+  width: 5px;
   background: var(--field-color);
   opacity: 0.75;
 }
 
 .knowledge-card:hover {
   border-color: var(--field-color);
-  box-shadow: 0 20px 40px rgba(99, 102, 241, 0.08);
+  box-shadow: 0 22px 46px rgba(51, 67, 45, 0.11);
   transform: translateY(-4px);
 }
 
-.knowledge-progress-panel {
-  margin-top: 28px;
-  border: 1px solid rgba(255, 255, 255, 0.66);
-  border-radius: 22px;
-  background:
-    radial-gradient(circle at top left, rgba(15, 23, 42, 0.055), transparent 36%),
-    rgba(255, 255, 255, 0.68);
-  backdrop-filter: blur(10px);
-  padding: 18px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.025);
+.knowledge-card:hover::before {
+  opacity: 1;
 }
 
 .knowledge-progress-panel {
@@ -431,21 +708,27 @@ onMounted(async () => {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 16px;
   align-items: center;
+  margin-top: 18px;
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at top left, rgba(77, 100, 79, 0.14), transparent 36%),
+    rgba(255, 253, 246, 0.78);
+  padding: 18px;
 }
 
 .knowledge-progress-panel__copy h2 {
   margin: 7px 0 0;
-  color: #0f172a;
-  font-size: 1.12rem;
-  font-weight: 900;
-  letter-spacing: -0.01em;
+  color: var(--map-ink);
+  font-size: 1.35rem;
+  font-weight: 950;
+  letter-spacing: -0.025em;
 }
 
 .knowledge-progress-panel__copy span {
   display: block;
   margin-top: 6px;
   max-width: 680px;
-  color: #64748b;
+  color: var(--map-muted);
   font-size: 0.86rem;
   line-height: 1.6;
 }
@@ -455,27 +738,18 @@ onMounted(async () => {
   gap: 10px;
 }
 
-.knowledge-kicker {
-  margin: 0;
-  color: #4f46e5;
-  font-size: 0.72rem;
-  font-weight: 900;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
 .knowledge-progress-panel__stats > div {
   min-width: 104px;
-  border: 1px solid #c7d2fe;
+  border: 1px solid rgba(77, 100, 79, 0.16);
   border-radius: 18px;
-  background: linear-gradient(135deg, #eef2ff, #ffffff);
+  background: linear-gradient(135deg, #e8f5ec, #fffdf6);
   padding: 12px;
   text-align: center;
 }
 
 .knowledge-progress-panel__stats span {
   margin: 0;
-  color: #4f46e5;
+  color: var(--map-green);
   font-size: 0.72rem;
   font-weight: 900;
 }
@@ -483,7 +757,7 @@ onMounted(async () => {
 .knowledge-progress-panel__stats strong {
   display: block;
   margin-top: 4px;
-  color: #0f172a;
+  color: var(--map-ink);
   font-size: 1.55rem;
   font-weight: 950;
   line-height: 1;
@@ -501,15 +775,15 @@ onMounted(async () => {
   grid-template-columns: 38px minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
-  border: 1px solid #f1f5f9;
+  border: 1px solid rgba(77, 100, 79, 0.12);
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 253, 246, 0.82);
   padding: 14px;
 }
 
 .knowledge-rank-card.is-top {
-  border-color: #f59e0b;
-  background: linear-gradient(135deg, #fffbeb, #ffffff);
+  border-color: #9a6b3e;
+  background: linear-gradient(135deg, #f7f0e4, #fffdf6);
 }
 
 .knowledge-rank-card__rank {
@@ -517,27 +791,27 @@ onMounted(async () => {
   place-items: center;
   height: 32px;
   border-radius: 999px;
-  background: #eef2ff;
-  color: #4f46e5;
+  background: #e8f5ec;
+  color: var(--map-green);
   font-size: 0.78rem;
   font-weight: 900;
 }
 
 .knowledge-rank-card strong {
   display: block;
-  color: #0f172a;
+  color: var(--map-ink);
   font-size: 0.88rem;
   font-weight: 900;
 }
 
 .knowledge-rank-card p {
   margin: 2px 0 0;
-  color: #64748b;
+  color: var(--map-muted);
   font-size: 0.76rem;
 }
 
 .knowledge-rank-card > span {
-  color: #0f172a;
+  color: var(--map-ink);
   font-size: 0.82rem;
   font-weight: 900;
 }
@@ -547,24 +821,24 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 10px;
-  border: 1px dashed #cbd5e1;
+  border: 1px dashed rgba(77, 100, 79, 0.24);
   border-radius: 16px;
-  background: rgba(248, 250, 252, 0.72);
-  color: #64748b;
+  background: rgba(255, 253, 246, 0.62);
+  color: var(--map-muted);
   padding: 12px 14px;
   font-size: 0.84rem;
   font-weight: 700;
 }
 
 .knowledge-progress-empty i {
-  color: #4f46e5;
+  color: var(--map-green);
 }
 
 .knowledge-cover {
   height: 142px;
   background:
     linear-gradient(135deg, var(--field-bg), #ffffff),
-    repeating-linear-gradient(0deg, rgba(15, 23, 42, 0.05) 0 1px, transparent 1px 14px);
+    repeating-linear-gradient(0deg, rgba(77, 100, 79, 0.08) 0 1px, transparent 1px 14px);
   overflow: hidden;
 }
 
@@ -584,6 +858,48 @@ onMounted(async () => {
   font-size: 2rem;
 }
 
+.knowledge-card__title {
+  margin-top: 16px;
+  color: var(--map-ink);
+  font-weight: 950;
+  letter-spacing: -0.01em;
+  transition: color 0.2s ease;
+}
+
+.knowledge-card:hover .knowledge-card__title {
+  color: var(--field-color);
+}
+
+.knowledge-card__action {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 16px;
+  color: var(--field-color);
+  font-size: 0.78rem;
+  font-weight: 950;
+  opacity: 0.84;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.knowledge-card:hover .knowledge-card__action {
+  opacity: 1;
+  transform: translateX(2px);
+}
+
+/* Compatibility guard for old utility classes in card content. */
+.knowledge-card h3 {
+  color: var(--map-ink) !important;
+  transition: color 0.2s ease;
+}
+
+.knowledge-card:hover h3 {
+  color: var(--field-color) !important;
+}
+
+.knowledge-card p {
+  color: var(--map-muted) !important;
+}
+
 .knowledge-icon {
   width: 48px;
   height: 48px;
@@ -600,9 +916,9 @@ onMounted(async () => {
   justify-content: space-between;
   gap: 10px;
   margin-bottom: 12px;
-  border-bottom: 1px dashed #dbeafe;
+  border-bottom: 1px dashed rgba(77, 100, 79, 0.2);
   padding-bottom: 10px;
-  color: #64748b;
+  color: var(--map-muted);
   font-size: 0.72rem;
   font-weight: 800;
 }
@@ -624,8 +940,8 @@ onMounted(async () => {
   align-items: center;
   gap: 5px;
   border-radius: 999px;
-  background: #eef2ff;
-  color: #4f46e5;
+  background: #e8f5ec;
+  color: var(--map-green);
   padding: 6px 9px;
   font-size: 0.68rem;
   font-weight: 900;
@@ -641,9 +957,52 @@ onMounted(async () => {
 }
 
 @media (max-width: 980px) {
+  .knowledge-hero,
+  .knowledge-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .knowledge-hero__copy {
+    grid-column: 1 / -1;
+  }
+
   .knowledge-progress-panel,
   .knowledge-rank-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .knowledge-hero,
+  .knowledge-grid,
+  .knowledge-catalog-heading {
+    grid-template-columns: 1fr;
+  }
+
+  .knowledge-hero {
+    display: grid;
+    padding: 20px 14px 12px;
+  }
+
+  .knowledge-shell {
+    padding: 0 14px 42px;
+  }
+
+  .knowledge-hero__map {
+    min-height: 270px;
+  }
+
+  .knowledge-catalog-heading {
+    display: grid;
+    align-items: start;
+  }
+
+  .knowledge-progress-panel__stats {
+    width: 100%;
+  }
+
+  .knowledge-progress-panel__stats > div {
+    flex: 1;
   }
 }
 
