@@ -153,7 +153,6 @@ import CategorySearchBar from '@/components/CategorySearchBar.vue';
 import { apiFetch, readJsonResponse } from '@/api/client';
 import staticLearningUnits from '@/data/knowledgeLearningUnits.json';
 import staticCrashCourseSeries from '@/data/crashCourseSeries.json';
-import bilibiliSeriesVideos from '@/data/bilibiliSeriesVideos.json';
 
 const route = useRoute();
 const router = useRouter();
@@ -307,11 +306,15 @@ function openSeries(series) {
 function firstVideoKeyForUnit(unit) {
   const recommended = String(unit?.series?.recommendedVideoId || '').trim();
   if (recommended) return recommended;
-  const key = String(unit?.series?.key || '').trim();
-  const firstVideo = key ? bilibiliSeriesVideos[key]?.videos?.[0] : null;
-  if (firstVideo) return String(firstVideo.id || firstVideo.bvid || firstVideo.url || '');
   const source = unit?.source || {};
-  return String(source.id || source.bvid || source.url || '').trim();
+  const sourceKey = String(source.id || source.bvid || '').trim();
+  if (sourceKey) return sourceKey;
+  return extractBvid(source.url);
+}
+
+function extractBvid(url) {
+  const match = String(url || '').match(/\/video\/(BV[a-zA-Z0-9]+)/);
+  return match?.[1] || '';
 }
 
 function scrollToCatalog() {
