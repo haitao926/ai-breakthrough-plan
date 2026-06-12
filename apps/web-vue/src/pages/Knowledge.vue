@@ -2,74 +2,46 @@
   <div class="knowledge-page text-slate-800">
     <SiteNav active="knowledge" />
 
-    <main class="knowledge-shell">
-      <section class="knowledge-control-panel">
-        <CategorySearchBar
-          :meta="headerMeta"
-          :category="filter"
-          :search="searchTerm"
-          :options="knowledgeCategoryOptions"
-          :placeholder="knowledgeSearchPlaceholder"
-          :clear-disabled="!searchTerm && filter === 'all'"
-          @update:category="applyFilter"
-          @update:search="searchTerm = $event"
-          @clear="resetKnowledgeSearch"
-        />
-      </section>
+    <PublicPageHeader
+      title="创新知识库"
+      description="按学科方向整理 Crash Course、研究问题与知识挑战，让学生从兴趣进入持续探索。"
+    />
 
-      <section class="knowledge-progress-panel">
-        <div class="knowledge-progress-panel__copy">
-          <p class="knowledge-kicker">学习进度</p>
-          <h2>知识观测榜单</h2>
-          <span>榜单只使用你的真实本地完成记录。先进入任意方向，看视频并完成挑战后，这里会生成积分和探索排名。</span>
-        </div>
-        <div class="knowledge-progress-panel__stats">
-          <div>
-            <span>知识积分</span>
-            <strong>{{ progressSummary.totalPoints }}</strong>
-          </div>
-          <div>
-            <span>完成挑战</span>
-            <strong>{{ progressSummary.completedUnits }}</strong>
-          </div>
-        </div>
-        <div v-if="leaderboardItems.length" class="knowledge-rank-grid">
-          <article
-            v-for="(item, index) in leaderboardItems"
-            :key="item.id"
-            class="knowledge-rank-card"
-            :class="{ 'is-top': index === 0 }"
-          >
-            <div class="knowledge-rank-card__rank">#{{ index + 1 }}</div>
-            <div>
-              <strong>{{ item.name }}</strong>
-              <p>{{ item.action }}</p>
-            </div>
-            <span>{{ item.points }} 分</span>
-          </article>
-        </div>
-        <div v-else class="knowledge-progress-empty">
-          <i class="fas fa-location-crosshairs"></i>
-          <span>还没有探索记录。完成第一个视频挑战后，再显示你的真实排名和积分变化。</span>
-        </div>
-      </section>
+    <main class="public-index-content min-h-dvh pb-12">
+      <CategorySearchBar
+        :category="filter"
+        :search="searchTerm"
+        :options="knowledgeCategoryOptions"
+        :placeholder="knowledgeSearchPlaceholder"
+        :clear-disabled="!searchTerm && filter === 'all'"
+        @update:category="applyFilter"
+        @update:search="searchTerm = $event"
+        @clear="resetKnowledgeSearch"
+      />
 
       <section>
         <div class="knowledge-catalog-heading">
           <div>
-            <p class="knowledge-kicker">系列目录</p>
-            <h2>选择一个系列进入知识任务</h2>
+            <p class="knowledge-kicker">全部方向</p>
+            <h2>{{ catalogHeadingTitle }}</h2>
           </div>
-          <span>{{ filteredSeries.length }} 个可见系列</span>
+          <div class="knowledge-catalog-actions">
+            <RouterLink class="knowledge-leaderboard-entry" to="/knowledge/leaderboard">
+              <i class="fas fa-ranking-star"></i>
+              <span>我的知识榜</span>
+            </RouterLink>
+            <span>{{ filteredSeries.length }} 个可见系列</span>
+          </div>
         </div>
 
-        <div class="knowledge-grid">
-          <div
+        <div v-if="filteredSeries.length" class="knowledge-grid">
+          <RouterLink
             v-for="series in filteredSeries"
             :key="series.id"
             class="knowledge-card group"
+            :class="{ 'is-featured': isFeaturedSeries(series) }"
             :style="{ '--field-color': series.colorText, '--field-bg': series.colorBg }"
-            @click="openSeries(series)"
+            :to="seriesTarget(series)"
           >
             <div class="knowledge-cover">
               <img v-if="series.image" :src="series.image" :alt="series.title" class="knowledge-cover-image" />
@@ -77,22 +49,24 @@
                 <i class="fas" :class="series.icon"></i>
               </div>
             </div>
-            <div class="p-5">
-              <div class="knowledge-node">
-                <span>Crash Course · {{ categoryLabel(series.category) }}</span>
-                <strong>{{ series.episodeText || '系列课程' }}</strong>
-              </div>
-              <div class="knowledge-icon" :style="{ backgroundColor: series.colorBg, color: series.colorText }">
-                <i class="fas" :class="series.icon"></i>
-              </div>
+
+            <div class="knowledge-card__body">
               <h3 class="knowledge-card__title">{{ series.title }}</h3>
-              <p class="text-xs text-slate-400">{{ series.englishName }}</p>
-              <p class="text-xs text-slate-500 mt-3 leading-relaxed">{{ seriesCardSummary(series) }}</p>
+              <p class="knowledge-card__english">{{ series.englishName }}</p>
+              <p class="knowledge-card__summary">{{ seriesCardSummary(series) }}</p>
+              <p class="knowledge-card__prompt">{{ seriesPrompt(series) }}</p>
               <span class="knowledge-card__action">
-                进入探索 <i class="fas fa-arrow-right ml-2 text-[10px]"></i>
+                进入探索 <i class="fas fa-arrow-right"></i>
               </span>
             </div>
-          </div>
+          </RouterLink>
+        </div>
+
+        <div v-else class="knowledge-empty-state">
+          <p class="knowledge-kicker">No Match</p>
+          <h3>没有找到符合条件的探索方向</h3>
+          <p>可以先清空筛选条件，或者回到上面的推荐路径重新开始。</p>
+          <button type="button" @click="resetKnowledgeSearch">重置筛选</button>
         </div>
       </section>
     </main>
@@ -106,10 +80,9 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import SiteNav from '@/components/SiteNav.vue';
 import PortalFooter from '@/components/portal/PortalFooter.vue';
+import PublicPageHeader from '@/components/PublicPageHeader.vue';
 import CategorySearchBar from '@/components/CategorySearchBar.vue';
 import { apiFetch, readJsonResponse } from '@/api/client';
-import staticLearningUnits from '@/data/knowledgeLearningUnits.json';
-import staticCrashCourseSeries from '@/data/crashCourseSeries.json';
 
 const route = useRoute();
 const router = useRouter();
@@ -118,8 +91,6 @@ const searchTerm = ref('');
 const fieldsData = ref([]);
 const learningUnits = ref([]);
 const crashCourseSeries = ref([]);
-const progress = ref({});
-const progressKey = 'kbLearningProgress:v1';
 
 const palette = {
   science: { bg: '#e8f5ec', text: '#207a54', icon: 'fa-flask' },
@@ -139,7 +110,7 @@ function categoryKey(field) {
   const id = String(field.id || '').toLowerCase();
   if (['env', 'physics', 'math', 'bio', 'medicine'].includes(id)) return 'science';
   if (['tech', 'cs', 'ai', 'robotics', 'materials', 'hci'].includes(id)) return 'engineering';
-  if (['soc', 'psych', 'econ', 'edu', 'public_health', 'comm'].includes(id)) return 'social';
+  if (['soc', 'psych', 'econ', 'edu', 'public_health', 'comm', 'media'].includes(id)) return 'social';
   return 'humanities';
 }
 
@@ -153,10 +124,16 @@ function categoryLabel(key) {
   }[key] || key;
 }
 
-function compactDefinition(value) {
+function compactDefinition(value, max = 54) {
   const text = String(value || '').trim();
   if (!text) return '这个方向主要研究真实问题背后的学科逻辑。';
-  return text.length > 46 ? `${text.slice(0, 46)}...` : text;
+  return text.length > max ? `${text.slice(0, max)}...` : text;
+}
+
+function clampLine(value, max = 28) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  return text.length > max ? `${text.slice(0, max)}...` : text;
 }
 
 const normalizedFields = computed(() =>
@@ -187,6 +164,7 @@ const normalizedSeries = computed(() =>
       category,
       disciplineName: mappedField.name || '创新知识方向',
       disciplineTagline: mappedField.tagline || mappedField.definition || '',
+      disciplineQuestion: mappedField.research_questions?.[0]?.q || '',
       colorBg: palette[category]?.bg || palette.all.bg,
       colorText: palette[category]?.text || palette.all.text,
       icon: mappedField.icon || palette[category]?.icon || palette.all.icon
@@ -194,44 +172,17 @@ const normalizedSeries = computed(() =>
   })
 );
 
-const progressSummary = computed(() => {
-  const profile = progress.value?._profile || {};
-  const completedIds = Object.entries(progress.value || {})
-    .filter(([key, value]) => key !== '_profile' && value?.completed)
-    .map(([key]) => key);
-  const totalPoints = Number(profile.totalPoints || 0)
-    || completedIds.reduce((sum, id) => sum + Number(progress.value[id]?.points || 0), 0);
-  return {
-    totalPoints,
-    completedUnits: Number(profile.completedUnits || completedIds.length),
-    streakDays: Number(profile.streakDays || 0)
-  };
-});
-
-const leaderboardItems = computed(() => {
-  return normalizedFields.value
-    .filter(field => isCompleted(field.id))
-    .map(field => ({
-      id: `me-${field.id}`,
-      name: '我的探索',
-      action: `完成 ${field.name} 挑战`,
-      points: Number(progress.value[field.id]?.points || unitFor(field.id)?.points || 0)
-    }))
-    .sort((a, b) => b.points - a.points)
-    .slice(0, 3);
-});
-
 const filteredSeries = computed(() => {
   return normalizedSeries.value
     .filter(series => filter.value === 'all' || series.category === filter.value)
     .filter(matchesSeriesSearch);
 });
 
-const headerMeta = computed(() => (
-  filter.value === 'all'
-    ? `${normalizedSeries.value.length} 个 Crash Course 系列`
-    : `${categoryLabel(filter.value)} · ${filteredSeries.value.length} 个系列`
-));
+const catalogHeadingTitle = computed(() => {
+  if (searchTerm.value.trim()) return '搜索结果中的探索方向';
+  if (filter.value === 'all') return '全部探索方向';
+  return `继续浏览 ${categoryLabel(filter.value)} 视角`;
+});
 
 const knowledgeCategoryOptions = [
   { value: 'all', label: '全部学科' },
@@ -244,19 +195,16 @@ const knowledgeCategoryOptions = [
 const knowledgeSearchPlaceholder = computed(() => {
   const label = categoryLabel(filter.value);
   return filter.value === 'all'
-    ? '搜索 Crash Course 系列、学科或关键词'
+    ? '搜索系列、学科或你想研究的问题'
     : `在${label}视角中搜索 Crash Course 系列`;
 });
 
-function openSeries(series) {
-  const unit = unitFor(series.disciplineId);
-  const videoKey = firstVideoKeyForUnit(unit);
-  const query = { filter: series.category };
-  if (videoKey) query.video = videoKey;
-  router.push({
-    path: `/knowledge/${encodeURIComponent(series.disciplineId)}`,
-    query
-  }).catch(() => {});
+function firstSeriesForDiscipline(disciplineId) {
+  return normalizedSeries.value.find(item => String(item.disciplineId || '') === String(disciplineId || '')) || null;
+}
+
+function unitFor(fieldId) {
+  return learningUnits.value.find(item => String(item.disciplineId || '') === String(fieldId)) || null;
 }
 
 function firstVideoKeyForUnit(unit) {
@@ -273,6 +221,18 @@ function extractBvid(url) {
   return match?.[1] || '';
 }
 
+function seriesTarget(series) {
+  const unit = unitFor(series.disciplineId);
+  const videoKey = firstVideoKeyForUnit(unit);
+  const query = {};
+  if (series.category && series.category !== 'all') query.filter = series.category;
+  if (videoKey) query.video = videoKey;
+  return {
+    path: `/knowledge/${encodeURIComponent(series.disciplineId)}`,
+    query
+  };
+}
+
 function applyFilter(key, { scroll = false } = {}) {
   filter.value = key;
   const query = { ...route.query };
@@ -284,8 +244,17 @@ function applyFilter(key, { scroll = false } = {}) {
 
 function seriesCardSummary(series) {
   const tagline = String(series.disciplineTagline || '').trim();
-  if (tagline) return `从 ${series.title} 进入 ${series.disciplineName}：${compactDefinition(tagline)}`;
-  return `从 ${series.title} 进入 ${series.disciplineName}，再完成视频挑战、答题和项目探索。`;
+  if (tagline) return clampLine(tagline, 26);
+  return `从 ${series.disciplineName} 进入探索。`;
+}
+
+function seriesPrompt(series) {
+  if (series.disciplineQuestion) return clampLine(series.disciplineQuestion, 24);
+  return `从真实问题开始。`;
+}
+
+function isFeaturedSeries(series) {
+  return false;
 }
 
 function matchesSeriesSearch(series) {
@@ -296,7 +265,8 @@ function matchesSeriesSearch(series) {
     series.englishName,
     series.episodeText,
     series.disciplineName,
-    series.disciplineTagline
+    series.disciplineTagline,
+    series.disciplineQuestion
   ].filter(Boolean).join(' ').toLowerCase().includes(keyword);
 }
 
@@ -311,23 +281,6 @@ function syncFromRoute() {
     : 'all';
 
   filter.value = nextFilter;
-}
-
-function unitFor(fieldId) {
-  return learningUnits.value.find(item => String(item.disciplineId || '') === String(fieldId)) || null;
-}
-
-function isCompleted(fieldId) {
-  return Boolean(progress.value?.[fieldId]?.completed);
-}
-
-function loadProgress() {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(progressKey) || '{}');
-    progress.value = parsed && typeof parsed === 'object' ? parsed : {};
-  } catch (err) {
-    progress.value = {};
-  }
 }
 
 watch([() => route.query.filter], () => {
@@ -350,7 +303,6 @@ watch(searchTerm, value => {
 onMounted(async () => {
   try {
     searchTerm.value = String(route.query.q || '');
-    loadProgress();
     const [disciplinesRes, unitsRes, seriesRes] = await Promise.all([
       apiFetch('/knowledge/disciplines'),
       apiFetch('/knowledge/learning-units'),
@@ -360,9 +312,11 @@ onMounted(async () => {
     const unitsData = await readJsonResponse(unitsRes, 'knowledge_learning_units');
     const seriesData = await readJsonResponse(seriesRes, 'knowledge_crash_course_series');
     if (!disciplinesRes.ok) throw new Error(disciplinesData?.error || 'knowledge_disciplines_failed');
+    if (!unitsRes.ok) throw new Error(unitsData?.error || 'knowledge_learning_units_failed');
+    if (!seriesRes.ok) throw new Error(seriesData?.error || 'knowledge_crash_course_series_failed');
     fieldsData.value = disciplinesData.disciplines || [];
-    learningUnits.value = unitsRes.ok ? (unitsData.learningUnits || []) : staticLearningUnits;
-    crashCourseSeries.value = seriesRes.ok ? (seriesData.series || []) : staticCrashCourseSeries;
+    learningUnits.value = unitsData.learningUnits || [];
+    crashCourseSeries.value = seriesData.series || [];
 
     const focusId = String(route.query.focus || '');
     if (focusId) {
@@ -385,6 +339,8 @@ onMounted(async () => {
   --map-line: rgba(77, 100, 79, 0.16);
   --map-green: #4d644f;
   --map-earth: #9a6b3e;
+  --map-panel: rgba(255, 253, 246, 0.82);
+  --map-panel-strong: rgba(255, 253, 246, 0.92);
   background:
     radial-gradient(circle at 12% 6%, rgba(77, 100, 79, 0.16), transparent 28%),
     radial-gradient(circle at 88% 16%, rgba(154, 107, 62, 0.14), transparent 28%),
@@ -392,16 +348,26 @@ onMounted(async () => {
     linear-gradient(65deg, rgba(64, 88, 58, 0.035) 25%, transparent 25%) 0 0 / 52px 52px,
     linear-gradient(rgba(77, 100, 79, 0.04) 1px, transparent 1px) 0 0 / 28px 28px,
     linear-gradient(90deg, rgba(77, 100, 79, 0.035) 1px, transparent 1px) 0 0 / 28px 28px,
-    #f5f7ef;
+  #f5f7ef;
   min-height: 100vh;
 }
 
-.knowledge-control-panel,
-.knowledge-progress-panel {
-  border: 1px solid rgba(77, 100, 79, 0.16);
-  background: rgba(255, 253, 246, 0.78);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 18px 45px rgba(51, 67, 45, 0.07);
+.public-index-content {
+  width: min(1320px, calc(100vw - 40px));
+  margin: 0 auto;
+}
+
+.knowledge-page :deep(.public-page-header) {
+  background: transparent;
+  padding-bottom: 1.2rem;
+}
+
+.knowledge-page :deep(.public-page-header__title) {
+  color: var(--map-ink);
+}
+
+.knowledge-page :deep(.public-page-header__description) {
+  color: var(--map-muted);
 }
 
 .knowledge-kicker {
@@ -413,20 +379,91 @@ onMounted(async () => {
   text-transform: uppercase;
 }
 
-.knowledge-shell {
-  max-width: 1320px;
-  min-height: 100vh;
-  margin: 0 auto;
-  padding: 32px 20px 56px;
+.knowledge-entry-card,
+.knowledge-path-card,
+.knowledge-card,
+.knowledge-empty-state {
+  border: 1px solid rgba(77, 100, 79, 0.16);
+  background: var(--map-panel);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 45px rgba(51, 67, 45, 0.07);
 }
 
-.knowledge-control-panel {
-  border-radius: 24px;
-  padding: 12px;
+.knowledge-entry-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+  margin-top: 24px;
 }
 
-.knowledge-control-panel :deep(.category-search-bar) {
+.knowledge-entry-card {
+  border-radius: 28px;
+  padding: 22px;
+}
+
+.knowledge-entry-card__top h2 {
+  margin: 10px 0 10px;
+  color: var(--map-ink);
+  font-size: clamp(1.35rem, 2vw, 1.8rem);
+  font-weight: 940;
+  letter-spacing: -0.04em;
+}
+
+.knowledge-entry-card__top p:last-child {
   margin: 0;
+  color: var(--map-muted);
+  line-height: 1.75;
+}
+
+.knowledge-entry-picks {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.knowledge-entry-pick {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  border: 1px solid rgba(77, 100, 79, 0.14);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 0 0, var(--entry-bg, #eef2e8), transparent 32%),
+    rgba(255, 253, 246, 0.92);
+  color: var(--map-ink);
+  padding: 16px;
+  text-align: left;
+  transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+}
+
+.knowledge-entry-pick:hover {
+  border-color: var(--entry-color, #4d644f);
+  box-shadow: 0 14px 30px rgba(51, 67, 45, 0.08);
+  transform: translateY(-1px);
+}
+
+.knowledge-entry-pick span {
+  color: var(--entry-color, #4d644f);
+  font-size: 0.74rem;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+}
+
+.knowledge-entry-pick strong {
+  color: var(--map-ink);
+  font-size: 1rem;
+  font-weight: 930;
+}
+
+.knowledge-entry-pick em {
+  color: var(--map-muted);
+  font-style: normal;
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+.knowledge-featured-section {
+  margin-top: 30px;
 }
 
 .knowledge-catalog-heading {
@@ -434,26 +471,154 @@ onMounted(async () => {
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
-  margin: 28px 0 16px;
 }
 
 .knowledge-catalog-heading h2 {
-  margin: 6px 0 0;
+  margin: 8px 0 8px;
   color: var(--map-ink);
-  font-size: clamp(1.5rem, 3vw, 2.25rem);
-  font-weight: 950;
-  letter-spacing: -0.04em;
+  font-size: clamp(1.55rem, 3vw, 2.35rem);
+  font-weight: 960;
+  letter-spacing: -0.05em;
+}
+
+.knowledge-catalog-heading p:last-child {
+  margin: 0;
+  color: var(--map-muted);
+  line-height: 1.7;
+  max-width: 62ch;
 }
 
 .knowledge-catalog-heading > span {
   flex: 0 0 auto;
   border: 1px solid rgba(77, 100, 79, 0.16);
   border-radius: 999px;
-  background: rgba(255, 253, 246, 0.75);
+  background: rgba(255, 253, 246, 0.76);
   color: #65725f;
   padding: 9px 12px;
   font-size: 0.8rem;
   font-weight: 900;
+}
+
+.knowledge-catalog-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.knowledge-leaderboard-entry {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid rgba(77, 100, 79, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 253, 246, 0.92);
+  color: var(--map-ink);
+  font-size: 0.82rem;
+  font-weight: 920;
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.knowledge-leaderboard-entry:hover {
+  border-color: rgba(77, 100, 79, 0.3);
+  box-shadow: 0 12px 24px rgba(51, 67, 45, 0.08);
+  transform: translateY(-1px);
+}
+
+.knowledge-leaderboard-entry i {
+  color: var(--map-green);
+}
+
+.knowledge-path-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.knowledge-path-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 28px;
+  text-decoration: none;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.knowledge-path-card:hover {
+  border-color: var(--field-color);
+  box-shadow: 0 24px 48px rgba(51, 67, 45, 0.12);
+  transform: translateY(-4px);
+}
+
+.knowledge-path-card__cover {
+  height: 168px;
+  background:
+    linear-gradient(135deg, var(--field-bg), #ffffff),
+    repeating-linear-gradient(0deg, rgba(77, 100, 79, 0.08) 0 1px, transparent 1px 14px);
+  overflow: hidden;
+}
+
+.knowledge-path-card__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.knowledge-path-card__fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--field-color);
+  font-size: 2rem;
+}
+
+.knowledge-path-card__body {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+
+.knowledge-path-card__body h3 {
+  margin: 0;
+  color: var(--map-ink);
+  font-size: 1.18rem;
+  font-weight: 940;
+  letter-spacing: -0.03em;
+}
+
+.knowledge-path-card__summary {
+  margin: 0;
+  color: var(--map-muted);
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.knowledge-path-card__question {
+  margin: 0;
+  border-left: 3px solid var(--field-color);
+  padding-left: 12px;
+  color: var(--map-ink);
+  font-size: 0.88rem;
+  font-weight: 850;
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.knowledge-catalog-heading {
+  margin: 24px 0 16px;
 }
 
 .knowledge-grid {
@@ -464,14 +629,14 @@ onMounted(async () => {
 
 .knowledge-card {
   position: relative;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
-  border: 1px solid rgba(77, 100, 79, 0.14);
   border-radius: 24px;
   background:
     radial-gradient(circle at 18% 0%, var(--field-bg), transparent 42%),
     rgba(255, 253, 246, 0.82);
-  backdrop-filter: blur(12px);
-  cursor: pointer;
+  text-decoration: none;
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 12px 32px rgba(51, 67, 45, 0.055);
 }
@@ -507,139 +672,20 @@ onMounted(async () => {
   opacity: 1;
 }
 
-.knowledge-progress-panel {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 16px;
-  align-items: center;
-  margin-top: 18px;
-  border-radius: 26px;
+.knowledge-card.is-featured {
   background:
-    radial-gradient(circle at top left, rgba(77, 100, 79, 0.14), transparent 36%),
-    rgba(255, 253, 246, 0.78);
-  padding: 18px;
+    radial-gradient(circle at 18% 0%, var(--field-bg), transparent 42%),
+    linear-gradient(180deg, rgba(255, 253, 246, 0.9), rgba(247, 248, 239, 0.84));
 }
 
-.knowledge-progress-panel__copy h2 {
-  margin: 7px 0 0;
-  color: var(--map-ink);
-  font-size: 1.35rem;
-  font-weight: 950;
-  letter-spacing: -0.025em;
-}
-
-.knowledge-progress-panel__copy span {
-  display: block;
-  margin-top: 6px;
-  max-width: 680px;
-  color: var(--map-muted);
-  font-size: 0.86rem;
-  line-height: 1.6;
-}
-
-.knowledge-progress-panel__stats {
-  display: flex;
-  gap: 10px;
-}
-
-.knowledge-progress-panel__stats > div {
-  min-width: 104px;
-  border: 1px solid rgba(77, 100, 79, 0.16);
-  border-radius: 18px;
-  background: linear-gradient(135deg, #e8f5ec, #fffdf6);
-  padding: 12px;
-  text-align: center;
-}
-
-.knowledge-progress-panel__stats span {
-  margin: 0;
-  color: var(--map-green);
-  font-size: 0.72rem;
-  font-weight: 900;
-}
-
-.knowledge-progress-panel__stats strong {
-  display: block;
-  margin-top: 4px;
-  color: var(--map-ink);
-  font-size: 1.55rem;
-  font-weight: 950;
-  line-height: 1;
-}
-
-.knowledge-rank-grid {
-  grid-column: 1 / -1;
+.knowledge-card__body {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
-}
-
-.knowledge-rank-card {
-  display: grid;
-  grid-template-columns: 38px minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: center;
-  border: 1px solid rgba(77, 100, 79, 0.12);
-  border-radius: 18px;
-  background: rgba(255, 253, 246, 0.82);
-  padding: 14px;
-}
-
-.knowledge-rank-card.is-top {
-  border-color: #9a6b3e;
-  background: linear-gradient(135deg, #f7f0e4, #fffdf6);
-}
-
-.knowledge-rank-card__rank {
-  display: grid;
-  place-items: center;
-  height: 32px;
-  border-radius: 999px;
-  background: #e8f5ec;
-  color: var(--map-green);
-  font-size: 0.78rem;
-  font-weight: 900;
-}
-
-.knowledge-rank-card strong {
-  display: block;
-  color: var(--map-ink);
-  font-size: 0.88rem;
-  font-weight: 900;
-}
-
-.knowledge-rank-card p {
-  margin: 2px 0 0;
-  color: var(--map-muted);
-  font-size: 0.76rem;
-}
-
-.knowledge-rank-card > span {
-  color: var(--map-ink);
-  font-size: 0.82rem;
-  font-weight: 900;
-}
-
-.knowledge-progress-empty {
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border: 1px dashed rgba(77, 100, 79, 0.24);
-  border-radius: 16px;
-  background: rgba(255, 253, 246, 0.62);
-  color: var(--map-muted);
-  padding: 12px 14px;
-  font-size: 0.84rem;
-  font-weight: 700;
-}
-
-.knowledge-progress-empty i {
-  color: var(--map-green);
+  padding: 20px;
 }
 
 .knowledge-cover {
-  height: 142px;
+  height: 148px;
   background:
     linear-gradient(135deg, var(--field-bg), #ffffff),
     repeating-linear-gradient(0deg, rgba(77, 100, 79, 0.08) 0 1px, transparent 1px 14px);
@@ -663,10 +709,11 @@ onMounted(async () => {
 }
 
 .knowledge-card__title {
-  margin-top: 16px;
+  margin: 0;
   color: var(--map-ink);
+  font-size: 1.26rem;
   font-weight: 950;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   transition: color 0.2s ease;
 }
 
@@ -674,83 +721,113 @@ onMounted(async () => {
   color: var(--field-color);
 }
 
+.knowledge-card__english {
+  margin: -2px 0 0;
+  color: #879088;
+  font-size: 0.73rem;
+  font-weight: 820;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.knowledge-card__summary,
+.knowledge-card__prompt {
+  margin: 0;
+  color: var(--map-muted);
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.knowledge-card__summary {
+  -webkit-line-clamp: 2;
+}
+
+.knowledge-card__prompt {
+  color: var(--map-ink);
+  font-size: 0.88rem;
+  font-weight: 860;
+  -webkit-line-clamp: 2;
+}
+
 .knowledge-card__action {
   display: inline-flex;
   align-items: center;
-  margin-top: 16px;
+  gap: 8px;
+  margin-top: 4px;
   color: var(--field-color);
   font-size: 0.78rem;
   font-weight: 950;
-  opacity: 0.84;
+  opacity: 0.9;
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
-.knowledge-card:hover .knowledge-card__action {
+.knowledge-card:hover .knowledge-card__action,
+.knowledge-path-card:hover .knowledge-card__action {
   opacity: 1;
   transform: translateX(2px);
 }
 
-/* Compatibility guard for old utility classes in card content. */
-.knowledge-card h3 {
-  color: var(--map-ink) !important;
-  transition: color 0.2s ease;
+.knowledge-empty-state {
+  border-radius: 28px;
+  padding: 28px;
 }
 
-.knowledge-card:hover h3 {
-  color: var(--field-color) !important;
+.knowledge-empty-state h3 {
+  margin: 10px 0 8px;
+  color: var(--map-ink);
+  font-size: 1.4rem;
+  font-weight: 940;
 }
 
-.knowledge-card p {
-  color: var(--map-muted) !important;
-}
-
-.knowledge-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.1rem;
-}
-
-.knowledge-node {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 12px;
-  border-bottom: 1px dashed rgba(77, 100, 79, 0.2);
-  padding-bottom: 10px;
+.knowledge-empty-state p {
+  margin: 0;
   color: var(--map-muted);
-  font-size: 0.72rem;
-  font-weight: 800;
+  line-height: 1.75;
 }
 
-.knowledge-node strong {
-  color: var(--field-color);
-  font-weight: 800;
+.knowledge-empty-state button {
+  margin-top: 18px;
+  border: 1px solid rgba(77, 100, 79, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 253, 246, 0.94);
+  color: var(--map-ink);
+  padding: 11px 16px;
+  font-size: 0.82rem;
+  font-weight: 900;
 }
 
-@media (max-width: 980px) {
+.knowledge-card:focus-visible,
+.knowledge-path-card:focus-visible,
+.knowledge-entry-pick:focus-visible,
+.knowledge-leaderboard-entry:focus-visible,
+.knowledge-empty-state button:focus-visible {
+  outline: 3px solid rgba(77, 100, 79, 0.28);
+  outline-offset: 3px;
+}
+
+@media (max-width: 1180px) {
+  .knowledge-entry-grid,
+  .knowledge-path-grid,
   .knowledge-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .knowledge-progress-panel,
-  .knowledge-rank-grid {
-    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 720px) {
-  .knowledge-grid,
-  .knowledge-catalog-heading {
-    grid-template-columns: 1fr;
+  .public-index-content {
+    width: min(1320px, calc(100vw - 22px));
   }
 
-  .knowledge-shell {
-    padding: 20px 14px 42px;
+  .knowledge-page :deep(.public-page-header) {
+    padding-bottom: 1rem;
+  }
+
+  .knowledge-entry-grid,
+  .knowledge-path-grid,
+  .knowledge-grid {
+    grid-template-columns: 1fr;
   }
 
   .knowledge-catalog-heading {
@@ -758,13 +835,14 @@ onMounted(async () => {
     align-items: start;
   }
 
-  .knowledge-progress-panel__stats {
-    width: 100%;
+  .knowledge-catalog-actions {
+    justify-content: flex-start;
   }
 
-  .knowledge-progress-panel__stats > div {
-    flex: 1;
+  .knowledge-card__body,
+  .knowledge-path-card__body {
+    padding: 18px;
   }
+
 }
-
 </style>

@@ -1,12 +1,16 @@
 <template>
-  <footer class="border-t border-gray-200 bg-white">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between text-sm">
-      <div class="text-slate-500">© 2025 {{ footerLabel }}</div>
-      <div class="flex flex-wrap gap-4 text-slate-500 font-medium">
-        <RouterLink to="/knowledge" class="hover:text-indigo-600">创新知识库</RouterLink>
-        <RouterLink to="/projects" class="hover:text-indigo-600">项目库</RouterLink>
-        <RouterLink to="/downloads" class="hover:text-indigo-600">课程库</RouterLink>
-        <RouterLink to="/competitions" class="hover:text-indigo-600">竞赛活动</RouterLink>
+  <footer class="portal-footer">
+    <div class="portal-footer-shell">
+      <div class="portal-footer-inner">
+        <div class="portal-footer-copy">
+          <div class="portal-footer-title">© 2025 {{ footerLabel }}</div>
+        </div>
+        <div class="portal-footer-links">
+        <RouterLink to="/knowledge" class="footer-link">创新知识库</RouterLink>
+        <RouterLink to="/projects" class="footer-link">项目库</RouterLink>
+        <RouterLink to="/courses" class="footer-link">课程库</RouterLink>
+        <RouterLink to="/competitions" class="footer-link">竞赛活动</RouterLink>
+        </div>
       </div>
     </div>
   </footer>
@@ -15,3 +19,36 @@
 <script setup>
 import { footerLabel } from '@/constants/brand';
 </script>
+
+<style scoped>
+.portal-footer-shell {
+  width: min(1320px, calc(100vw - 40px));
+  margin: 0 auto;
+}
+
+.portal-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.footer-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 8px;
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.18s ease;
+}
+
+.footer-link:hover {
+  color: var(--color-brand-accent);
+}
+
+@media (max-width: 720px) {
+  .portal-footer-shell {
+    width: min(1320px, calc(100vw - 22px));
+  }
+}
+</style>

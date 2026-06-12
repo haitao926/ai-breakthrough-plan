@@ -1,17 +1,14 @@
 <template>
   <div class="downloads-page text-gray-800">
-    <SiteNav active="downloads" />
+    <SiteNav active="courses" />
 
     <PublicPageHeader
-      eyebrow="Courses"
       title="课程库"
-      description="课程、讲义、代码与资料集中在这里。"
-      :meta="`${visibleCourseCount} 门内容`"
+      description="按学科方向整理课程、课时和资料，让学生从能力训练进入真实项目实践。"
     />
 
-    <main class="max-w-[1320px] mx-auto px-5 sm:px-6 lg:px-8 py-3 min-h-screen space-y-5">
+    <main class="public-index-content min-h-dvh pb-3">
       <CategorySearchBar
-        :meta="`${visibleCourseCount} 门匹配`"
         :category="activeFilter"
         :search="searchTerm"
         :options="courseCategoryOptions"
@@ -25,7 +22,7 @@
       <section ref="courseListRef" class="scroll-anchor">
         <template v-if="loading">
           <div class="text-center py-16 text-gray-400">
-            <i class="fas fa-spinner fa-spin text-2xl mb-2"></i><br />
+            <i class="fas fa-circle-notch text-2xl mb-2"></i><br />
             加载课程中...
           </div>
         </template>
@@ -38,66 +35,64 @@
           <section v-for="section in visibleSections" :key="section.id" class="mb-10">
             <div class="course-section-heading">
               <div>
-                <p>{{ section.label }}</p>
+                <p>
+                  <i class="fas" :class="section.icon"></i>
+                  {{ section.label }}
+                </p>
                 <h2>{{ section.title }}</h2>
               </div>
-              <span>{{ section.desc }}</span>
+              <span>{{ section.desc }} · {{ section.items.length }} 门</span>
             </div>
 
-            <div v-if="section.items.length" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div
+            <div v-if="section.items.length" class="course-list">
+              <button
                 v-for="course in section.items"
                 :key="course.id"
-                class="course-card relative rounded-3xl border border-slate-200/60 bg-white/95 flex flex-col justify-between cursor-pointer group overflow-hidden"
+                type="button"
+                class="course-card group text-left"
                 :style="getTrackStyles(section.id)"
+                :aria-label="`打开课程：${course.title}`"
                 @click="openCourse(course.id)"
               >
-                <!-- Top Cover Visual Area -->
-                <div class="relative w-full">
-                  <!-- Tag Badge -->
-                  <span class="absolute top-3 right-3 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-white/90 backdrop-blur-md text-slate-700 shadow-sm border border-slate-100/40 z-20">
-                    {{ course.courseType || section.label }}
-                  </span>
-
-                  <!-- SVG layout -->
-                  <div v-if="isSvg(getCourseVisual(course.id, course.direction).cover)" class="h-36 w-full flex items-center justify-center p-6 relative overflow-hidden grid-pattern" :class="sectionCoverBg(section.id)">
-                    <div class="absolute inset-0 bg-white/20 opacity-40 blur-xl pointer-events-none"></div>
-                    <img :src="getCourseVisual(course.id, course.direction).cover" class="h-full w-auto object-contain relative z-10 transition-transform duration-500 group-hover:scale-110" />
-                  </div>
-
-                  <!-- PNG layout -->
-                  <div v-else class="h-36 w-full overflow-hidden relative bg-slate-900">
-                    <img :src="getCourseVisual(course.id, course.direction).cover" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                  </div>
+                <div class="course-card__media" :class="sectionCoverBg(section.id)">
+                  <img
+                    :src="getCourseVisual(course.id, course.direction).cover"
+                    :alt="course.title"
+                    class="course-card__image"
+                    :class="{ 'course-card__image--svg': isSvg(getCourseVisual(course.id, course.direction).cover) }"
+                  />
                 </div>
 
-                <!-- Bottom Content Details -->
-                <div class="p-6 flex-1 flex flex-col justify-between">
-                  <div class="space-y-6">
-                    <!-- Title & Summary -->
-                    <div class="space-y-2">
-                      <h3 class="text-sm sm:text-base font-black text-slate-900 group-hover:text-indigo-600 transition-colors leading-snug line-clamp-1">
-                        {{ course.title }}
-                      </h3>
-                      
-                      <p class="text-xs text-slate-500 font-semibold leading-relaxed line-clamp-2 h-[36px]">
-                        {{ course.summary }}
-                      </p>
-                    </div>
+                <div class="course-card__top">
+                  <span>{{ section.label }}</span>
+                  <span>{{ course.courseType || '课程' }}</span>
+                </div>
 
-
+                <div class="course-card__content">
+                  <div class="course-card__summary">
+                    <h3>{{ course.title }}</h3>
+                    <p>{{ course.summary }}</p>
                   </div>
 
-                  <!-- Footer Action row -->
-                  <div class="flex items-center justify-between text-xs font-bold pt-4 border-t border-slate-100/60 mt-5 transition-colors duration-300 group-hover:text-indigo-600" :class="sectionText(section.id)">
+                  <div class="course-card__facts">
+                    <span>{{ course.positioning || section.desc }}</span>
+                    <span>{{ course.pace || '节奏待补充' }}</span>
+                  </div>
+
+                  <div class="course-card__details">
+                    <span>{{ course.audience || '适合对象待补充' }}</span>
+                    <span>{{ course.teacherName || '导师组' }}</span>
+                  </div>
+
+                  <div class="course-card__action">
                     <span class="flex items-center gap-1.5">
                       <i class="fas" :class="stepActionIcon(activeStep)"></i> 
                       {{ stepActionLabel(activeStep) }}
                     </span>
-                    <i class="fas fa-arrow-right transition-transform duration-300 group-hover:translate-x-1.5"></i>
+                    <i class="fas fa-arrow-right"></i>
                   </div>
                 </div>
-              </div>
+              </button>
             </div>
 
             <div v-else class="text-gray-400 text-sm">这一方向的课程正在整理中。</div>
@@ -130,13 +125,9 @@ const activeStep = ref(resolveStep(route.query.step));
 const searchTerm = ref('');
 const courses = ref([]);
 const courseListRef = ref(null);
-
-const pathwaySteps = [
-  { id: 'guide', label: '导学', icon: 'fa-graduation-cap' },
-  { id: 'lessons', label: '课时', icon: 'fa-layer-group' },
-  { id: 'materials', label: '资料', icon: 'fa-folder-open' },
-  { id: 'practice', label: '实践', icon: 'fa-screwdriver-wrench' }
-];
+const hiddenCourseSectionIds = new Set(['capstone']);
+const displayCourseSections = courseSections.filter(section => !hiddenCourseSectionIds.has(section.id));
+const displayCourseFilters = courseFilters.filter(filter => !hiddenCourseSectionIds.has(filter.id));
 
 function resolveStep(value) {
   return ['guide', 'lessons', 'materials', 'practice'].includes(String(value || ''))
@@ -146,7 +137,7 @@ function resolveStep(value) {
 
 const visibleSections = computed(() => {
   const sectionIds = activeFilter.value === 'all'
-    ? courseSections.map(section => section.id)
+    ? displayCourseSections.map(section => section.id)
     : [activeFilter.value];
 
   return sectionIds.map(sectionId => {
@@ -160,17 +151,14 @@ const visibleSections = computed(() => {
   });
 });
 
-const visibleCourseCount = computed(() =>
-  visibleSections.value.reduce((total, section) => total + section.items.length, 0)
-);
 
-const courseCategoryOptions = computed(() => courseFilters.map(filter => ({
+const courseCategoryOptions = computed(() => displayCourseFilters.map(filter => ({
   value: filter.id,
   label: filter.id === 'all' ? '全部课程' : filter.label
 })));
 
 const courseSearchPlaceholder = computed(() => {
-  const label = courseFilters.find(item => item.id === activeFilter.value)?.label || '课程';
+  const label = displayCourseFilters.find(item => item.id === activeFilter.value)?.label || '课程';
   return activeFilter.value === 'all'
     ? '搜索课程标题、简介或方向'
     : `在${label}中搜索课程标题或简介`;
@@ -188,17 +176,6 @@ function matchesCourseSearch(course) {
   ].filter(Boolean).join(' ').toLowerCase().includes(keyword);
 }
 
-function sectionGradient(id) {
-  return {
-    foundation: 'bg-gradient-to-br from-slate-700 to-slate-900',
-    science: 'bg-gradient-to-br from-emerald-600 to-teal-500',
-    engineering: 'bg-gradient-to-br from-blue-600 to-cyan-500',
-    social: 'bg-gradient-to-br from-purple-600 to-pink-500',
-    humanities: 'bg-gradient-to-br from-amber-500 to-orange-400',
-    capstone: 'bg-gradient-to-br from-indigo-900 to-blue-900'
-  }[id] || 'bg-gradient-to-br from-indigo-600 to-blue-500';
-}
-
 function sectionIcon(id) {
   return {
     foundation: 'fa-graduation-cap',
@@ -213,34 +190,34 @@ function sectionIcon(id) {
 function sectionText(id) {
   return {
     foundation: 'text-slate-700',
-    science: 'text-emerald-600',
-    engineering: 'text-blue-600',
-    social: 'text-purple-600',
-    humanities: 'text-amber-600',
-    capstone: 'text-indigo-400'
-  }[id] || 'text-indigo-600';
+    science: 'text-slate-700',
+    engineering: 'text-teal-700',
+    social: 'text-slate-700',
+    humanities: 'text-slate-700',
+    capstone: 'text-slate-700'
+  }[id] || 'text-teal-700';
 }
 
 function sectionBorderBg(id) {
   return {
     foundation: 'bg-slate-400/80',
-    science: 'bg-emerald-500/80',
-    engineering: 'bg-blue-500/80',
-    social: 'bg-purple-500/80',
-    humanities: 'bg-amber-500/80',
-    capstone: 'bg-indigo-600/80'
-  }[id] || 'bg-indigo-500/80';
+    science: 'bg-slate-500/80',
+    engineering: 'bg-teal-600/80',
+    social: 'bg-slate-500/80',
+    humanities: 'bg-slate-500/80',
+    capstone: 'bg-slate-700/80'
+  }[id] || 'bg-teal-600/80';
 }
 
 function sectionIconBg(id) {
   return {
     foundation: 'bg-slate-100 text-slate-600',
-    science: 'bg-emerald-50 text-emerald-600',
-    engineering: 'bg-blue-50 text-blue-600',
-    social: 'bg-purple-50 text-purple-600',
-    humanities: 'bg-amber-50 text-amber-600',
-    capstone: 'bg-indigo-50 text-indigo-600'
-  }[id] || 'bg-indigo-50 text-indigo-600';
+    science: 'bg-slate-100 text-slate-600',
+    engineering: 'bg-teal-50 text-teal-700',
+    social: 'bg-slate-100 text-slate-600',
+    humanities: 'bg-slate-100 text-slate-600',
+    capstone: 'bg-slate-100 text-slate-700'
+  }[id] || 'bg-teal-50 text-teal-700';
 }
 
 function isSvg(path) {
@@ -249,76 +226,90 @@ function isSvg(path) {
 
 function sectionCoverBg(id) {
   return {
-    foundation: 'bg-gradient-to-br from-slate-50 to-slate-100',
-    science: 'bg-gradient-to-br from-emerald-50 to-teal-100/50',
-    engineering: 'bg-gradient-to-br from-indigo-50/50 to-blue-100/60',
-    social: 'bg-gradient-to-br from-rose-50 to-pink-100/50',
-    humanities: 'bg-gradient-to-br from-amber-50 to-orange-100/50',
-    capstone: 'bg-gradient-to-br from-violet-50 to-indigo-100/50'
-  }[id] || 'bg-gradient-to-br from-indigo-50 to-blue-100/50';
+    foundation: 'bg-slate-50',
+    science: 'bg-slate-50',
+    engineering: 'bg-teal-50',
+    social: 'bg-slate-50',
+    humanities: 'bg-slate-50',
+    capstone: 'bg-slate-100'
+  }[id] || 'bg-teal-50';
 }
 
 function stepActiveBg(sectionId) {
   return {
     foundation: 'bg-slate-900 text-white border-transparent',
-    science: 'bg-emerald-600 text-white border-transparent',
-    engineering: 'bg-indigo-600 text-white border-transparent',
-    social: 'bg-rose-500 text-white border-transparent',
-    humanities: 'bg-amber-50 text-amber-600 border-transparent',
-    capstone: 'bg-violet-600 text-white border-transparent'
-  }[sectionId] || 'bg-indigo-600 text-white border-transparent';
+    science: 'bg-slate-800 text-white border-transparent',
+    engineering: 'bg-teal-700 text-white border-transparent',
+    social: 'bg-slate-800 text-white border-transparent',
+    humanities: 'bg-slate-800 text-white border-transparent',
+    capstone: 'bg-slate-800 text-white border-transparent'
+  }[sectionId] || 'bg-teal-700 text-white border-transparent';
 }
 
 function getTrackStyles(sectionId) {
   const configs = {
     foundation: {
-      color: 'rgba(100, 116, 139, 0.4)',
-      shadow1: 'rgba(100, 116, 139, 0.10)',
-      shadow2: 'rgba(100, 116, 139, 0.05)'
+      accent: '#6366f1',
+      gradient: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+      glow: 'rgba(99, 102, 241, 0.25)',
+      tagText: '#c7d2fe',
+      tagBg: 'rgba(99, 102, 241, 0.12)'
     },
     science: {
-      color: 'rgba(16, 185, 129, 0.4)',
-      shadow1: 'rgba(16, 185, 129, 0.10)',
-      shadow2: 'rgba(16, 185, 129, 0.05)'
+      accent: '#10b981',
+      gradient: 'linear-gradient(135deg, #10b981, #059669)',
+      glow: 'rgba(16, 185, 129, 0.25)',
+      tagText: '#a7f3d0',
+      tagBg: 'rgba(16, 185, 129, 0.12)'
     },
     engineering: {
-      color: 'rgba(99, 102, 241, 0.4)',
-      shadow1: 'rgba(99, 102, 241, 0.10)',
-      shadow2: 'rgba(99, 102, 241, 0.05)'
+      accent: '#0d9488',
+      gradient: 'linear-gradient(135deg, #0d9488, #0f766e)',
+      glow: 'rgba(13, 148, 136, 0.25)',
+      tagText: '#99f6e4',
+      tagBg: 'rgba(13, 148, 136, 0.12)'
     },
     social: {
-      color: 'rgba(244, 63, 94, 0.4)',
-      shadow1: 'rgba(244, 63, 94, 0.10)',
-      shadow2: 'rgba(244, 63, 94, 0.05)'
+      accent: '#f43f5e',
+      gradient: 'linear-gradient(135deg, #f43f5e, #e11d48)',
+      glow: 'rgba(244, 63, 94, 0.25)',
+      tagText: '#fecdd3',
+      tagBg: 'rgba(244, 63, 94, 0.12)'
     },
     humanities: {
-      color: 'rgba(245, 158, 11, 0.4)',
-      shadow1: 'rgba(245, 158, 11, 0.10)',
-      shadow2: 'rgba(245, 158, 11, 0.05)'
+      accent: '#f59e0b',
+      gradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
+      glow: 'rgba(245, 158, 11, 0.25)',
+      tagText: '#fde68a',
+      tagBg: 'rgba(245, 158, 11, 0.12)'
     },
     capstone: {
-      color: 'rgba(139, 92, 246, 0.4)',
-      shadow1: 'rgba(139, 92, 246, 0.10)',
-      shadow2: 'rgba(139, 92, 246, 0.05)'
+      accent: '#8b5cf6',
+      gradient: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+      glow: 'rgba(139, 92, 246, 0.25)',
+      tagText: '#ddd6fe',
+      tagBg: 'rgba(139, 92, 246, 0.12)'
     }
   };
   const config = configs[sectionId] || configs.engineering;
   return {
-    '--track-hover-color': config.color,
-    '--track-hover-shadow-1': config.shadow1,
-    '--track-hover-shadow-2': config.shadow2
+    '--track-accent-color': config.accent,
+    '--track-gradient': config.gradient,
+    '--track-glow-color': config.glow,
+    '--track-tag-text': config.tagText,
+    '--track-tag-bg': config.tagBg
   };
 }
 
 function tagStyle(sectionId) {
   return {
     foundation: 'bg-slate-50 text-slate-500 border border-slate-100/80 hover:bg-slate-100',
-    science: 'bg-emerald-50/50 text-emerald-600 border border-emerald-100/50 hover:bg-emerald-50',
-    engineering: 'bg-indigo-50/50 text-indigo-600 border border-indigo-100/50 hover:bg-indigo-50',
-    social: 'bg-rose-50/50 text-rose-600 border border-rose-100/50 hover:bg-rose-50',
-    humanities: 'bg-amber-50/50 text-amber-600 border border-amber-100/50 hover:bg-amber-50',
-    capstone: 'bg-violet-50/50 text-violet-600 border border-violet-100/50 hover:bg-violet-50'
-  }[sectionId] || 'bg-indigo-50/50 text-indigo-600 border border-indigo-100/50 hover:bg-indigo-50';
+    science: 'bg-slate-50 text-slate-600 border border-slate-100/80 hover:bg-slate-100',
+    engineering: 'bg-teal-50/50 text-teal-700 border border-teal-100/50 hover:bg-teal-50',
+    social: 'bg-slate-50 text-slate-600 border border-slate-100/80 hover:bg-slate-100',
+    humanities: 'bg-slate-50 text-slate-600 border border-slate-100/80 hover:bg-slate-100',
+    capstone: 'bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100'
+  }[sectionId] || 'bg-teal-50/50 text-teal-700 border border-teal-100/50 hover:bg-teal-50';
 }
 
 function openCourseWithStep(courseId, stepId) {
@@ -366,7 +357,7 @@ function setActiveStep(step, { scroll = false } = {}) {
 }
 
 function setActiveFilter(direction, { scroll = false } = {}) {
-  activeFilter.value = courseFilters.some(item => item.id === direction) ? direction : 'all';
+  activeFilter.value = displayCourseFilters.some(item => item.id === direction) ? direction : 'all';
   const query = { ...route.query };
   if (activeFilter.value === 'all') delete query.direction;
   else query.direction = activeFilter.value;
@@ -410,7 +401,7 @@ async function loadCourses() {
 
 onMounted(async () => {
   const direction = String(route.query.direction || '');
-  if (courseFilters.some(item => item.id === direction)) {
+  if (displayCourseFilters.some(item => item.id === direction)) {
     activeFilter.value = direction;
   }
   searchTerm.value = String(route.query.q || '');
@@ -428,7 +419,7 @@ watch(() => route.query.q, value => {
 
 watch(() => route.query.direction, value => {
   const next = String(value || '');
-  if (courseFilters.some(item => item.id === next)) activeFilter.value = next;
+  if (displayCourseFilters.some(item => item.id === next)) activeFilter.value = next;
   else activeFilter.value = 'all';
 });
 
@@ -443,10 +434,13 @@ watch(searchTerm, value => {
 
 <style scoped>
 .downloads-page {
-  background:
-    linear-gradient(180deg, rgba(238, 242, 255, 0.9), rgba(248, 250, 252, 0.2) 320px),
-    #f8fafc;
-  min-height: 100vh;
+  background: #f8fafc;
+  min-height: 100dvh;
+}
+
+.public-index-content {
+  width: min(1320px, calc(100vw - 40px));
+  margin: 0 auto;
 }
 
 .course-section-heading {
@@ -454,35 +448,43 @@ watch(searchTerm, value => {
   align-items: end;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 18px;
-  border-left: 5px solid #4f46e5;
-  padding-left: 14px;
+  margin-bottom: 20px;
 }
 
 .course-section-heading p {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
-  color: #4f46e5;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
+  color: var(--color-brand-accent);
+  font-size: 0.66rem;
+  font-weight: 900;
   text-transform: uppercase;
 }
 
 .course-section-heading h2 {
   margin: 4px 0 0;
-  color: #111827;
-  font-size: 1.2rem;
-  font-weight: 800;
+  color: #0f172a;
+  font-size: 1.25rem;
+  font-weight: 900;
+  line-height: 1.08;
 }
 
 .course-section-heading span {
   color: #64748b;
-  font-size: 0.86rem;
-  font-weight: 700;
+  font-size: 0.82rem;
+  font-weight: 800;
 }
 
 .scroll-anchor {
   scroll-margin-top: 112px;
+}
+
+.course-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  padding-inline: 4px;
 }
 
 @media (max-width: 860px) {
@@ -490,25 +492,264 @@ watch(searchTerm, value => {
     align-items: start;
     flex-direction: column;
   }
+
+  .course-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .public-index-content {
+    width: min(1320px, calc(100vw - 22px));
+  }
+
+  .course-list {
+    grid-template-columns: 1fr;
+    padding-inline: 0;
+  }
 }
 
 .grid-pattern {
-  background-size: 16px 16px;
-  background-image: 
-    linear-gradient(to right, rgba(148, 163, 184, 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
+  background-image: none;
 }
 
 .course-card {
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 4px 20px -2px rgba(148, 163, 184, 0.08), 0 2px 8px -1px rgba(148, 163, 184, 0.04);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 460px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 28px;
+  background: #090d16;
+  color: inherit;
+  text-align: left;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: border-color 220ms ease, box-shadow 220ms ease, transform 220ms ease;
 }
 
 .course-card:hover {
-  transform: translateY(-6px);
-  border-color: var(--track-hover-color) !important;
-  box-shadow: 
-    0 24px 48px -12px var(--track-hover-shadow-1),
-    0 8px 16px -8px var(--track-hover-shadow-2) !important;
+  border-color: var(--track-accent-color) !important;
+  box-shadow: 0 20px 40px -10px var(--track-glow-color), 0 4px 28px rgba(0, 0, 0, 0.35);
+  transform: translateY(-4px);
+}
+
+.course-card__media {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #0f172a;
+}
+
+.course-card__media::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(9, 13, 22, 0.1) 0%, rgba(9, 13, 22, 0.4) 100%);
+  transition: background 220ms ease;
+}
+
+.course-card:hover .course-card__media::after {
+  background: linear-gradient(180deg, rgba(9, 13, 22, 0.2) 0%, rgba(9, 13, 22, 0.5) 100%);
+}
+
+.course-card__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.01);
+  transition: transform 260ms cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.course-card:hover .course-card__image {
+  transform: scale(1.06);
+}
+
+.course-card__image--svg {
+  width: 65%;
+  height: 65%;
+  object-fit: contain;
+  transform: scale(1);
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.15));
+}
+
+.course-card:hover .course-card__image--svg {
+  transform: scale(1.05);
+}
+
+.course-card__top {
+  position: absolute;
+  z-index: 2;
+  top: 16px;
+  inset-inline: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.course-card__top span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(15, 23, 42, 0.65);
+  color: #fff;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.course-card__top span:first-child {
+  background: var(--track-gradient);
+  border: none;
+  color: #fff;
+  font-weight: 900;
+  box-shadow: 0 4px 10px var(--track-glow-color);
+}
+
+.course-card__content {
+  position: relative;
+  flex-grow: 1;
+  display: grid;
+  gap: 14px;
+  padding: 20px 24px 16px;
+  background: #0c111d;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  color: #fff;
+  transition: background-color 220ms ease;
+}
+
+.course-card:hover .course-card__content {
+  background: #0f1626;
+}
+
+.course-card__summary {
+  min-height: 0;
+}
+
+.course-card__content h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 1.25rem;
+  font-weight: 900;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: color 220ms ease;
+}
+
+.course-card:hover .course-card__content h3 {
+  color: var(--track-accent-color);
+}
+
+.course-card__content p {
+  margin: 6px 0 0;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.5;
+  min-height: 36px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.course-card__facts,
+.course-card__details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.course-card__facts span,
+.course-card__details span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  max-width: 100%;
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  line-height: 1.3;
+  transition: all 220ms ease;
+}
+
+.course-card__facts span {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.course-card:hover .course-card__facts span {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.course-card__details span {
+  background: var(--track-tag-bg);
+  border: 1px solid rgba(255, 255, 255, 0.02);
+  color: var(--track-tag-text);
+  font-weight: 700;
+}
+
+.course-card:hover .course-card__details span {
+  filter: brightness(1.2);
+}
+
+.course-card__action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.8rem;
+  font-weight: 700;
+  transition: color 220ms ease, border-top-color 220ms ease;
+}
+
+.course-card:hover .course-card__action {
+  color: #fff;
+  border-top-color: rgba(255, 255, 255, 0.12);
+}
+
+.course-card__action .fa-arrow-right {
+  transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1), color 220ms ease;
+}
+
+.course-card:hover .course-card__action .fa-arrow-right {
+  transform: translateX(6px);
+  color: var(--track-accent-color);
+}
+
+@media (max-width: 640px) {
+  .course-card {
+    min-height: 350px;
+  }
+
+  .course-card__content {
+    padding: 24px;
+  }
 }
 </style>
