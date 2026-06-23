@@ -1,17 +1,47 @@
+export function normalizeRole(role) {
+  return String(role || '').trim();
+}
+
+export function isAdminRole(role) {
+  return normalizeRole(role) === 'admin';
+}
+
+export function isTeacherRole(role) {
+  return ['teacher', 'judge'].includes(normalizeRole(role));
+}
+
 export function isTeacherLike(role) {
-  return ['teacher', 'judge'].includes(String(role || '').trim());
+  return isTeacherRole(role);
 }
 
 export function getRoleLabel(role) {
+  if (role === 'admin') return '管理员账号';
   if (role === 'teacher') return '教师账号';
   if (role === 'judge') return '评委账号';
   return '学生账号';
 }
 
 export function getPrimaryWorkspaceTarget(user) {
-  return isTeacherLike(user?.role) ? '/teacher' : '/workspace';
+  if (isAdminRole(user?.role)) return '/admin';
+  return isTeacherRole(user?.role) ? '/teacher' : '/my';
 }
 
 export function getPrimaryWorkspaceLabel(user) {
-  return isTeacherLike(user?.role) ? '进入教师后台' : '进入学生工作台';
+  if (isAdminRole(user?.role)) return '进入管理后台';
+  return isTeacherRole(user?.role) ? '进入教师工作台' : '进入我的空间';
+}
+
+export function getPrimaryWorkspaceIcon(user) {
+  if (isAdminRole(user?.role)) return 'fa-shield-halved';
+  return isTeacherRole(user?.role) ? 'fa-chalkboard-teacher' : 'fa-rocket';
+}
+
+export function getSecondaryWorkspaceTarget(user) {
+  if (isAdminRole(user?.role)) return '/teacher';
+  return isTeacherRole(user?.role) ? '/my' : '';
+}
+
+export function getSecondaryWorkspaceLabel(user) {
+  if (isAdminRole(user?.role)) return '进入教师工作台';
+  return isTeacherRole(user?.role) ? '进入学生空间' : '';
 }

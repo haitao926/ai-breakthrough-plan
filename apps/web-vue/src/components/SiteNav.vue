@@ -1,58 +1,74 @@
 <template>
-  <nav class="public-nav">
-    <div class="public-nav-inner">
-      <RouterLink to="/" class="public-brand">
-        <span class="public-brand-badge">
-          <i class="fas fa-cube"></i>
+  <nav class="fixed top-0 w-full z-50 border-b border-slate-200/80 bg-white/88 backdrop-blur-xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] pt-[env(safe-area-inset-top,0px)]">
+    <div class="max-w-7xl mx-auto min-h-[72px] px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4 md:gap-6 flex-wrap md:flex-nowrap relative">
+      
+      <RouterLink to="/" class="flex-shrink-0 flex items-center gap-3 text-slate-900 no-underline group" @click="closeNav">
+        <span class="w-10 h-10 rounded-full flex items-center justify-center bg-white overflow-hidden shadow-sm transition-all duration-200 group-hover:-translate-y-[1px] group-hover:shadow-md border border-slate-100">
+          <img src="/assets/branding/site-logo.png" alt="Logo" class="w-full h-full object-contain block" />
         </span>
-        <span class="public-brand-copy">{{ brandName }}</span>
+        <span class="text-[1.05rem] font-bold tracking-tight whitespace-nowrap hidden sm:block md:block">{{ brandName }}</span>
       </RouterLink>
 
-      <div class="public-nav-links">
-        <RouterLink :class="{ active: active === 'competitions' }" to="/competitions">竞赛活动</RouterLink>
-        <RouterLink :class="{ active: active === 'knowledge' }" to="/knowledge">创新知识库</RouterLink>
-        <RouterLink :class="{ active: active === 'projects' }" to="/projects">项目库</RouterLink>
-        <RouterLink :class="{ active: active === 'downloads' }" to="/downloads">课程库</RouterLink>
-        <RouterLink :class="{ active: active === 'showcase' }" to="/showcase">项目展示台</RouterLink>
+      <button
+        type="button"
+        class="md:hidden flex items-center justify-center w-11 h-11 border border-slate-200 rounded-xl bg-white text-slate-700 transition-colors hover:bg-slate-50 hover:border-slate-300 hover:text-slate-900"
+        :aria-expanded="navOpen ? 'true' : 'false'"
+        aria-controls="public-nav-links"
+        aria-label="打开导航菜单"
+        @click="navOpen = !navOpen"
+      >
+        <i class="fas" :class="navOpen ? 'fa-xmark' : 'fa-bars'"></i>
+      </button>
+
+      <div 
+        id="public-nav-links" 
+        class="flex-1 w-full md:w-auto md:flex items-center justify-center gap-2"
+        :class="navOpen ? 'flex flex-col mt-2 pt-2 border-t border-slate-100 pb-4 order-last col-span-full absolute top-[72px] left-0 w-full bg-white/95 backdrop-blur-xl px-4 shadow-md' : 'hidden md:flex'"
+      >
+        <RouterLink :class="['inline-flex items-center justify-start md:justify-center w-full md:w-auto min-h-[44px] px-3.5 rounded-full text-[0.9rem] font-semibold transition-colors whitespace-nowrap relative', active === 'competitions' ? 'bg-teal-50 text-teal-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900']" to="/competitions" @click="closeNav">竞赛活动</RouterLink>
+        <RouterLink :class="['inline-flex items-center justify-start md:justify-center w-full md:w-auto min-h-[44px] px-3.5 rounded-full text-[0.9rem] font-semibold transition-colors whitespace-nowrap relative', active === 'knowledge' ? 'bg-teal-50 text-teal-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900']" to="/knowledge" @click="closeNav">创新知识库</RouterLink>
+        <RouterLink :class="['inline-flex items-center justify-start md:justify-center w-full md:w-auto min-h-[44px] px-3.5 rounded-full text-[0.9rem] font-semibold transition-colors whitespace-nowrap relative', active === 'projects' ? 'bg-teal-50 text-teal-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900']" to="/projects" @click="closeNav">项目库</RouterLink>
+        <RouterLink :class="['inline-flex items-center justify-start md:justify-center w-full md:w-auto min-h-[44px] px-3.5 rounded-full text-[0.9rem] font-semibold transition-colors whitespace-nowrap relative', active === 'courses' ? 'bg-teal-50 text-teal-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900']" to="/courses" @click="closeNav">课程库</RouterLink>
+        <RouterLink v-if="!isAuthenticated && navOpen" class="inline-flex items-center justify-start w-full min-h-[44px] px-3.5 rounded-xl text-[0.9rem] font-semibold text-slate-600 transition-colors whitespace-nowrap md:hidden" to="/login" @click="closeNav">登录</RouterLink>
       </div>
 
-      <div class="public-nav-actions">
+      <div class="flex items-center justify-end gap-3 shrink-0 ml-auto md:ml-0 md:order-last" :class="{ 'absolute right-[70px] top-[14px]': navOpen }">
         <template v-if="isAuthenticated && user">
-          <div ref="menuRoot" class="public-account">
+          <div ref="menuRoot" class="relative">
             <button
               type="button"
-              class="public-account-trigger"
+              class="inline-flex items-center gap-2.5 min-h-[44px] p-1 pr-3 border border-slate-200/80 rounded-2xl bg-white/95 transition-all hover:border-teal-500/25 hover:shadow-sm"
               :aria-expanded="menuOpen ? 'true' : 'false'"
               aria-haspopup="menu"
               @click.stop="toggleMenu"
             >
-              <img :src="avatarUrl" alt="" class="public-avatar" />
-              <div class="public-account-copy">
-                <strong>{{ user.name }}</strong>
-                <span>{{ roleLabel }}</span>
+              <img :src="avatarUrl" alt="" class="w-8 h-8 rounded-full border-[1.5px] border-slate-200 shrink-0 bg-white transition-all group-hover:scale-105 group-hover:border-teal-500" />
+              <div class="hidden sm:flex flex-col items-start min-w-0">
+                <strong class="text-slate-900 text-[0.84rem] font-bold leading-tight">{{ user.name }}</strong>
+                <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[0.65rem] font-bold leading-none mt-1">{{ roleLabel }}</span>
               </div>
-              <i class="fas fa-chevron-down public-account-chevron" :class="{ 'is-open': menuOpen }"></i>
+              <i class="fas fa-chevron-down text-slate-400 text-xs transition-transform" :class="{ 'rotate-180': menuOpen }"></i>
             </button>
 
-            <div v-if="menuOpen" class="public-account-menu">
-              <div class="public-account-summary">
-                <img :src="avatarUrl" alt="" class="public-account-summary-avatar" />
+            <div v-if="menuOpen" class="absolute top-[calc(100%+10px)] right-0 w-[300px] max-w-[calc(100vw-28px)] border border-slate-200/80 rounded-2xl bg-white/95 shadow-xl p-3.5 z-50">
+              <div class="grid grid-cols-[auto_1fr] gap-3 items-center px-1 pb-3.5 border-b border-slate-100">
+                <img :src="avatarUrl" alt="" class="w-11 h-11 rounded-xl border border-slate-200" />
                 <div>
-                  <strong>{{ user.name }}</strong>
-                  <p>{{ user.email }}</p>
-                  <span>{{ roleLabel }}</span>
+                  <strong class="block text-slate-900 text-[0.92rem] font-bold">{{ user.name }}</strong>
+                  <p class="mt-0.5 text-slate-500 text-[0.78rem] font-medium">{{ user.email }}</p>
+                  <span class="inline-flex items-center justify-center px-2 py-1 rounded-md bg-teal-50 text-teal-600 text-[0.72rem] font-bold leading-none mt-1.5">{{ roleLabel }}</span>
                 </div>
               </div>
 
-              <div class="public-account-links">
-                <RouterLink class="public-account-primary" :to="primaryWorkspaceTarget" @click="closeMenu">
-                  <i class="fas" :class="isTeacher ? 'fa-chalkboard-teacher' : 'fa-rocket'"></i>
+              <div class="grid gap-2 pt-3">
+                <RouterLink class="inline-flex items-center justify-center gap-2.5 min-h-[44px] rounded-xl font-bold text-[0.84rem] transition-colors bg-teal-600 text-white hover:bg-teal-700" :to="primaryWorkspaceTarget" @click="closeMenu">
+                  <i class="fas" :class="primaryWorkspaceIcon"></i>
                   {{ primaryWorkspaceLabel }}
                 </RouterLink>
 
                 <RouterLink
                   v-if="secondaryWorkspaceTarget"
-                  class="public-account-link"
+                  class="inline-flex items-center justify-start px-3.5 gap-2.5 min-h-[44px] rounded-xl font-bold text-[0.84rem] transition-colors bg-white border border-slate-200 text-slate-600 hover:border-teal-200 hover:text-teal-600"
                   :to="secondaryWorkspaceTarget"
                   @click="closeMenu"
                 >
@@ -60,12 +76,12 @@
                   {{ secondaryWorkspaceLabel }}
                 </RouterLink>
 
-                <RouterLink class="public-account-link" to="/account" @click="closeMenu">
+                <RouterLink class="inline-flex items-center justify-start px-3.5 gap-2.5 min-h-[44px] rounded-xl font-bold text-[0.84rem] transition-colors bg-white border border-slate-200 text-slate-600 hover:border-teal-200 hover:text-teal-600" to="/account" @click="closeMenu">
                   <i class="fas fa-id-card"></i>
                   个人中心
                 </RouterLink>
 
-                <button type="button" class="public-account-link public-account-link--danger" @click="handleLogout">
+                <button type="button" class="inline-flex items-center justify-start px-3.5 gap-2.5 min-h-[44px] rounded-xl font-bold text-[0.84rem] transition-colors bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300" @click="handleLogout">
                   <i class="fas fa-sign-out-alt"></i>
                   退出登录
                 </button>
@@ -74,8 +90,8 @@
           </div>
         </template>
         <template v-else>
-          <RouterLink class="public-link" to="/login">登录</RouterLink>
-          <RouterLink class="public-primary" to="/register">开始使用</RouterLink>
+          <RouterLink class="hidden md:inline-flex items-center min-h-[44px] px-3 text-slate-600 font-semibold text-[0.9rem] hover:text-slate-900" to="/login" @click="closeNav">登录</RouterLink>
+          <RouterLink class="inline-flex items-center justify-center min-h-[44px] px-4 rounded-full bg-teal-700 text-white font-bold text-[0.88rem] hover:bg-teal-800 whitespace-nowrap shadow-[0_16px_28px_-20px_rgba(15,118,110,0.55)]" to="/register" @click="closeNav">开始使用</RouterLink>
         </template>
       </div>
     </div>
@@ -88,7 +104,14 @@ import { storeToRefs } from 'pinia';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { brandName } from '@/constants/brand';
-import { getPrimaryWorkspaceLabel, getPrimaryWorkspaceTarget, getRoleLabel, isTeacherLike } from '@/utils/userRole';
+import {
+  getPrimaryWorkspaceIcon,
+  getPrimaryWorkspaceLabel,
+  getPrimaryWorkspaceTarget,
+  getRoleLabel,
+  getSecondaryWorkspaceLabel,
+  getSecondaryWorkspaceTarget
+} from '@/utils/userRole';
 
 const props = defineProps({
   active: { type: String, default: '' }
@@ -99,6 +122,7 @@ const authStore = useAuthStore();
 authStore.hydrate();
 const { user, isAuthenticated } = storeToRefs(authStore);
 const menuOpen = ref(false);
+const navOpen = ref(false);
 const menuRoot = ref(null);
 
 const active = computed(() => props.active);
@@ -106,12 +130,12 @@ const avatarUrl = computed(() => {
   if (!user.value) return '';
   return user.value.avatar_url || `https://api.dicebear.com/7.x/identicon/svg?seed=${user.value.id || user.value.email || 'user'}`;
 });
-const isTeacher = computed(() => isTeacherLike(user.value?.role));
 const roleLabel = computed(() => getRoleLabel(user.value?.role));
+const primaryWorkspaceIcon = computed(() => getPrimaryWorkspaceIcon(user.value));
 const primaryWorkspaceTarget = computed(() => getPrimaryWorkspaceTarget(user.value));
 const primaryWorkspaceLabel = computed(() => getPrimaryWorkspaceLabel(user.value));
-const secondaryWorkspaceTarget = computed(() => (isTeacher.value ? '/workspace' : ''));
-const secondaryWorkspaceLabel = computed(() => (isTeacher.value ? '进入学生工作台' : ''));
+const secondaryWorkspaceTarget = computed(() => getSecondaryWorkspaceTarget(user.value));
+const secondaryWorkspaceLabel = computed(() => getSecondaryWorkspaceLabel(user.value));
 
 function closeMenu() {
   menuOpen.value = false;
@@ -129,6 +153,10 @@ function handleDocumentClick(event) {
   }
 }
 
+function closeNav() {
+  navOpen.value = false;
+}
+
 function handleLogout() {
   authStore.logout();
   closeMenu();
@@ -143,372 +171,3 @@ onBeforeUnmount(() => {
   window.removeEventListener('click', handleDocumentClick);
 });
 </script>
-
-<style scoped>
-.public-nav {
-  position: fixed;
-  top: 0;
-  width: 100%;
-  z-index: 50;
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.02);
-}
-
-.public-nav-inner {
-  max-width: 1320px;
-  margin: 0 auto;
-  min-height: 68px;
-  padding: 12px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-}
-
-.public-brand {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: #111827;
-  text-decoration: none;
-}
-
-.public-brand-badge {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-  color: #fff;
-  box-shadow: 0 8px 20px rgba(79, 70, 229, 0.3);
-  transition: all 0.3s ease;
-}
-
-.public-brand:hover .public-brand-badge {
-  transform: rotate(10deg) scale(1.1);
-  box-shadow: 0 8px 25px rgba(79, 70, 229, 0.5);
-}
-
-.public-brand-copy {
-  font-size: 1.08rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  white-space: nowrap;
-}
-
-.public-nav-links {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  min-width: 0;
-  flex: 1;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.public-nav-links::-webkit-scrollbar {
-  display: none;
-}
-
-.public-nav-links a {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px 11px;
-  border-radius: 10px;
-  color: #475569;
-  text-decoration: none;
-  font-size: 0.9rem;
-  font-weight: 700;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  white-space: nowrap;
-  position: relative;
-}
-
-.public-nav-links a::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  width: 0;
-  height: 2px;
-  background: #4f46e5;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  transform: translateX(-50%);
-  border-radius: 99px;
-}
-
-.public-nav-links a:hover::after,
-.public-nav-links a.active::after {
-  width: 60%;
-}
-
-.public-nav-links a:hover,
-.public-nav-links a.active {
-  background: rgba(99, 102, 241, 0.05);
-  color: #4338ca;
-}
-
-.public-nav-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.public-account {
-  position: relative;
-}
-
-.public-account-trigger {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 42px;
-  padding: 4px 10px 4px 4px;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.98);
-  transition: 0.18s ease;
-}
-
-.public-account-trigger:hover {
-  border-color: #c7d2fe;
-  box-shadow: 0 14px 26px -22px rgba(79, 70, 229, 0.6);
-}
-
-.public-account-copy {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  min-width: 0;
-}
-
-.public-account-copy strong {
-  color: #0f172a;
-  font-size: 0.84rem;
-  font-weight: 800;
-  line-height: 1.1;
-}
-
-.public-account-copy span {
-  color: #64748b;
-  font-size: 0.7rem;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-.public-account-chevron {
-  color: #94a3b8;
-  font-size: 0.75rem;
-  transition: transform 0.18s ease;
-}
-
-.public-account-chevron.is-open {
-  transform: rotate(180deg);
-}
-
-.public-account-menu {
-  position: absolute;
-  top: calc(100% + 10px);
-  right: 0;
-  width: min(320px, calc(100vw - 28px));
-  border: 1px solid #e2e8f0;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 30px 50px -28px rgba(15, 23, 42, 0.28);
-  padding: 14px;
-  backdrop-filter: blur(16px);
-}
-
-.public-account-summary {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 12px;
-  align-items: center;
-  padding: 4px 2px 14px;
-  border-bottom: 1px solid #eef2ff;
-}
-
-.public-account-summary-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 16px;
-  border: 1px solid #dbeafe;
-}
-
-.public-account-summary strong {
-  display: block;
-  color: #0f172a;
-  font-size: 0.96rem;
-  font-weight: 800;
-}
-
-.public-account-summary p {
-  margin: 4px 0 0;
-  color: #64748b;
-  font-size: 0.78rem;
-  font-weight: 600;
-}
-
-.public-account-summary span {
-  display: inline-flex;
-  margin-top: 8px;
-  color: #4338ca;
-  font-size: 0.72rem;
-  font-weight: 800;
-}
-
-.public-account-links {
-  display: grid;
-  gap: 8px;
-  padding-top: 12px;
-}
-
-.public-account-primary,
-.public-account-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 42px;
-  border-radius: 12px;
-  text-decoration: none;
-  font-size: 0.84rem;
-  font-weight: 800;
-  transition: 0.18s ease;
-}
-
-.public-account-primary {
-  justify-content: center;
-  background: #4f46e5;
-  color: #fff;
-}
-
-.public-account-primary:hover {
-  background: #4338ca;
-}
-
-.public-account-link {
-  width: 100%;
-  padding: 0 14px;
-  border: 1px solid #e2e8f0;
-  background: #fff;
-  color: #334155;
-}
-
-.public-account-link:hover {
-  border-color: #c7d2fe;
-  color: #312e81;
-}
-
-.public-account-link--danger {
-  border-color: #fecdd3;
-  color: #be123c;
-}
-
-.public-account-link--danger:hover {
-  background: #fff1f2;
-  border-color: #fda4af;
-}
-
-.public-link {
-  padding: 8px 10px;
-  color: #475569;
-  text-decoration: none;
-  font-size: 0.9rem;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.public-link:hover {
-  color: #312e81;
-}
-
-.public-primary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 40px;
-  padding: 0 14px;
-  border-radius: 10px;
-  background: #4f46e5;
-  color: #fff;
-  text-decoration: none;
-  font-size: 0.88rem;
-  font-weight: 800;
-  transition: 0.2s ease;
-  white-space: nowrap;
-}
-
-.public-primary:hover {
-  background: #4338ca;
-}
-
-.public-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 999px;
-  border: 1.5px solid #dbeafe;
-  background: #fff;
-  flex-shrink: 0;
-  transition: all 0.3s ease;
-}
-
-.public-account-trigger:hover .public-avatar {
-  transform: scale(1.1);
-  border-color: #6366f1;
-}
-
-@media (max-width: 1100px) {
-  .public-nav-inner {
-    gap: 12px;
-  }
-
-  .public-nav-links a {
-    padding: 7px 9px;
-    font-size: 0.88rem;
-  }
-}
-
-@media (max-width: 860px) {
-  .public-nav-inner {
-    flex-wrap: wrap;
-    padding: 10px 14px 12px;
-  }
-
-  .public-nav-links {
-    order: 3;
-    width: 100%;
-    justify-content: flex-start;
-    padding-bottom: 2px;
-  }
-
-  .public-nav-actions {
-    margin-left: auto;
-  }
-}
-
-@media (max-width: 640px) {
-  .public-brand-copy {
-    font-size: 0.98rem;
-  }
-
-  .public-link {
-    display: none;
-  }
-
-  .public-primary {
-    min-height: 38px;
-    padding: 0 12px;
-    font-size: 0.82rem;
-  }
-}
-</style>

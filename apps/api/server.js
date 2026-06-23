@@ -3,11 +3,34 @@ const fs = require('fs');
 const os = require('os');
 const crypto = require('crypto');
 const archiver = require('archiver');
-const fastify = require('fastify')({ logger: true });
+const fastify = require('fastify')({
+  logger: true,
+  requestTimeout: 30000,
+  connectionTimeout: 10000
+});
 const { pipeline } = require('stream');
 const util = require('util');
 const pump = util.promisify(pipeline);
 const { createDatabase, DEFAULT_DB_PATH } = require('./db');
+const { registerAssignmentRoutes } = require('./routes/assignments');
+const { registerCourseRoutes } = require('./routes/courses');
+const { registerProjectOpsRoutes } = require('./routes/project-ops');
+const { registerProjectRoutes } = require('./routes/projects');
+const { registerPortalRoutes } = require('./routes/portal');
+const { registerMatchingRoutes } = require('./routes/matching');
+const { registerReviewRoutes } = require('./routes/review');
+const { registerCollaborationRoutes } = require('./routes/collaboration');
+const { registerKnowledgeRoutes } = require('./routes/knowledge');
+const { registerSystemRoutes } = require('./routes/system');
+const { registerAssetRoutes } = require('./routes/assets');
+const { createProjectRepository } = require('./repositories/projects');
+const { createProjectReviewRepository } = require('./repositories/project-review');
+const { createShowcaseRepository } = require('./repositories/showcase');
+const { createAuthHelpers } = require('./src/utils/auth-helpers');
+const { createCourseContentService } = require('./src/utils/course-content');
+const { createFileHelpers } = require('./src/utils/file-helpers');
+const { createKnowledgeContentService } = require('./src/utils/knowledge-content');
+const { createPortalContentService } = require('./src/utils/portal-content');
 
 const PORT = Number.parseInt(process.env.PORT || '8090', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -43,6 +66,8 @@ const COURSE_CATALOG_PATH = path.join(COURSES_DIR, 'catalog.json');
 const DISCIPLINE_DATA_PATH = path.join(__dirname, '../../content/courses/disciplines/index.json');
 const DISCIPLINE_LEARNING_UNITS_PATH = path.join(__dirname, '../../content/courses/disciplines/learning-units.json');
 const CRASH_COURSE_SERIES_PATH = path.join(__dirname, '../../content/courses/disciplines/crash-course-series.json');
+const CRASH_COURSE_VIDEOS_PATH = path.join(__dirname, '../../content/courses/disciplines/crash-course-videos.json');
+const BILIBILI_SERIES_VIDEOS_PATH = path.join(__dirname, '../web-vue/src/data/bilibiliSeriesVideos.json');
 const MATERIALS_DIR = path.join(__dirname, '../../content/materials');
 const PORTAL_DIR = process.env.PORTAL_DIR
   ? path.resolve(process.env.PORTAL_DIR)
@@ -149,6 +174,40 @@ const ASSIGNMENT_SUBMISSION_STATUSES = new Set(['submitted', 'needs_changes', 'r
 const COMPETITION_REGISTRATION_STATUSES = new Set(['pending', 'needs_materials', 'approved', 'rejected']);
 const COMPETITION_PUBLISH_STATUSES = new Set(['draft', 'published', 'archived']);
 const PROJECT_TOPIC_STATUSES = new Set(['draft', 'published', 'archived']);
+const MATCH_ELIGIBILITY_STATUSES = new Set(['eligible', 'conditional', 'ineligible']);
+const MATCH_OVERRIDE_TYPES = new Set(['boost', 'suppress', 'force_include', 'force_exclude']);
+const MATCH_INTERACTION_TYPES = new Set(['view', 'click', 'apply', 'ignore']);
+const MATCH_CANDIDATE_BUCKET_LABELS = {
+  ready_to_nudge: '适合但未报名',
+  needs_materials: '已报名但缺材料',
+  trainable: '边缘匹配，可培养',
+  already_registered: '已报名待跟进',
+  manually_suppressed: '已人工屏蔽',
+  ignored: '学生暂时忽略',
+  hold: '暂不推荐'
+};
+const MATCH_ELIGIBILITY_ORDER = {
+  eligible: 0,
+  conditional: 1,
+  ineligible: 2
+};
+const MATCH_CANDIDATE_BUCKET_ORDER = {
+  ready_to_nudge: 0,
+  needs_materials: 1,
+  trainable: 2,
+  already_registered: 3,
+  manually_suppressed: 4,
+  ignored: 5,
+  hold: 6
+};
+const MATCH_RULE_VERSION = 'competition-v1';
+const MATCH_AI_VERSION = 'competition-ai-v1';
+const PROJECT_TOPIC_MATCH_RULE_VERSION = 'project-topic-v1';
+const PROJECT_TOPIC_MATCH_AI_VERSION = 'project-topic-ai-v1';
+const COURSE_MATCH_RULE_VERSION = 'course-v1';
+const COURSE_MATCH_AI_VERSION = 'course-ai-v1';
+const TEAM_CANDIDATE_MATCH_RULE_VERSION = 'team-candidate-v1';
+const TEAM_CANDIDATE_MATCH_AI_VERSION = 'team-candidate-ai-v1';
 const STATUS_TRANSITIONS = {
   draft: ['submitted'],
   submitted: ['reviewing', 'rejected'],
@@ -199,6 +258,16 @@ const SUBMISSION_FIELD_LABELS = {
   showcaseSummary: '展示说明'
 };
 let db;
+let projectRepository;
+const routeDb = new Proxy({}, {
+  get(_target, prop) {
+    if (!db) {
+      throw new Error('Database not initialized');
+    }
+    const value = db[prop];
+    return typeof value === 'function' ? value.bind(db) : value;
+  }
+});
 
 function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
@@ -206,13 +275,6 @@ function ensureDir(dirPath) {
 
 function now() {
   return new Date().toISOString();
-}
-
-function sanitizeName(name) {
-  return String(name || '')
-    .trim()
-    .replace(/[^a-zA-Z0-9.\-_ \u4e00-\u9fa5]/g, '_')
-    .slice(0, 120);
 }
 
 function slugifyRepoName(value) {
@@ -223,6 +285,17 @@ function slugifyRepoName(value) {
     .replace(/-+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 50);
+}
+
+function slugifyGiteaUsername(value, fallback = 'student') {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/@.*$/, '')
+    .replace(/[^a-z0-9_.-]+/g, '-')
+    .replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, '')
+    .slice(0, 39);
+  return normalized || fallback;
 }
 
 function toUrlPath(filePath) {
@@ -261,25 +334,18 @@ function normalizeToolKey(value) {
     .replace(/^_+|_+$/g, '');
 }
 
-function getProjectMembership(projectId, userId) {
-  return db.get(
-    'SELECT id, role FROM project_members WHERE project_id = ? AND user_id = ?',
-    [projectId, userId]
-  );
-}
-
 function canReadProject(user, project) {
   if (!user || !project) return false;
-  if (user.role === 'teacher' || user.role === 'judge') return true;
+  if (user.role === 'teacher' || user.role === 'judge' || user.role === 'admin') return true;
   if (Number(project.created_by) === Number(user.id)) return true;
-  return Boolean(getProjectMembership(project.id, user.id));
+  return Boolean(projectRepository.getMembership(project.id, user.id));
 }
 
 function canWriteProject(user, project) {
   if (!user || !project) return false;
-  if (user.role === 'teacher' || user.role === 'judge') return true;
+  if (user.role === 'teacher' || user.role === 'judge' || user.role === 'admin') return true;
   if (Number(project.created_by) === Number(user.id)) return true;
-  return Boolean(getProjectMembership(project.id, user.id));
+  return Boolean(projectRepository.getMembership(project.id, user.id));
 }
 
 function requireProjectAccess(request, reply, project, mode = 'read') {
@@ -292,52 +358,6 @@ function requireProjectAccess(request, reply, project, mode = 'read') {
     return false;
   }
   return true;
-}
-
-function loadProjectToolData(projectId) {
-  return db.all(
-    `SELECT id, project_id, tool_key, data, created_by, updated_by, created_at, updated_at
-     FROM project_tool_data
-     WHERE project_id = ?
-     ORDER BY updated_at DESC, id DESC`,
-    [projectId]
-  ).map(row => ({
-    ...row,
-    data: safeParseJson(row.data) || {}
-  }));
-}
-
-function getProjectToolData(projectId, toolKey) {
-  return db.get(
-    `SELECT id, project_id, tool_key, data, created_by, updated_by, created_at, updated_at
-     FROM project_tool_data
-     WHERE project_id = ? AND tool_key = ?`,
-    [projectId, normalizeToolKey(toolKey)]
-  );
-}
-
-function upsertProjectToolData(projectId, toolKey, data, userId) {
-  const normalizedToolKey = normalizeToolKey(toolKey);
-  const payload = typeof data === 'string' ? safeParseJson(data) : data;
-  const dataJson = JSON.stringify(payload && typeof payload === 'object' ? payload : {});
-  const existing = db.get(
-    'SELECT id, created_by FROM project_tool_data WHERE project_id = ? AND tool_key = ?',
-    [projectId, normalizedToolKey]
-  );
-  const nowAt = now();
-  if (existing) {
-    db.run(
-      'UPDATE project_tool_data SET data = ?, updated_by = ?, updated_at = ? WHERE id = ?',
-      [dataJson, userId || null, nowAt, existing.id]
-    );
-    return { id: existing.id, projectId, toolKey: normalizedToolKey, data: payload || {}, updatedAt: nowAt };
-  }
-  const info = db.run(
-    `INSERT INTO project_tool_data (project_id, tool_key, data, created_by, updated_by, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [projectId, normalizedToolKey, dataJson, userId || null, userId || null, nowAt, nowAt]
-  );
-  return { id: info.lastInsertRowid, projectId, toolKey: normalizedToolKey, data: payload || {}, updatedAt: nowAt };
 }
 
 function parseGiteaRepoUrl(repoUrl) {
@@ -414,6 +434,22 @@ function normalizeJsonArray(value) {
   return [];
 }
 
+function normalizeStringArray(value) {
+  if (!Array.isArray(value)) return [];
+  return Array.from(new Set(value.map(item => String(item || '').trim()).filter(Boolean)));
+}
+
+function normalizeNullableText(value) {
+  const text = String(value || '').trim();
+  return text || '';
+}
+
+function normalizeNullableNumber(value, fallback = null) {
+  if (value === null || value === undefined || value === '') return fallback;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : fallback;
+}
+
 function logAudit(action, request, detail = {}) {
   const entry = {
     ts: now(),
@@ -429,31 +465,6 @@ function logAudit(action, request, detail = {}) {
   } catch (err) {
     fastify.log.error(err, 'audit log failed');
   }
-}
-
-function isAllowedFile(fileName) {
-  const ext = path.extname(fileName || '').toLowerCase();
-  if (!ext) return false;
-  return ALLOWED_EXTENSIONS.has(ext);
-}
-
-function validateFileType(fileName, mimeType) {
-  const ext = path.extname(fileName || '').toLowerCase();
-  if (!ext || !ALLOWED_EXTENSIONS.has(ext)) {
-    return '不支持的文件类型';
-  }
-  if (!mimeType) return null;
-  if (!ALLOWED_MIME_TYPES.has(mimeType)) {
-    return '不支持的文件类型';
-  }
-  if (mimeType === 'application/octet-stream') {
-    return null;
-  }
-  const allowed = EXTENSION_MIME_MAP[ext];
-  if (Array.isArray(allowed) && allowed.length && !allowed.includes(mimeType)) {
-    return `文件类型与扩展名不匹配：${mimeType}`;
-  }
-  return null;
 }
 
 function validateStatusTransition(currentStatus, nextStatus) {
@@ -498,113 +509,6 @@ function validateSubmissionDetails(type, details) {
   return `缺少必填字段：${labels}`;
 }
 
-function normalizeEmail(value) {
-  return String(value || '').trim().toLowerCase();
-}
-
-function toBase64Url(buffer) {
-  return Buffer.from(buffer)
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/g, '');
-}
-
-function fromBase64Url(text) {
-  const normalized = String(text || '').replace(/-/g, '+').replace(/_/g, '/');
-  const padLength = normalized.length % 4 === 0 ? 0 : 4 - (normalized.length % 4);
-  return Buffer.from(`${normalized}${'='.repeat(padLength)}`, 'base64');
-}
-
-function hashPassword(password) {
-  const salt = crypto.randomBytes(16).toString('hex');
-  const hashed = crypto.scryptSync(String(password || ''), salt, 64).toString('hex');
-  return `scrypt$${salt}$${hashed}`;
-}
-
-function verifyPassword(password, storedHash) {
-  const parts = String(storedHash || '').split('$');
-  if (parts.length !== 3 || parts[0] !== 'scrypt') return false;
-  const [, salt, hash] = parts;
-  const derived = crypto.scryptSync(String(password || ''), salt, 64).toString('hex');
-  const hashBuffer = Buffer.from(hash, 'hex');
-  const derivedBuffer = Buffer.from(derived, 'hex');
-  if (hashBuffer.length !== derivedBuffer.length) return false;
-  return crypto.timingSafeEqual(hashBuffer, derivedBuffer);
-}
-
-function createToken(payload) {
-  const issuedAt = Math.floor(Date.now() / 1000);
-  const exp = issuedAt + Math.max(1, AUTH_TOKEN_TTL_HOURS) * 3600;
-  const header = { alg: 'HS256', typ: 'JWT' };
-  const body = { ...payload, iat: issuedAt, exp };
-  const data = `${toBase64Url(JSON.stringify(header))}.${toBase64Url(JSON.stringify(body))}`;
-  const signature = toBase64Url(
-    crypto.createHmac('sha256', AUTH_SECRET).update(data).digest()
-  );
-  return { token: `${data}.${signature}`, exp };
-}
-
-function verifyToken(token) {
-  const value = String(token || '').trim();
-  if (!value) return null;
-  const parts = value.split('.');
-  if (parts.length !== 3) return null;
-  const [headerPart, payloadPart, signature] = parts;
-  const data = `${headerPart}.${payloadPart}`;
-  const expected = toBase64Url(
-    crypto.createHmac('sha256', AUTH_SECRET).update(data).digest()
-  );
-  const signatureBuffer = Buffer.from(signature);
-  const expectedBuffer = Buffer.from(expected);
-  if (signatureBuffer.length !== expectedBuffer.length) return null;
-  if (!crypto.timingSafeEqual(signatureBuffer, expectedBuffer)) return null;
-  let payload;
-  try {
-    payload = JSON.parse(fromBase64Url(payloadPart).toString('utf8'));
-  } catch (err) {
-    return null;
-  }
-  if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) return null;
-  return payload;
-}
-
-function getAuthToken(request) {
-  const authHeader = request.headers.authorization || '';
-  if (authHeader.startsWith('Bearer ')) {
-    return authHeader.slice(7);
-  }
-  const legacyToken = request.headers['x-auth-token'];
-  if (legacyToken) return String(legacyToken);
-  return null;
-}
-
-function getUserFromToken(token) {
-  const payload = verifyToken(token);
-  if (!payload || !payload.sub) return null;
-  return db.get(
-    'SELECT id, name, email, role, avatar_url FROM users WHERE id = ?',
-    [payload.sub]
-  ) || null;
-}
-
-function requireAuth(request, reply) {
-  if (request.user) return true;
-  reply.code(401);
-  reply.send({ error: '未登录' });
-  return false;
-}
-
-function requireRole(request, reply, roles) {
-  if (!requireAuth(request, reply)) return false;
-  if (!roles.includes(request.user.role)) {
-    reply.code(403);
-    reply.send({ error: '权限不足' });
-    return false;
-  }
-  return true;
-}
-
 function buildProjectFilters(query, alias = '') {
   const { status, keyword, className } = query || {};
   const prefix = alias ? `${alias}.` : '';
@@ -627,39 +531,53 @@ function buildProjectFilters(query, alias = '') {
   return { conditions, params };
 }
 
-function toCsvValue(value) {
-  if (value === null || value === undefined) return '';
-  const text = String(value);
-  if (/[",\n\r]/.test(text)) {
-    return `"${text.replace(/"/g, '""')}"`;
-  }
-  return text;
+function createHttpError(statusCode, message) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
 }
 
-function toCsvLine(values) {
-  return values.map(toCsvValue).join(',');
-}
+const {
+  createToken,
+  getAuthToken,
+  getUserFromToken,
+  hashPassword,
+  normalizeEmail,
+  requireAuth,
+  requireRole,
+  verifyPassword
+} = createAuthHelpers({
+  crypto,
+  authSecret: AUTH_SECRET,
+  authTokenTtlHours: AUTH_TOKEN_TTL_HOURS,
+  getUserById: (userId) => db?.get(
+    'SELECT id, name, username, email, role, avatar_url FROM users WHERE id = ?',
+    [userId]
+  ) || null
+});
 
-function streamZip(reply, filename, buildArchive) {
-  reply
-    .header('Content-Type', 'application/zip')
-    .header('Content-Disposition', `attachment; filename="${filename}"`);
-  const archive = archiver('zip', { zlib: { level: 9 } });
-  archive.on('error', err => {
-    throw err;
-  });
-  reply.send(archive);
-  buildArchive(archive);
-  archive.finalize();
-}
-
-function appendFileSafe(archive, absolutePath, archivePath, missing) {
-  if (!fs.existsSync(absolutePath)) {
-    missing.push(archivePath);
-    return;
-  }
-  archive.file(absolutePath, { name: archivePath });
-}
+const {
+  appendFileSafe,
+  cleanupTempFiles,
+  collectMultipart,
+  moveTempFiles,
+  sanitizeName,
+  streamZip,
+  toCsvLine
+} = createFileHelpers({
+  fs,
+  path,
+  os,
+  pump,
+  archiver,
+  ensureDir,
+  uploadDir: UPLOAD_DIR,
+  uploadMaxBytes: UPLOAD_MAX_BYTES,
+  uploadMaxMb: UPLOAD_MAX_MB,
+  allowedExtensions: ALLOWED_EXTENSIONS,
+  allowedMimeTypes: ALLOWED_MIME_TYPES,
+  extensionMimeMap: EXTENSION_MIME_MAP
+});
 
 ensureDir(UPLOAD_DIR);
 ensureDir(LOG_DIR);
@@ -770,24 +688,28 @@ fastify.addHook('preHandler', (request, reply, done) => {
   done();
 });
 
-function insertProjectLog(projectId, status, note = '') {
-  db.run(
-    'INSERT INTO project_logs (project_id, status, note, created_at) VALUES (?, ?, ?, ?)',
-    [projectId, status, note, now()]
-  );
-}
+fastify.setErrorHandler((error, request, reply) => {
+  const statusCode = Number(error?.statusCode) || 500;
+  const message = statusCode >= 500 ? '服务器内部错误' : (error.message || '请求失败');
+  if (statusCode >= 500) {
+    request.log.error(error);
+  }
+  reply.code(statusCode).send({
+    error: message,
+    ...(process.env.NODE_ENV !== 'production' && error?.stack ? { stack: error.stack } : {})
+  });
+});
 
 function updateProjectStatus(projectId, status, note) {
-  db.run('UPDATE projects SET status = ?, updated_at = ? WHERE id = ?', [
-    status,
-    now(),
-    projectId
-  ]);
-  insertProjectLog(projectId, status, note || '');
+  projectRepository.updateStatus(projectId, status, note);
 }
 
 function getProject(projectId) {
-  return db.get('SELECT * FROM projects WHERE id = ?', [projectId]);
+  return projectRepository.getById(projectId);
+}
+
+function getProjectDetail(projectId) {
+  return projectRepository.getDetail(projectId);
 }
 
 function getSubmissionAttachments(submissionId, fallback) {
@@ -809,73 +731,16 @@ function getSubmissionAttachments(submissionId, fallback) {
   }));
 }
 
-function getProjectDetail(projectId) {
-  const project = getProject(projectId);
-  if (!project) return null;
-
-  const members = db.all(
-    `SELECT u.id, u.name, u.email, u.avatar_url, pm.role
-     FROM project_members pm
-     JOIN users u ON pm.user_id = u.id
-     WHERE pm.project_id = ?
-     ORDER BY pm.created_at ASC`,
-    [projectId]
-  );
-  const submissions = db.all(
-    'SELECT * FROM submissions WHERE project_id = ? ORDER BY created_at DESC',
-    [projectId]
-  ).map(row => ({
-    ...row,
-    details: safeParseJson(row.details),
-    attachments: getSubmissionAttachments(row.id, row.attachments)
-  }));
-
-  const logs = db.all(
-    'SELECT * FROM project_logs WHERE project_id = ? ORDER BY created_at DESC',
-    [projectId]
-  );
-
-  const toolDataRows = loadProjectToolData(projectId);
-  const toolData = toolDataRows.reduce((acc, item) => {
-    acc[item.tool_key] = item.data || {};
-    return acc;
-  }, {});
-
-  return { project, members, submissions, logs, toolData, toolDataRows };
-}
-
 function getProjectMilestones(projectId) {
-  return db.all(
-    `SELECT * FROM project_milestones
-     WHERE project_id = ?
-     ORDER BY COALESCE(sort_order, id) ASC, id ASC`,
-    [projectId]
-  ).map(row => ({
-    ...row,
-    deliverables: safeParseJson(row.deliverables) || {}
-  }));
+  return projectRepository.listMilestones(projectId);
 }
 
 function getProjectResources(projectId) {
-  return db.all(
-    `SELECT r.*, u.name AS requester_name, u.email AS requester_email
-     FROM resource_requests r
-     JOIN users u ON u.id = r.requester_id
-     WHERE r.project_id = ?
-     ORDER BY r.created_at DESC`,
-    [projectId]
-  );
+  return projectRepository.listResources(projectId);
 }
 
 function getProjectDevLogs(projectId) {
-  return db.all(
-    `SELECT l.id, l.content, l.tags, l.created_at, u.name AS author_name, u.avatar_url
-     FROM dev_logs l
-     JOIN users u ON u.id = l.author_id
-     WHERE l.project_id = ?
-     ORDER BY l.created_at DESC`,
-    [projectId]
-  );
+  return projectRepository.listDevLogs(projectId);
 }
 
 function isReviewableSubmission(submission) {
@@ -973,81 +838,576 @@ function getProjectScores(projectId) {
 }
 
 // --- Knowledge APIs ---
-function loadDisciplines() {
-  const data = readJsonFile(DISCIPLINE_DATA_PATH, []);
-  return Array.isArray(data) ? data : [];
+function createViewerToken() {
+  return crypto.randomBytes(18).toString('hex');
 }
 
-function loadKnowledgeLearningUnits() {
-  const data = readJsonFile(DISCIPLINE_LEARNING_UNITS_PATH, []);
-  return Array.isArray(data) ? data : [];
+function createLearnerToken() {
+  return crypto.randomBytes(18).toString('hex');
 }
 
-function loadCrashCourseSeries() {
-  const data = readJsonFile(CRASH_COURSE_SERIES_PATH, []);
-  return Array.isArray(data) ? data : [];
+function normalizeKnowledgeAnswers(rawAnswers) {
+  if (!Array.isArray(rawAnswers)) return [];
+  return rawAnswers
+    .map((item, index) => ({
+      questionId: String(item?.questionId || `q-${index + 1}`).trim(),
+      prompt: String(item?.prompt || '').trim(),
+      type: String(item?.type || '').trim(),
+      answer: String(item?.answer || '').trim()
+    }))
+    .filter(item => item.prompt && item.answer);
 }
 
-function findKnowledgeDetail(disciplineId) {
-  const id = String(disciplineId || '').trim();
-  if (!id) return null;
-  const disciplines = loadDisciplines();
-  const learningUnits = loadKnowledgeLearningUnits();
-  const discipline = disciplines.find(item => String(item.id || '') === id);
-  if (!discipline) return null;
-  const learningUnit = learningUnits.find(item => String(item.disciplineId || '') === id) || null;
-  const courseIds = Array.isArray(learningUnit?.next?.courseIds) ? learningUnit.next.courseIds : [];
-  const catalog = loadCourseCatalog();
-  const courses = courseIds
-    .map(courseId => catalog.find(course => String(course.id || '') === String(courseId)))
-    .filter(Boolean);
-  return { discipline, learningUnit, relatedCourses: courses };
+function normalizeKnowledgePromptType(value) {
+  const type = String(value || '').trim();
+  return type === 'single_choice' ? 'single_choice' : 'short_answer';
 }
 
-fastify.get(`${API_PREFIX}/knowledge/disciplines`, async (request, reply) => {
-  try {
-    return { disciplines: loadDisciplines() };
-  } catch (err) {
-    fastify.log.error(err);
-    reply.code(500);
-    return { error: 'Failed to load disciplines' };
+function normalizeKnowledgePromptOptions(options) {
+  if (!Array.isArray(options)) return [];
+  return options
+    .map((option, index) => {
+      if (option && typeof option === 'object') {
+        return {
+          id: String(option.id || option.value || String.fromCharCode(97 + index)).trim(),
+          text: String(option.text || option.label || option.value || '').trim()
+        };
+      }
+      return {
+        id: String.fromCharCode(97 + index),
+        text: String(option || '').trim()
+      };
+    })
+    .filter(option => option.id && option.text);
+}
+
+function serializeKnowledgePromptOptions(options) {
+  const normalized = normalizeKnowledgePromptOptions(options);
+  return normalized.length ? JSON.stringify(normalized) : '';
+}
+
+function parseKnowledgePromptOptions(value) {
+  return normalizeKnowledgePromptOptions(safeParseJson(value));
+}
+
+function publicKnowledgePrompt(prompt) {
+  const type = normalizeKnowledgePromptType(prompt?.type || prompt?.promptType);
+  const normalized = {
+    id: String(prompt?.id || prompt?.promptId || '').trim(),
+    type,
+    prompt: String(prompt?.prompt || '').trim(),
+    expectation: String(prompt?.expectation || '').trim()
+  };
+  const options = normalizeKnowledgePromptOptions(prompt?.options);
+  if (type === 'single_choice') normalized.options = options;
+  return normalized;
+}
+
+function knowledgePromptFromDbRow(row, fallbackPrompt = null) {
+  const type = normalizeKnowledgePromptType(row.prompt_type || fallbackPrompt?.type);
+  const options = parseKnowledgePromptOptions(row.options_json);
+  return {
+    id: row.prompt_id,
+    type,
+    prompt: row.prompt,
+    expectation: row.expectation || fallbackPrompt?.expectation || '',
+    options: options.length ? options : normalizeKnowledgePromptOptions(fallbackPrompt?.options),
+    correctAnswer: String(row.correct_answer || fallbackPrompt?.correctAnswer || '').trim()
+  };
+}
+
+function getKnowledgePromptAnswer(answer) {
+  return String(answer?.answer || '').trim();
+}
+
+function getKnowledgeAnswerText(answer) {
+  return String(answer?.answerText || answer?.answer || '').trim();
+}
+
+function findKnowledgePromptOption(prompt, value) {
+  const answer = String(value || '').trim();
+  if (!answer) return null;
+  return normalizeKnowledgePromptOptions(prompt?.options).find(option => (
+    option.id === answer || option.text === answer
+  )) || null;
+}
+
+function validateKnowledgeAnswersForPrompts(prompts, rawAnswers) {
+  const answerById = new Map(rawAnswers.map(answer => [String(answer.questionId || '').trim(), answer]));
+  const normalized = [];
+  if (!prompts.length) {
+    return { error: '本节题目暂未发布，请稍后再提交。', answers: [] };
   }
-});
-
-fastify.get(`${API_PREFIX}/knowledge/learning-units`, async (request, reply) => {
-  try {
-    return { learningUnits: loadKnowledgeLearningUnits() };
-  } catch (err) {
-    fastify.log.error(err);
-    reply.code(500);
-    return { error: 'Failed to load knowledge learning units' };
-  }
-});
-
-fastify.get(`${API_PREFIX}/knowledge/crash-course-series`, async (request, reply) => {
-  try {
-    return { series: loadCrashCourseSeries() };
-  } catch (err) {
-    fastify.log.error(err);
-    reply.code(500);
-    return { error: 'Failed to load Crash Course series' };
-  }
-});
-
-fastify.get(`${API_PREFIX}/knowledge/disciplines/:id`, async (request, reply) => {
-  try {
-    const detail = findKnowledgeDetail(request.params.id);
-    if (!detail) {
-      reply.code(404);
-      return { error: 'Knowledge discipline not found' };
+  for (const prompt of prompts) {
+    const promptId = String(prompt.id || '').trim();
+    const answer = answerById.get(promptId);
+    const value = getKnowledgePromptAnswer(answer);
+    if (!answer || !value) {
+      return { error: `请完成全部 ${prompts.length} 题后再提交。`, answers: [] };
     }
-    return detail;
-  } catch (err) {
-    fastify.log.error(err);
-    reply.code(500);
-    return { error: 'Failed to load knowledge discipline' };
+    if (normalizeKnowledgePromptType(prompt.type) === 'single_choice') {
+      const option = findKnowledgePromptOption(prompt, value);
+      if (!option) {
+        return { error: '请选择每道选择题的答案。', answers: [] };
+      }
+      normalized.push({
+        questionId: promptId,
+        type: 'single_choice',
+        prompt: prompt.prompt,
+        answer: option.id,
+        answerText: option.text
+      });
+      continue;
+    }
+    if (value.length < 10) {
+      return { error: '简答题至少写 10 个字，说明场景和判断依据。', answers: [] };
+    }
+    normalized.push({
+      questionId: promptId,
+      type: 'short_answer',
+      prompt: prompt.prompt,
+      answer: value
+    });
   }
-});
+  return { error: '', answers: normalized };
+}
+
+function getKnowledgeEpisodePromptPreset(detail, episode = {}) {
+  const disciplineId = String(detail?.discipline?.id || '').trim();
+  const key = String(episode?.episodeKey || getKnowledgeEpisodeKey(episode?.video) || '').trim();
+  const title = String(episode?.video?.title || detail?.learningUnit?.source?.title || detail?.learningUnit?.title || '').trim();
+  if (disciplineId !== 'ai') return null;
+  if (key === 'ai-02' || key === 'BV1YJ411D7Ap' || /监督式学习/.test(title)) {
+    return {
+      task: '这节要判断你是否理解监督式学习的基本条件。',
+      prompts: [
+        {
+          id: 'concept',
+          type: 'single_choice',
+          prompt: '监督式学习最需要哪一类训练数据？',
+          options: [
+            { id: 'a', text: '输入和标准答案成对' },
+            { id: 'b', text: '只有未标注材料' },
+            { id: 'c', text: '只靠随机奖励' },
+            { id: 'd', text: '只靠运行速度' }
+          ],
+          correctAnswer: 'a',
+          expectation: '选出“输入 + 标签/答案”的核心条件。'
+        },
+        {
+          id: 'transfer',
+          type: 'single_choice',
+          prompt: '下面哪个校园任务最适合改写成监督式学习问题？',
+          options: [
+            { id: 'a', text: '作业照片标清晰度' },
+            { id: 'b', text: '随便生成广播稿' },
+            { id: 'c', text: '只统计经过人数' },
+            { id: 'd', text: '按首字母排序' }
+          ],
+          correctAnswer: 'a',
+          expectation: '判断是否有可学习的输入和标签。'
+        },
+        {
+          id: 'verification',
+          type: 'short_answer',
+          prompt: '如果用监督式学习做一个校园小工具，你会怎样验证它没有只背训练样本？',
+          expectation: '写清楚测试数据、判断指标，以及一种可能出错的情况。'
+        }
+      ]
+    };
+  }
+  if (key === 'ai-12' || key === 'BV157411876W' || /游戏/.test(title)) {
+    return {
+      task: '这节要判断你是否理解 AI 玩游戏时的试错闭环。',
+      prompts: [
+        {
+          id: 'concept',
+          type: 'single_choice',
+          prompt: 'AI 玩游戏时，奖励信号主要用来做什么？',
+          options: [
+            { id: 'a', text: '强化更好的行动' },
+            { id: 'b', text: '让画面更清晰' },
+            { id: 'c', text: '写固定答案' },
+            { id: 'd', text: '保证首次获胜' }
+          ],
+          correctAnswer: 'a',
+          expectation: '抓住行动、反馈、奖励之间的关系。'
+        },
+        {
+          id: 'transfer',
+          type: 'single_choice',
+          prompt: '下面哪个校园例子最像“通过试错改进策略”？',
+          options: [
+            { id: 'a', text: '按送书结果改路线' },
+            { id: 'b', text: '书名按拼音排序' },
+            { id: 'c', text: '原样抄进表格' },
+            { id: 'd', text: '定时播放铃声' }
+          ],
+          correctAnswer: 'a',
+          expectation: '判断任务里是否有行动选择和反馈。'
+        },
+        {
+          id: 'verification',
+          type: 'short_answer',
+          prompt: '设计一个校园试错任务，并说明怎样判断它是真的学会了更好的策略。',
+          expectation: '写出可选行动、奖励标准，以及重复测试或对照方法。'
+        }
+      ]
+    };
+  }
+  return {
+    task: '这节要判断你是否理解“什么是人工智能”。',
+    prompts: [
+      {
+        id: 'concept',
+        type: 'single_choice',
+        prompt: '这集更接近把人工智能理解成哪一种能力？',
+        options: [
+          { id: 'a', text: '按输入判断并输出' },
+          { id: 'b', text: '只要运行得快' },
+          { id: 'c', text: '自动化都算 AI' },
+          { id: 'd', text: '会聊天就算 AI' }
+        ],
+        correctAnswer: 'a',
+        expectation: '选出最能概括本集定义的一项。'
+      },
+      {
+        id: 'transfer',
+        type: 'single_choice',
+        prompt: '下面哪个问题更适合用 AI 方法尝试解决？',
+        options: [
+          { id: 'a', text: '看照片判断桶满' },
+          { id: 'b', text: '按学号排序' },
+          { id: 'c', text: '打印今天日期' },
+          { id: 'd', text: '定时播放铃声' }
+        ],
+        correctAnswer: 'a',
+        expectation: '判断任务是否需要从数据中识别模式。'
+      },
+      {
+        id: 'verification',
+        type: 'short_answer',
+        prompt: '选一个校园场景，说明它为什么适合或不适合用 AI 解决。',
+        expectation: '写清楚任务目标、可用数据和判断标准。'
+      }
+    ]
+  };
+}
+
+function buildKnowledgeOpenPrompts(detail, episode = {}, options = {}) {
+  const disciplineId = String(detail?.discipline?.id || '').trim();
+  const episodeKey = String(episode?.episodeKey || getKnowledgeEpisodeKey(episode?.video) || '').trim();
+  const preset = getKnowledgeEpisodePromptPreset(detail, episode);
+  const presetById = new Map((preset?.prompts || []).map(prompt => [String(prompt.id || '').trim(), prompt]));
+  if (disciplineId && episodeKey && db) {
+    const rows = db.all(
+      `SELECT prompt_id, prompt_type, prompt, options_json, correct_answer, expectation
+       FROM knowledge_open_prompts
+       WHERE discipline_id = ? AND episode_key = ? AND status = ?
+       ORDER BY sort_order ASC, id ASC`,
+      [disciplineId, episodeKey, 'published']
+    );
+    if (rows.length) {
+      const prompts = rows.map(row => knowledgePromptFromDbRow(row, presetById.get(String(row.prompt_id || '').trim())));
+      return options.includeAnswers ? prompts : prompts.map(publicKnowledgePrompt);
+    }
+  }
+  if (preset?.prompts?.length) {
+    return options.includeAnswers ? preset.prompts : preset.prompts.map(publicKnowledgePrompt);
+  }
+  const discipline = detail?.discipline || {};
+  const learningUnit = detail?.learningUnit || {};
+  const firstQuestion = String(discipline?.research_questions?.[0]?.q || '').trim();
+  const firstContext = String(discipline?.research_questions?.[0]?.context || '').trim();
+  const firstProjectPrompt = String(learningUnit?.next?.projectPrompts?.[0] || '').trim();
+  const prompts = [
+    {
+      id: 'observation',
+      type: 'short_answer',
+      prompt: firstQuestion || `看完这节“${learningUnit.title || discipline.name || '知识课程'}”后，你最想研究的具体问题是什么？`,
+      expectation: firstContext || '要写出一个具体场景、对象或变量，而不是泛泛地说“我想研究环境”。'
+    },
+    {
+      id: 'method',
+      type: 'short_answer',
+      prompt: '如果你真的要开始做这个小研究，你准备怎样观察、记录或比较？',
+      expectation: '至少写出时间、地点、记录方法或评价指标中的两个。'
+    },
+    {
+      id: 'project',
+      type: 'short_answer',
+      prompt: firstProjectPrompt || '把这个知识点改写成一个可以继续做下去的小项目。',
+      expectation: '要写出你想做什么、怎样判断是否有效。'
+    }
+  ];
+  return options.includeAnswers ? prompts : prompts.map(publicKnowledgePrompt);
+}
+
+function getKnowledgeEpisodeKey(video) {
+  return String(video?.id || video?.bvid || video?.url || '').trim();
+}
+
+function resolveKnowledgeEpisode(detail, requestedEpisodeKey) {
+  const videos = getKnowledgeSeriesVideos(detail);
+  if (!videos.length) {
+    return { videos, episodeKey: 'source', episodeIndex: 0, video: null };
+  }
+  const requested = String(requestedEpisodeKey || '').trim();
+  const foundIndex = requested
+    ? videos.findIndex(video => getKnowledgeEpisodeKey(video) === requested || String(video?.bvid || '') === requested)
+    : 0;
+  const episodeIndex = foundIndex >= 0 ? foundIndex : 0;
+  return {
+    videos,
+    episodeKey: getKnowledgeEpisodeKey(videos[episodeIndex]),
+    episodeIndex,
+    video: videos[episodeIndex]
+  };
+}
+
+function getKnowledgeIdentityCondition(request, learnerToken) {
+  if (request.user?.id) {
+    return { sql: 'user_id = ?', params: [request.user.id] };
+  }
+  const token = String(learnerToken || '').trim();
+  if (token) {
+    return { sql: 'learner_token = ?', params: [token] };
+  }
+  return null;
+}
+
+function getKnowledgeEpisodeProgress(detail, request, learnerToken) {
+  const videos = getKnowledgeSeriesVideos(detail);
+  const identity = getKnowledgeIdentityCondition(request, learnerToken);
+  if (!identity) {
+    return {
+      unlockedUntil: videos.length ? 1 : 0,
+      completedCount: 0,
+      passedEpisodeKeys: [],
+      videos
+    };
+  }
+  const rows = db.all(
+    `SELECT episode_key, episode_index, passed
+     FROM knowledge_responses
+     WHERE discipline_id = ? AND ${identity.sql}
+     ORDER BY episode_index DESC, created_at DESC`,
+    [detail.discipline.id, ...identity.params]
+  );
+  const passedByIndex = new Map();
+  rows.forEach(row => {
+    const key = String(row.episode_key || '').trim();
+    const currentIndex = videos.findIndex(video => getKnowledgeEpisodeKey(video) === key || String(video?.bvid || '') === key);
+    const index = currentIndex >= 0 ? currentIndex : Number(row.episode_index || 0);
+    if (!key || Number(row.passed || 0) !== 1 || passedByIndex.has(index)) return;
+    passedByIndex.set(index, key);
+  });
+  let unlockedUntil = videos.length ? 1 : 0;
+  for (let index = 0; index < videos.length; index += 1) {
+    if (index === 0) continue;
+    if (passedByIndex.has(index - 1)) {
+      unlockedUntil = index + 1;
+      continue;
+    }
+    break;
+  }
+  return {
+    unlockedUntil,
+    completedCount: passedByIndex.size,
+    passedEpisodeKeys: Array.from(passedByIndex.values()),
+    videos
+  };
+}
+
+function scoreKnowledgeResponseFallback(detail, answers, episode = {}, prompts = null) {
+  const expectedPrompts = Array.isArray(prompts) && prompts.length
+    ? prompts
+    : buildKnowledgeOpenPrompts(detail, episode, { includeAnswers: true });
+  const answerById = new Map(answers.map(item => [String(item.questionId || '').trim(), item]));
+  const joined = answers.map(item => `${item.prompt}\n${getKnowledgeAnswerText(item)}`).join('\n');
+  const text = joined.toLowerCase();
+  const isAiUnit = String(detail?.discipline?.id || '') === 'ai';
+  const choicePrompts = expectedPrompts.filter(item => normalizeKnowledgePromptType(item.type) === 'single_choice');
+  const shortPrompts = expectedPrompts.filter(item => normalizeKnowledgePromptType(item.type) !== 'single_choice');
+  if (choicePrompts.length) {
+    const choiceWeight = shortPrompts.length ? 50 / choicePrompts.length : 100 / expectedPrompts.length;
+    const shortWeight = shortPrompts.length ? 50 / shortPrompts.length : 100 / expectedPrompts.length;
+    let total = 0;
+    const rubric = expectedPrompts.map((prompt, index) => {
+      const answer = answerById.get(String(prompt.id || '').trim());
+      if (normalizeKnowledgePromptType(prompt.type) === 'single_choice') {
+        const selected = findKnowledgePromptOption(prompt, getKnowledgePromptAnswer(answer));
+        const correct = String(prompt.correctAnswer || '').trim();
+        const passed = Boolean(selected && correct && (selected.id === correct || selected.text === correct));
+        if (passed) total += choiceWeight;
+        return {
+          key: prompt.id,
+          label: `第 ${index + 1} 题`,
+          max: 4,
+          score: passed ? 4 : 0,
+          feedback: passed ? '选择正确。' : (prompt.expectation || '回看题干里的核心概念。')
+        };
+      }
+      const answerText = getKnowledgeAnswerText(answer);
+      const hasScenario = /校园|教室|操场|图书|作业|社团|食堂|走廊|班级|垃圾|图片|声音|文本|样本|场景|学生|老师|路线|测试/.test(answerText);
+      const hasData = /数据|输入|照片|记录|样本|标签|标准|指标|正确率|错误|对照|测试|验证|风险|判断/.test(answerText);
+      const hasReason = /因为|所以|适合|不适合|有效|无效|判断|比较|观察|记录/.test(answerText);
+      let score = answerText.length >= 10 ? 2 : 1;
+      if (hasScenario) score += 1;
+      if (hasData || hasReason) score += 1;
+      score = Math.max(0, Math.min(4, score));
+      total += (score / 4) * shortWeight;
+      return {
+        key: prompt.id,
+        label: `第 ${index + 1} 题`,
+        max: 4,
+        score,
+        feedback: score >= 4
+          ? '场景、依据和判断标准都比较清楚。'
+          : prompt.expectation || '补充场景、可用数据和判断标准。'
+      };
+    });
+    const wrongChoices = rubric.filter(item => item.score === 0).length;
+    const weakShortAnswer = rubric.some(item => item.key && item.score > 0 && item.score < 3);
+    const score = Math.round(Math.max(0, Math.min(100, total)));
+    const suggestions = [];
+    if (wrongChoices) suggestions.push('先把选择题里的核心概念重新对齐。');
+    if (weakShortAnswer) suggestions.push('简答题补上场景、数据和判断标准。');
+    return {
+      score,
+      feedback: suggestions.length
+        ? `已完成。${suggestions.join(' ')}`
+        : '已完成，概念判断和迁移表达都达标。',
+      rubric,
+      summary: answers.map(item => getKnowledgeAnswerText(item)).filter(Boolean).slice(-1)[0] || '',
+      provider: 'fallback'
+    };
+  }
+  const rubric = [
+    {
+      key: 'concept',
+      label: '概念是否抓准',
+      max: 4,
+      score: (
+        isAiUnit
+          ? /输入|输出|判断|任务|数据|标签|奖励|反馈|行动|模型|学习|智能|预测|分类/.test(joined)
+          : /概念|定义|目标|对象|变量|原因/.test(joined)
+      ) ? 4 : 2,
+      feedback: isAiUnit ? '是否说清 AI 在什么任务中做判断。' : '是否抓住本节核心概念。'
+    },
+    {
+      key: 'transfer',
+      label: '能否迁移到场景',
+      max: 4,
+      score: /校园|教室|操场|图书|作业|社团|食堂|走廊|班级|垃圾|图片|声音|文本|样本|场景/.test(joined) ? 4 : 2,
+      feedback: '是否能把视频概念放进一个真实任务里。'
+    },
+    {
+      key: 'verification',
+      label: '是否有验证标准',
+      max: 4,
+      score: /验证|测试|判断|是否有效|正确率|错误|对照|指标|样本|偏差|风险|重复/.test(joined) ? 4 : 2,
+      feedback: '是否说明怎样判断方案真的有效。'
+    },
+    {
+      key: 'clarity',
+      label: '表达是否清楚',
+      max: 4,
+      score: text.length >= 90 ? 4 : text.length >= 45 ? 3 : 2,
+      feedback: '回答是否完整，是否让别人能看懂你想做什么。'
+    }
+  ];
+  const total = rubric.reduce((sum, item) => sum + item.score, 0);
+  const percent = Math.round((total / rubric.reduce((sum, item) => sum + item.max, 0)) * 100);
+  const strengths = [];
+  const suggestions = [];
+  if (rubric[0].score >= 4) strengths.push('你已经抓住了本节的核心概念。');
+  else suggestions.push(`先补一句“${episodeTitle.includes('监督') ? '输入和标签是什么' : episodeTitle.includes('游戏') ? '行动、反馈、奖励是什么' : 'AI 在处理什么输入、输出什么结果'}”。`);
+  if (rubric[1].score >= 4) strengths.push('你能把概念迁移到具体场景。');
+  else suggestions.push('补一个具体场景，不要只停留在抽象定义。');
+  if (rubric[2].score >= 4) strengths.push('你提到了怎样判断方案是否有效。');
+  else suggestions.push('补上测试方法或评价指标，这会直接影响是否解锁下一节。');
+
+  return {
+    score: percent,
+    feedback: [
+      strengths.length ? `亮点：${strengths.join(' ')}` : '亮点：你已经开始把课程内容转成自己的研究表达。',
+      suggestions.length ? `建议：${suggestions.join(' ')}` : '建议：下一步可以把它继续写成一周内可执行的小项目。'
+    ].join(' '),
+    rubric,
+    provider: 'fallback'
+  };
+}
+
+async function scoreKnowledgeResponse(detail, answers, apiKey, episode = {}) {
+  const prompts = buildKnowledgeOpenPrompts(detail, episode, { includeAnswers: true });
+  if (prompts.some(prompt => normalizeKnowledgePromptType(prompt.type) === 'single_choice')) {
+    return scoreKnowledgeResponseFallback(detail, answers, episode, prompts);
+  }
+  if (!apiKey) return scoreKnowledgeResponseFallback(detail, answers, episode, prompts);
+  const systemPrompt = [
+    '你是一名初中创新课程的AI助教。',
+    '请根据学生对课程开放题的回答做评分。',
+    '输出必须是 JSON，不要输出额外解释。',
+    'JSON schema: {"score":0-100,"feedback":"不超过120字","rubric":[{"label":"问题是否具体","score":0-4,"feedback":"一句话"},{"label":"方法是否可执行","score":0-4,"feedback":"一句话"},{"label":"是否有验证意识","score":0-4,"feedback":"一句话"},{"label":"表达是否清楚","score":0-4,"feedback":"一句话"}],"summary":"一句话总结"}'
+  ].join('\n');
+    const userPrompt = JSON.stringify({
+      discipline: detail?.discipline?.name || detail?.discipline?.id || '',
+      learningUnit: detail?.learningUnit?.title || '',
+      episode: episode?.video?.title || episode?.episodeKey || '',
+      expectedPrompts: prompts.map(publicKnowledgePrompt),
+      studentAnswers: answers
+  }, null, 2);
+  try {
+    const result = await requestAiChat([
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt }
+    ], apiKey);
+    const raw = String(result?.content || '').trim();
+    const match = raw.match(/\{[\s\S]*\}/);
+    const parsed = match ? JSON.parse(match[0]) : JSON.parse(raw);
+    const rubric = Array.isArray(parsed?.rubric) ? parsed.rubric : [];
+    const score = Number(parsed?.score);
+    return {
+      score: Number.isFinite(score) ? Math.max(0, Math.min(100, Math.round(score))) : 0,
+      feedback: String(parsed?.feedback || '').trim() || '已完成自动评分。',
+      rubric,
+      summary: String(parsed?.summary || '').trim(),
+      provider: 'ai'
+    };
+  } catch (err) {
+    fastify.log.warn(`knowledge.ai.score failed: ${err.message}`);
+    return scoreKnowledgeResponseFallback(detail, answers, episode, prompts);
+  }
+}
+
+function maskKnowledgeName(name) {
+  const text = String(name || '').trim();
+  if (!text) return '同学';
+  if (text.length <= 1) return `${text}同学`;
+  return `${text.slice(0, 1)}*${text.slice(-1)}`;
+}
+
+function mapKnowledgeResponseRow(row, options = {}) {
+  const revealIdentity = Boolean(options.revealIdentity);
+  return {
+    id: row.id,
+    disciplineId: row.discipline_id,
+    episodeKey: row.episode_key || '',
+    episodeIndex: row.episode_index === null || row.episode_index === undefined ? 0 : Number(row.episode_index),
+    displayName: revealIdentity ? row.display_name : maskKnowledgeName(row.display_name),
+    focus: row.focus || '',
+    answers: safeParseJson(row.answers) || [],
+    summary: row.summary || '',
+    aiScore: row.ai_score === null || row.ai_score === undefined ? null : Number(row.ai_score),
+    aiFeedback: row.ai_feedback || '',
+    aiRubric: safeParseJson(row.ai_rubric) || [],
+    scoreProvider: row.score_provider || '',
+    passed: Number(row.passed || 0) === 1,
+    createdAt: row.created_at,
+    isMine: Boolean(options.isMine)
+  };
+}
 
 const COURSE_DIRECTIONS = new Set([
   'foundation',
@@ -1060,412 +1420,2303 @@ const COURSE_DIRECTIONS = new Set([
 const COURSE_STATUSES = new Set(['draft', 'published', 'archived']);
 const COURSE_MATERIAL_SECTIONS = new Set(['课程导学', '教师资料', '学生资料', '补充资料']);
 
-function normalizeCourseId(value) {
-  return String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80);
-}
+const {
+  loadCourseCatalog,
+  loadCourseDetail,
+  listCourseLessons,
+  listCourseMaterials,
+  normalizeCoursePayload,
+  normalizeLessonPayload,
+  saveCourseDetail
+} = createCourseContentService({
+  path,
+  fs,
+  readJsonFile,
+  writeJsonFile,
+  normalizeTaxonomyArray,
+  normalizeTaxonomyValue,
+  getActiveTaxonomyIndex,
+  courseCatalogPath: COURSE_CATALOG_PATH,
+  coursesDir: COURSES_DIR,
+  materialsDir: MATERIALS_DIR,
+  courseDirections: COURSE_DIRECTIONS,
+  courseStatuses: COURSE_STATUSES,
+  courseMaterialSections: COURSE_MATERIAL_SECTIONS,
+  apiPrefix: API_PREFIX,
+  toUrlPath
+});
 
-function normalizeRelativePath(value) {
-  return String(value || '')
-    .replace(/\\/g, '/')
-    .replace(/^\/+/, '')
-    .split('/')
-    .filter(part => part && part !== '.' && part !== '..')
-    .join('/');
-}
+const {
+  dbJson,
+  filterKnowledgeLearningVideos,
+  findKnowledgeDetail,
+  getKnowledgeSeriesVideos,
+  loadAllKnowledgeSeriesFromDb,
+  loadBilibiliSeriesVideos,
+  loadCrashCourseSeries,
+  loadCrashCourseVideos,
+  loadDisciplines,
+  loadKnowledgeDisciplinesFromDb,
+  loadKnowledgeLearningUnits,
+  loadKnowledgeLearningUnitsFromDb,
+  loadKnowledgeSeriesFromDb,
+  normalizeKnowledgeDisciplineId,
+  seedKnowledgeContent
+} = createKnowledgeContentService({
+  getDb: () => db,
+  now,
+  readJsonFile,
+  safeParseJson,
+  loadCourseCatalog,
+  getKnowledgeEpisodePromptPreset,
+  normalizeKnowledgePromptType,
+  serializeKnowledgePromptOptions,
+  disciplineDataPath: DISCIPLINE_DATA_PATH,
+  learningUnitsPath: DISCIPLINE_LEARNING_UNITS_PATH,
+  crashCourseSeriesPath: CRASH_COURSE_SERIES_PATH,
+  crashCourseVideosPath: CRASH_COURSE_VIDEOS_PATH,
+  bilibiliSeriesVideosPath: BILIBILI_SERIES_VIDEOS_PATH
+});
 
-function courseFilePath(courseId) {
-  return path.join(COURSES_DIR, courseId, 'course.json');
-}
-
-function lessonSortValue(value) {
-  const match = String(value || '').match(/(\d+)/);
-  return match ? Number.parseInt(match[1], 10) : Number.MAX_SAFE_INTEGER;
-}
-
-function loadCourseCatalog() {
-  const catalog = readJsonFile(COURSE_CATALOG_PATH, []);
-  return Array.isArray(catalog) ? catalog : [];
-}
-
-function toCatalogEntry(course) {
-  return {
-    id: course.id,
-    title: course.title,
-    direction: course.direction,
-    teacherName: course.teacherName,
-    summary: course.summary,
-    description: course.description,
-    audience: course.audience,
-    pace: course.pace,
-    status: course.status,
-    materialsRoot: course.materialsRoot,
-    relatedProjects: Array.isArray(course.relatedProjects) ? course.relatedProjects : [],
-    positioning: course.positioning || '',
-    courseType: course.courseType || '',
-    createdBy: course.createdBy || course.created_by || null
-  };
-}
-
-function loadCourseDetail(courseId) {
-  const safeId = normalizeCourseId(courseId);
-  if (!safeId) return null;
-  const course = readJsonFile(courseFilePath(safeId), null);
-  if (!course || typeof course !== 'object') return null;
-  return {
-    ...course,
-    id: safeId,
-    materialsRoot: normalizeRelativePath(course.materialsRoot || safeId) || safeId,
-    relatedProjects: Array.isArray(course.relatedProjects) ? course.relatedProjects : [],
-    learningObjectives: Array.isArray(course.learningObjectives) ? course.learningObjectives : [],
-    materials: Array.isArray(course.materials) ? course.materials : [],
-    createdBy: course.createdBy || course.created_by || null
-  };
-}
-
-function listCourseLessons(course) {
-  const lessonsDir = path.join(MATERIALS_DIR, course.materialsRoot, 'lessons');
-  if (!lessonsDir.startsWith(MATERIALS_DIR) || !fs.existsSync(lessonsDir)) {
-    return [];
-  }
-
-  return fs.readdirSync(lessonsDir)
-    .filter(fileName => /\.json$/i.test(fileName))
-    .sort((a, b) => lessonSortValue(a) - lessonSortValue(b))
-    .map(fileName => {
-      const lessonId = fileName.replace(/\.json$/i, '');
-      const data = readJsonFile(path.join(lessonsDir, fileName), {});
-      return {
-        id: lessonId,
-        courseId: course.id,
-        title: data.title || lessonId,
-        description: data.description || '',
-        order: Number.isFinite(Number(data.order)) ? Number(data.order) : lessonSortValue(lessonId),
-        duration: Number.isFinite(Number(data.duration)) ? Number(data.duration) : 0,
-        moduleId: String(data.moduleId || '').trim(),
-        essentialQuestion: String(data.essentialQuestion || '').trim(),
-        learningObjectives: Array.isArray(data.learningObjectives)
-          ? data.learningObjectives.map(item => String(item || '').trim()).filter(Boolean)
-          : [],
-        knowledgePoints: Array.isArray(data.knowledgePoints)
-          ? data.knowledgePoints.map(item => String(item || '').trim()).filter(Boolean)
-          : [],
-        equipment: Array.isArray(data.equipment)
-          ? data.equipment.map(item => String(item || '').trim()).filter(Boolean)
-          : [],
-        classroomTasks: Array.isArray(data.classroomTasks)
-          ? data.classroomTasks.map(item => String(item || '').trim()).filter(Boolean)
-          : [],
-        deliverables: Array.isArray(data.deliverables)
-          ? data.deliverables.map(item => String(item || '').trim()).filter(Boolean)
-          : [],
-        commonMisconceptions: Array.isArray(data.commonMisconceptions)
-          ? data.commonMisconceptions.map(item => String(item || '').trim()).filter(Boolean)
-          : [],
-        assessmentCriteria: Array.isArray(data.assessmentCriteria)
-          ? data.assessmentCriteria.map(item => String(item || '').trim()).filter(Boolean)
-          : [],
-        homework: Array.isArray(data.homework)
-          ? data.homework.map(item => String(item || '').trim()).filter(Boolean)
-          : [],
-        lessonResources: Array.isArray(data.lessonResources)
-          ? data.lessonResources
-            .filter(item => item && typeof item === 'object')
-            .map(item => ({
-              type: String(item.type || '').trim() || 'resource',
-              title: String(item.title || '').trim(),
-              path: normalizeRelativePath(item.path || '')
-            }))
-            .filter(item => item.title || item.path)
-          : [],
-        units: Array.isArray(data.units) ? data.units : [],
-        phases: Array.isArray(data.phases) ? data.phases : []
-      };
-    })
-    .sort((a, b) => a.order - b.order);
-}
-
-function listCourseMaterials(course) {
-  return (Array.isArray(course.materials) ? course.materials : [])
-    .map((item, index) => {
-      const relativePath = normalizeRelativePath(item.path || '');
-      const absolutePath = relativePath
-        ? path.join(MATERIALS_DIR, course.materialsRoot, relativePath)
-        : '';
-      const exists = absolutePath ? fs.existsSync(absolutePath) : false;
-      return {
-        id: item.id || `${course.id}-material-${index + 1}`,
-        courseId: course.id,
-        section: COURSE_MATERIAL_SECTIONS.has(item.section) ? item.section : '补充资料',
-        title: String(item.title || relativePath || `资料 ${index + 1}`).trim(),
-        path: relativePath,
-        kind: String(item.kind || '').trim() || 'file',
-        exists,
-        downloadUrl: relativePath
-          ? `${API_PREFIX}/download/${toUrlPath(course.materialsRoot)}/${toUrlPath(relativePath)}`
-          : ''
-      };
-    })
-    .filter(item => item.path);
-}
-
-function normalizeCourseMaterialList(value, courseId) {
-  if (!Array.isArray(value)) return [];
-  return value
-    .map((item, index) => {
-      if (!item || typeof item !== 'object') return null;
-      const relativePath = normalizeRelativePath(item.path || '');
-      const title = String(item.title || '').trim();
-      if (!relativePath || !title) return null;
-      return {
-        id: String(item.id || `${courseId}-material-${index + 1}`).trim(),
-        courseId,
-        section: COURSE_MATERIAL_SECTIONS.has(item.section) ? item.section : '补充资料',
-        title,
-        path: relativePath,
-        kind: String(item.kind || '').trim() || 'file'
-      };
-    })
-    .filter(Boolean);
-}
-
-function normalizeCoursePayload(input = {}, existingCourse = {}) {
-  const fallbackId = normalizeCourseId(existingCourse.id || input.id || input.title);
-  const direction = String(input.direction || existingCourse.direction || 'foundation').trim();
-  const status = String(input.status || existingCourse.status || 'draft').trim();
-  const materialsRoot = normalizeRelativePath(input.materialsRoot || existingCourse.materialsRoot || fallbackId) || fallbackId;
-  const learningObjectives = Array.isArray(input.learningObjectives)
-    ? input.learningObjectives.map(item => String(item || '').trim()).filter(Boolean)
-    : (Array.isArray(existingCourse.learningObjectives) ? existingCourse.learningObjectives : []);
-  const relatedProjects = Array.isArray(input.relatedProjects)
-    ? Array.from(new Set(input.relatedProjects.map(item => String(item || '').trim()).filter(Boolean)))
-    : (Array.isArray(existingCourse.relatedProjects) ? existingCourse.relatedProjects : []);
-  const materials = Array.isArray(input.materials)
-    ? normalizeCourseMaterialList(input.materials, fallbackId)
-    : (Array.isArray(existingCourse.materials) ? existingCourse.materials : []);
-
-  return {
-    id: fallbackId,
-    title: String(input.title || existingCourse.title || '').trim(),
-    direction: COURSE_DIRECTIONS.has(direction) ? direction : 'foundation',
-    teacherName: String(input.teacherName || existingCourse.teacherName || '').trim(),
-    summary: String(input.summary || existingCourse.summary || '').trim(),
-    description: String(input.description || existingCourse.description || '').trim(),
-    audience: String(input.audience || existingCourse.audience || '').trim(),
-    pace: String(input.pace || existingCourse.pace || '').trim(),
-    status: COURSE_STATUSES.has(status) ? status : 'draft',
-    materialsRoot,
-    relatedProjects,
-    positioning: String(input.positioning || existingCourse.positioning || '').trim(),
-    courseType: String(input.courseType || existingCourse.courseType || '').trim(),
-    guidePath: normalizeRelativePath(input.guidePath || existingCourse.guidePath || ''),
-    learningObjectives,
-    materials,
-    createdBy: input.createdBy || input.created_by || existingCourse.createdBy || existingCourse.created_by || null
-  };
-}
-
-function normalizeStringArray(value) {
-  if (!Array.isArray(value)) return [];
-  return Array.from(new Set(value.map(item => String(item || '').trim()).filter(Boolean)));
-}
-
-function loadPortalCompetitions() {
-  const data = readJsonFile(PORTAL_COMPETITIONS_PATH, []);
-  if (!Array.isArray(data)) return [];
-  return data.map(item => ({
-    title: String(item.title || '').trim(),
-    slug: String(item.slug || '').trim(),
-    tagline: String(item.tagline || '').trim(),
-    tier: String(item.tier || '').trim(),
-    discipline: normalizeStringArray(item.discipline),
-    schoolStage: normalizeStringArray(item.schoolStage),
-    status: String(item.status || '').trim(),
-    dateRange: String(item.dateRange || '').trim(),
-    fitSummary: String(item.fitSummary || '').trim(),
-    whyJoin: String(item.whyJoin || '').trim(),
-    prepAdvice: String(item.prepAdvice || '').trim(),
-    externalLink: String(item.externalLink || '').trim(),
-    attachments: Array.isArray(item.attachments) ? item.attachments : [],
-    relatedCourseIds: normalizeStringArray(item.relatedCourseIds),
-    featuredFlags: normalizeStringArray(item.featuredFlags),
-    host: String(item.host || '').trim(),
-    location: String(item.location || '').trim(),
-    publishStatus: COMPETITION_PUBLISH_STATUSES.has(String(item.publishStatus || item.publish_status || 'published').trim())
-      ? String(item.publishStatus || item.publish_status || 'published').trim()
-      : 'published',
-    createdBy: item.createdBy || item.created_by || null
-  })).filter(item => item.slug && item.title);
-}
-
-function normalizeCompetitionPayload(input = {}, existing = {}) {
-  const title = String(input.title || existing.title || '').trim();
-  const publishStatus = String(input.publishStatus || input.publish_status || existing.publishStatus || existing.publish_status || 'draft').trim();
-  const slug = String(input.slug || existing.slug || title)
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 100);
-  return {
-    title,
-    slug,
-    tagline: String(input.tagline || existing.tagline || '').trim(),
-    tier: String(input.tier || existing.tier || '').trim(),
-    discipline: normalizeJsonArray(input.discipline ?? existing.discipline),
-    schoolStage: normalizeJsonArray(input.schoolStage ?? existing.schoolStage),
-    status: String(input.status || existing.status || '报名中').trim(),
-    dateRange: String(input.dateRange || existing.dateRange || '').trim(),
-    fitSummary: String(input.fitSummary || existing.fitSummary || '').trim(),
-    whyJoin: String(input.whyJoin || existing.whyJoin || '').trim(),
-    prepAdvice: String(input.prepAdvice || existing.prepAdvice || '').trim(),
-    externalLink: String(input.externalLink || existing.externalLink || '').trim(),
-    attachments: Array.isArray(input.attachments) ? input.attachments : (Array.isArray(existing.attachments) ? existing.attachments : []),
-    relatedCourseIds: normalizeJsonArray(input.relatedCourseIds ?? existing.relatedCourseIds),
-    featuredFlags: normalizeJsonArray(input.featuredFlags ?? existing.featuredFlags),
-    host: String(input.host || existing.host || '').trim(),
-    location: String(input.location || existing.location || '').trim(),
-    publishStatus: COMPETITION_PUBLISH_STATUSES.has(publishStatus) ? publishStatus : 'draft',
-    createdBy: input.createdBy || input.created_by || existing.createdBy || existing.created_by || null
-  };
-}
-
-function savePortalCompetition(competition) {
-  const items = loadPortalCompetitions();
-  const index = items.findIndex(item => item.slug === competition.slug);
-  if (index >= 0) {
-    items[index] = competition;
-  } else {
-    items.unshift(competition);
-  }
-  writeJsonFile(PORTAL_COMPETITIONS_PATH, items);
-}
-
-function loadPortalCompetitionDetail(slug) {
-  const safeSlug = String(slug || '').trim();
-  if (!safeSlug) return null;
-  const detailPath = path.join(PORTAL_COMPETITION_DETAILS_DIR, `${safeSlug}.json`);
-  const detail = readJsonFile(detailPath, null);
-  return detail && typeof detail === 'object' ? detail : null;
-}
-
-function loadPortalStories() {
-  const data = readJsonFile(PORTAL_STORIES_PATH, []);
-  if (!Array.isArray(data)) return [];
-  return data.map(item => ({
-    title: String(item.title || '').trim(),
-    slug: String(item.slug || '').trim(),
-    studentLabel: String(item.studentLabel || '').trim(),
-    summary: String(item.summary || '').trim(),
-    result: String(item.result || '').trim(),
-    relatedCompetitionSlug: String(item.relatedCompetitionSlug || '').trim(),
-    relatedCourseIds: normalizeStringArray(item.relatedCourseIds),
-    cover: String(item.cover || '').trim(),
-    featured: Boolean(item.featured)
-  })).filter(item => item.slug && item.title);
-}
-
-function loadPortalBanners() {
-  const data = readJsonFile(PORTAL_BANNERS_PATH, []);
-  if (!Array.isArray(data)) return [];
-  return data
-    .map(item => ({
-      type: String(item.type || '').trim(),
-      title: String(item.title || '').trim(),
-      image: String(item.image || '').trim(),
-      tag: String(item.tag || '').trim(),
-      targetUrl: String(item.targetUrl || '').trim(),
-      priority: Number.isFinite(Number(item.priority)) ? Number(item.priority) : 999
-    }))
-    .filter(item => item.title && item.targetUrl)
-    .sort((a, b) => a.priority - b.priority);
-}
-
-function savePortalBanners(items) {
-  writeJsonFile(PORTAL_BANNERS_PATH, Array.isArray(items) ? items : []);
-}
-
-function normalizeBannerPayload(input = {}, existing = {}) {
-  return {
-    type: String(input.type || existing.type || 'feature').trim(),
-    title: String(input.title || existing.title || '').trim(),
-    image: String(input.image || existing.image || '').trim(),
-    tag: String(input.tag || existing.tag || '').trim(),
-    targetUrl: String(input.targetUrl || input.target_url || existing.targetUrl || '').trim(),
-    priority: Number.isFinite(Number(input.priority)) ? Number(input.priority) : (Number.isFinite(Number(existing.priority)) ? Number(existing.priority) : 999)
-  };
-}
-
-function savePortalStories(items) {
-  writeJsonFile(PORTAL_STORIES_PATH, Array.isArray(items) ? items : []);
-}
-
-function normalizeStoryPayload(input = {}, existing = {}) {
-  const title = String(input.title || existing.title || '').trim();
-  const slug = String(input.slug || existing.slug || title)
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 100);
-  return {
-    title,
-    slug,
-    studentLabel: String(input.studentLabel || input.student_label || existing.studentLabel || '').trim(),
-    summary: String(input.summary || existing.summary || '').trim(),
-    result: String(input.result || existing.result || '').trim(),
-    relatedCompetitionSlug: String(input.relatedCompetitionSlug || input.related_competition_slug || existing.relatedCompetitionSlug || '').trim(),
-    relatedCourseIds: normalizeJsonArray(input.relatedCourseIds ?? existing.relatedCourseIds),
-    cover: String(input.cover || existing.cover || '').trim(),
-    featured: Boolean(input.featured ?? existing.featured)
-  };
-}
-
-function buildCoursePreviewMap() {
-  return loadCourseCatalog().reduce((acc, course) => {
-    acc[course.id] = {
-      id: course.id,
-      title: course.title,
-      summary: course.summary,
-      audience: course.audience,
-      positioning: course.positioning || '',
-      courseType: course.courseType || '',
-      direction: course.direction || ''
-    };
-    return acc;
-  }, {});
-}
-
-function enrichCompetition(competition, courseMap) {
-  return {
-    ...competition,
-    relatedCourses: competition.relatedCourseIds.map(courseId => courseMap[courseId]).filter(Boolean),
-    registrationStats: getCompetitionRegistrationStats(competition.slug)
-  };
-}
-
-function listPublishedCompetitions() {
-  return loadPortalCompetitions().filter(item => item.publishStatus === 'published');
-}
-
-function buildStoryResponse(story, competitionMap, courseMap) {
-  return {
-    ...story,
-    relatedCompetition: competitionMap[story.relatedCompetitionSlug] || null,
-    relatedCourses: story.relatedCourseIds.map(courseId => courseMap[courseId]).filter(Boolean)
-  };
-}
+const {
+  loadPortalBanners,
+  savePortalBanners,
+  normalizeBannerPayload,
+  loadPortalStories,
+  savePortalStories,
+  normalizeStoryPayload,
+  buildStoryResponse,
+  buildCoursePreviewMap,
+  listPublishedCompetitions,
+  enrichCompetition,
+  loadPortalCompetitionDetail,
+  loadPortalCompetitions,
+  savePortalCompetition,
+  normalizeCompetitionPayload
+} = createPortalContentService({
+  path,
+  readJsonFile,
+  writeJsonFile,
+  normalizeTaxonomyArray,
+  normalizeTaxonomyValue,
+  getActiveTaxonomyIndex,
+  normalizeJsonArray,
+  loadCourseCatalog,
+  getCompetitionRegistrationStats,
+  portalCompetitionsPath: PORTAL_COMPETITIONS_PATH,
+  portalCompetitionDetailsDir: PORTAL_COMPETITION_DETAILS_DIR,
+  portalStoriesPath: PORTAL_STORIES_PATH,
+  portalBannersPath: PORTAL_BANNERS_PATH,
+  competitionPublishStatuses: COMPETITION_PUBLISH_STATUSES
+});
 
 function getStudentCount() {
   const row = db.get('SELECT COUNT(*) AS count FROM users WHERE role = ?', ['student']);
   return row ? Number(row.count) || 0 : 0;
+}
+
+function parseJsonArray(value) {
+  if (Array.isArray(value)) return normalizeStringArray(value);
+  const raw = String(value || '').trim();
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? normalizeStringArray(parsed) : [];
+  } catch {
+    return normalizeStringArray(raw.split(/[,，\n]/));
+  }
+}
+
+function normalizeTaxonomyLookupToken(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function buildTaxonomyIndex(rows = []) {
+  return rows.reduce((acc, row) => {
+    const type = String(row.term_type || '').trim();
+    const key = String(row.term_key || '').trim();
+    if (!type || !key) return acc;
+    if (!acc[type]) {
+      acc[type] = { lookup: new Map(), labels: new Map() };
+    }
+    const lookup = acc[type].lookup;
+    const labels = acc[type].labels;
+    labels.set(key, String(row.label || key).trim() || key);
+    [key, row.label, ...parseJsonArray(row.aliases)].forEach((item) => {
+      const token = normalizeTaxonomyLookupToken(item);
+      if (token) lookup.set(token, key);
+    });
+    return acc;
+  }, {});
+}
+
+function getActiveTaxonomyIndex() {
+  return buildTaxonomyIndex(db.all(
+    'SELECT term_type, term_key, label, aliases FROM match_taxonomy_terms WHERE status = ?',
+    ['active']
+  ));
+}
+
+function resolveTaxonomyKey(termTypes = [], value, taxonomyIndex = null) {
+  const token = normalizeTaxonomyLookupToken(value);
+  if (!token) return '';
+  const index = taxonomyIndex || getActiveTaxonomyIndex();
+  for (const termType of termTypes) {
+    const key = index?.[termType]?.lookup?.get(token);
+    if (key) return key;
+  }
+  return String(value || '').trim();
+}
+
+function normalizeTaxonomyArray(value, termTypes = [], taxonomyIndex = null) {
+  return normalizeStringArray(normalizeJsonArray(value).map(item => resolveTaxonomyKey(termTypes, item, taxonomyIndex)));
+}
+
+function normalizeTaxonomyValue(value, termTypes = [], taxonomyIndex = null) {
+  return resolveTaxonomyKey(termTypes, value, taxonomyIndex);
+}
+
+function formatTaxonomyLabel(termType, value, taxonomyIndex = null) {
+  const key = String(value || '').trim();
+  if (!key) return '';
+  const index = taxonomyIndex || getActiveTaxonomyIndex();
+  return index?.[termType]?.labels?.get(key) || key;
+}
+
+function formatTaxonomyLabels(termType, values = [], taxonomyIndex = null) {
+  return normalizeStringArray(values).map(item => formatTaxonomyLabel(termType, item, taxonomyIndex));
+}
+
+function formatBestEffortTaxonomyLabels(termTypes = [], values = [], taxonomyIndex = null) {
+  const index = taxonomyIndex || getActiveTaxonomyIndex();
+  return normalizeStringArray(values).map((item) => {
+    for (const termType of termTypes) {
+      const label = formatTaxonomyLabel(termType, item, index);
+      if (label && label !== String(item || '').trim()) return label;
+    }
+    return String(item || '').trim();
+  });
+}
+
+function safeParseJsonText(value, fallback = {}) {
+  if (!value) return fallback;
+  if (typeof value === 'object') return value;
+  try {
+    return JSON.parse(String(value));
+  } catch {
+    return fallback;
+  }
+}
+
+function defaultStudentProfile(userId) {
+  return {
+    user_id: userId,
+    school_stage: '',
+    grade_level: '',
+    class_name: '',
+    interest_tags: '[]',
+    skill_tags: '[]',
+    target_tags: '[]',
+    weekly_hours: null,
+    experience_level: '',
+    preferred_team_size: '',
+    device_access: '',
+    notes: '',
+    profile_version: 1,
+    created_at: now(),
+    updated_at: now()
+  };
+}
+
+function mapStudentProfile(row) {
+  const profile = row || defaultStudentProfile(0);
+  const taxonomyIndex = getActiveTaxonomyIndex();
+  return {
+    userId: Number(profile.user_id || 0),
+    schoolStage: formatTaxonomyLabel('stage', profile.school_stage || '', taxonomyIndex),
+    gradeLevel: profile.grade_level || '',
+    className: profile.class_name || '',
+    interestTags: formatBestEffortTaxonomyLabels(['discipline', 'skill'], parseJsonArray(profile.interest_tags), taxonomyIndex),
+    skillTags: formatTaxonomyLabels('skill', parseJsonArray(profile.skill_tags), taxonomyIndex),
+    targetTags: formatBestEffortTaxonomyLabels(['discipline', 'skill'], parseJsonArray(profile.target_tags), taxonomyIndex),
+    weeklyHours: profile.weekly_hours === null || profile.weekly_hours === undefined ? null : Number(profile.weekly_hours),
+    experienceLevel: profile.experience_level || '',
+    preferredTeamSize: profile.preferred_team_size || '',
+    deviceAccess: profile.device_access || '',
+    notes: profile.notes || '',
+    profileVersion: Number(profile.profile_version || 1),
+    createdAt: profile.created_at || '',
+    updatedAt: profile.updated_at || ''
+  };
+}
+
+function normalizeStudentProfilePayload(input = {}, existing = {}) {
+  const taxonomyIndex = getActiveTaxonomyIndex();
+  return {
+    school_stage: normalizeTaxonomyValue(input.schoolStage || input.school_stage || existing.school_stage, ['stage'], taxonomyIndex),
+    grade_level: normalizeNullableText(input.gradeLevel || input.grade_level || existing.grade_level),
+    class_name: normalizeNullableText(input.className || input.class_name || existing.class_name),
+    interest_tags: JSON.stringify(normalizeTaxonomyArray(
+      input.interestTags ?? input.interest_tags ?? parseJsonArray(existing.interest_tags),
+      ['discipline', 'skill'],
+      taxonomyIndex
+    )),
+    skill_tags: JSON.stringify(normalizeTaxonomyArray(
+      input.skillTags ?? input.skill_tags ?? parseJsonArray(existing.skill_tags),
+      ['skill'],
+      taxonomyIndex
+    )),
+    target_tags: JSON.stringify(normalizeTaxonomyArray(
+      input.targetTags ?? input.target_tags ?? parseJsonArray(existing.target_tags),
+      ['discipline', 'skill'],
+      taxonomyIndex
+    )),
+    weekly_hours: normalizeNullableNumber(input.weeklyHours ?? input.weekly_hours ?? existing.weekly_hours),
+    experience_level: normalizeNullableText(input.experienceLevel || input.experience_level || existing.experience_level),
+    preferred_team_size: normalizeNullableText(input.preferredTeamSize || input.preferred_team_size || existing.preferred_team_size),
+    device_access: normalizeNullableText(input.deviceAccess || input.device_access || existing.device_access),
+    notes: normalizeNullableText(input.notes || existing.notes),
+    profile_version: Math.max(1, Number(existing.profile_version || 1))
+  };
+}
+
+function getStudentProfile(userId) {
+  return db.get('SELECT * FROM student_profiles WHERE user_id = ?', [userId]);
+}
+
+function seedStudentProfile(userId) {
+  let row = getStudentProfile(userId);
+  if (row) return row;
+  const profile = defaultStudentProfile(userId);
+  db.run(
+    `INSERT INTO student_profiles
+     (user_id, school_stage, grade_level, class_name, interest_tags, skill_tags, target_tags, weekly_hours, experience_level, preferred_team_size, device_access, notes, profile_version, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      profile.user_id,
+      profile.school_stage,
+      profile.grade_level,
+      profile.class_name,
+      profile.interest_tags,
+      profile.skill_tags,
+      profile.target_tags,
+      profile.weekly_hours,
+      profile.experience_level,
+      profile.preferred_team_size,
+      profile.device_access,
+      profile.notes,
+      profile.profile_version,
+      profile.created_at,
+      profile.updated_at
+    ]
+  );
+  return getStudentProfile(userId);
+}
+
+function upsertStudentProfile(userId, payload) {
+  const existing = seedStudentProfile(userId);
+  const profileVersion = Number(existing.profile_version || 1) + 1;
+  db.run(
+    `UPDATE student_profiles
+     SET school_stage = ?, grade_level = ?, class_name = ?, interest_tags = ?, skill_tags = ?, target_tags = ?, weekly_hours = ?, experience_level = ?, preferred_team_size = ?, device_access = ?, notes = ?, profile_version = ?, updated_at = ?
+     WHERE user_id = ?`,
+    [
+      payload.school_stage,
+      payload.grade_level,
+      payload.class_name,
+      payload.interest_tags,
+      payload.skill_tags,
+      payload.target_tags,
+      payload.weekly_hours,
+      payload.experience_level,
+      payload.preferred_team_size,
+      payload.device_access,
+      payload.notes,
+      profileVersion,
+      now(),
+      userId
+    ]
+  );
+  return getStudentProfile(userId);
+}
+
+function getKnowledgeSignals(userId) {
+  const responses = db.all('SELECT passed, ai_score FROM knowledge_responses WHERE user_id = ?', [userId]);
+  const passedCount = responses.filter(row => Number(row.passed) === 1).length;
+  const averageScore = responses.length
+    ? responses.reduce((sum, row) => sum + (Number(row.ai_score) || 0), 0) / responses.length
+    : 0;
+  return { passedCount, averageScore };
+}
+
+function parseDeadlineDate(value = '') {
+  const text = String(value || '').trim();
+  if (!text) return null;
+  let match = text.match(/(20\d{2})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/);
+  if (match) {
+    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 23, 59, 59, 999);
+  }
+  match = text.match(/(20\d{2})[./-](\d{1,2})[./-](\d{1,2})/);
+  if (match) {
+    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 23, 59, 59, 999);
+  }
+  return null;
+}
+
+function countSharedTags(a = [], b = []) {
+  const set = new Set(a.map(item => String(item || '').toLowerCase()));
+  return b.filter(item => set.has(String(item || '').toLowerCase())).length;
+}
+
+function parseTeamSizePreference(value = '') {
+  const text = String(value || '').trim();
+  if (!text) return null;
+  const rangeMatch = text.match(/(\d+)\s*[-~至]\s*(\d+)/);
+  if (rangeMatch) {
+    const min = Number(rangeMatch[1]);
+    const max = Number(rangeMatch[2]);
+    if (Number.isFinite(min) && Number.isFinite(max) && min > 0 && max >= min) {
+      return { min, max };
+    }
+  }
+  const exactMatch = text.match(/(\d+)/);
+  if (exactMatch) {
+    const size = Number(exactMatch[1]);
+    if (Number.isFinite(size) && size > 0) return { min: size, max: size };
+  }
+  return null;
+}
+
+function teamSizeRangesOverlap(a, b) {
+  if (!a || !b) return false;
+  return Math.max(a.min, b.min) <= Math.min(a.max, b.max);
+}
+
+function getCanonicalProfileForMatching(profileRow) {
+  const profile = profileRow || defaultStudentProfile(0);
+  return {
+    userId: Number(profile.user_id || 0),
+    schoolStage: String(profile.school_stage || '').trim(),
+    gradeLevel: profile.grade_level || '',
+    className: profile.class_name || '',
+    interestTags: parseJsonArray(profile.interest_tags),
+    skillTags: parseJsonArray(profile.skill_tags),
+    targetTags: parseJsonArray(profile.target_tags),
+    weeklyHours: profile.weekly_hours === null || profile.weekly_hours === undefined ? null : Number(profile.weekly_hours),
+    experienceLevel: profile.experience_level || '',
+    preferredTeamSize: profile.preferred_team_size || '',
+    deviceAccess: profile.device_access || '',
+    notes: profile.notes || '',
+    profileVersion: Number(profile.profile_version || 1),
+    createdAt: profile.created_at || '',
+    updatedAt: profile.updated_at || ''
+  };
+}
+
+function listStudentUsers() {
+  return db.all('SELECT id, name, email FROM users WHERE role = ? ORDER BY id ASC', ['student']);
+}
+
+function getStudentCollaborationContext(studentIds = []) {
+  const normalizedIds = Array.from(new Set(studentIds.map(id => Number(id)).filter(id => Number.isFinite(id) && id > 0)));
+  const contextMap = new Map();
+  normalizedIds.forEach((id) => {
+    contextMap.set(id, {
+      teamIds: new Set(),
+      projectIds: new Set(),
+      teammateIds: new Set(),
+      projectPartnerIds: new Set()
+    });
+  });
+  if (!normalizedIds.length) return contextMap;
+
+  const placeholders = normalizedIds.map(() => '?').join(',');
+  const teamRows = db.all(
+    `SELECT team_id, user_id FROM team_members WHERE user_id IN (${placeholders})`,
+    normalizedIds
+  );
+  const teamGroups = new Map();
+  teamRows.forEach((row) => {
+    const teamId = Number(row.team_id || 0);
+    const userId = Number(row.user_id || 0);
+    if (!teamId || !userId || !contextMap.has(userId)) return;
+    contextMap.get(userId).teamIds.add(teamId);
+    if (!teamGroups.has(teamId)) teamGroups.set(teamId, new Set());
+    teamGroups.get(teamId).add(userId);
+  });
+  teamGroups.forEach((members) => {
+    const ids = Array.from(members);
+    ids.forEach((userId) => {
+      const context = contextMap.get(userId);
+      if (!context) return;
+      ids.forEach((peerId) => {
+        if (peerId !== userId) context.teammateIds.add(peerId);
+      });
+    });
+  });
+
+  const projectRows = db.all(
+    `SELECT id, created_by, team_id FROM projects
+     WHERE created_by IN (${placeholders})
+        OR id IN (SELECT project_id FROM project_members WHERE user_id IN (${placeholders}))`,
+    [...normalizedIds, ...normalizedIds]
+  );
+  const projectMemberRows = db.all(
+    `SELECT project_id, user_id FROM project_members WHERE user_id IN (${placeholders})`,
+    normalizedIds
+  );
+  const projectParticipants = new Map();
+
+  projectRows.forEach((row) => {
+    const projectId = Number(row.id || 0);
+    if (!projectId) return;
+    if (!projectParticipants.has(projectId)) projectParticipants.set(projectId, new Set());
+    const creatorId = Number(row.created_by || 0);
+    if (contextMap.has(creatorId)) {
+      contextMap.get(creatorId).projectIds.add(projectId);
+      projectParticipants.get(projectId).add(creatorId);
+    }
+    const teamId = Number(row.team_id || 0);
+    if (teamId && teamGroups.has(teamId)) {
+      teamGroups.get(teamId).forEach((userId) => {
+        if (!contextMap.has(userId)) return;
+        contextMap.get(userId).projectIds.add(projectId);
+        projectParticipants.get(projectId).add(userId);
+      });
+    }
+  });
+
+  projectMemberRows.forEach((row) => {
+    const projectId = Number(row.project_id || 0);
+    const userId = Number(row.user_id || 0);
+    if (!projectId || !userId || !contextMap.has(userId)) return;
+    contextMap.get(userId).projectIds.add(projectId);
+    if (!projectParticipants.has(projectId)) projectParticipants.set(projectId, new Set());
+    projectParticipants.get(projectId).add(userId);
+  });
+
+  projectParticipants.forEach((participants, projectId) => {
+    const ids = Array.from(participants);
+    ids.forEach((userId) => {
+      const context = contextMap.get(userId);
+      if (!context) return;
+      context.projectIds.add(projectId);
+      ids.forEach((peerId) => {
+        if (peerId !== userId) context.projectPartnerIds.add(peerId);
+      });
+    });
+  });
+
+  return contextMap;
+}
+
+function buildTeamCandidatePreview(userRow, profileRow, context = null) {
+  const profile = getCanonicalProfileForMatching(profileRow);
+  const taxonomyIndex = getActiveTaxonomyIndex();
+  return {
+    userId: Number(userRow?.id || profile.userId || 0),
+    name: userRow?.name || '',
+    email: userRow?.email || '',
+    schoolStage: formatTaxonomyLabel('stage', profile.schoolStage, taxonomyIndex),
+    gradeLevel: profile.gradeLevel || '',
+    className: profile.className || '',
+    interestTags: formatBestEffortTaxonomyLabels(['discipline', 'skill'], profile.interestTags, taxonomyIndex),
+    skillTags: formatTaxonomyLabels('skill', profile.skillTags, taxonomyIndex),
+    targetTags: formatBestEffortTaxonomyLabels(['discipline', 'skill'], profile.targetTags, taxonomyIndex),
+    weeklyHours: profile.weeklyHours,
+    experienceLevel: profile.experienceLevel || '',
+    preferredTeamSize: profile.preferredTeamSize || '',
+    teamCount: context ? context.teamIds.size : 0,
+    activeProjectCount: context ? context.projectIds.size : 0
+  };
+}
+
+function estimateCompetitionDeadline(competition) {
+  if (competition.registrationDeadline) return parseDeadlineDate(competition.registrationDeadline);
+  const detail = loadPortalCompetitionDetail(competition.slug);
+  const timeline = Array.isArray(detail?.timeline) ? detail.timeline : [];
+  const target = timeline.find(item => /截止|报送|提交/.test(String(item.label || '')));
+  return parseDeadlineDate(target?.date || '');
+}
+
+function listPublishedProjectTopics() {
+  return db.all(
+    'SELECT * FROM project_topics WHERE status = ? ORDER BY updated_at DESC, id DESC',
+    ['published']
+  ).map(mapProjectTopic);
+}
+
+function inferCourseMatchSignals(course = {}) {
+  const taxonomyIndex = getActiveTaxonomyIndex();
+  const text = [
+    course.direction,
+    course.positioning,
+    course.courseType,
+    course.summary,
+    course.description,
+    ...(Array.isArray(course.learningObjectives) ? course.learningObjectives : [])
+  ].filter(Boolean).join(' ');
+
+  const inferredTags = [];
+  const inferredSkills = [];
+
+  if (/ai|机器学习|神经网络|视觉|算法|数据/i.test(text)) inferredTags.push('ai');
+  if (/机器人|ros|硬件|物联网|传感器|控制/i.test(text)) inferredTags.push('robotics');
+  if (/产品|用户|设计|访谈|方案/i.test(text)) inferredTags.push('product');
+  if (/web|前端|后端|全栈|系统/i.test(text)) inferredTags.push('web');
+
+  if (/python/i.test(text)) inferredSkills.push('python');
+  if (/视觉|cv|computer vision|机器视觉/i.test(text)) inferredSkills.push('machine-vision');
+  if (/硬件|gpio|树莓派|传感器/i.test(text)) inferredSkills.push('hardware');
+  if (/前端|web|界面/i.test(text)) inferredSkills.push('frontend');
+  if (/后端|接口|服务/i.test(text)) inferredSkills.push('backend');
+  if (/调研|访谈|研究/i.test(text)) inferredSkills.push('research');
+
+  return {
+    tags: normalizeTaxonomyArray(
+      (Array.isArray(course.tags) ? course.tags : []).concat(inferredTags),
+      ['discipline', 'skill'],
+      taxonomyIndex
+    ),
+    skillOutcomes: normalizeTaxonomyArray(
+      (Array.isArray(course.skillOutcomes) ? course.skillOutcomes : []).concat(inferredSkills),
+      ['skill'],
+      taxonomyIndex
+    ),
+    difficultyPath: normalizeTaxonomyValue(
+      course.difficultyPath || (String(course.audience || '').includes('零基础') ? 'beginner' : ''),
+      ['difficulty'],
+      taxonomyIndex
+    )
+  };
+}
+
+function computeCompetitionMatch(profileRow, competition, courseMap) {
+  const profile = getCanonicalProfileForMatching(profileRow);
+  const taxonomyIndex = getActiveTaxonomyIndex();
+  const knowledge = getKnowledgeSignals(profile.userId);
+  const reasons = [];
+  const gaps = [];
+  const ruleBreakdown = {};
+  let score = 0;
+  let eligibilityStatus = 'eligible';
+
+  const normalizedCompetitionStage = normalizeStringArray(competition.schoolStage).map(item => item.toLowerCase());
+  const profileStage = String(profile.schoolStage || '').toLowerCase();
+  if (normalizedCompetitionStage.length) {
+    if (profileStage && normalizedCompetitionStage.includes(profileStage)) {
+      score += 25;
+      ruleBreakdown.stage = 25;
+      reasons.push(`学段匹配：${formatTaxonomyLabel('stage', profile.schoolStage, taxonomyIndex)}`);
+    } else {
+      ruleBreakdown.stage = 0;
+      gaps.push(`适合学段：${formatTaxonomyLabels('stage', competition.schoolStage, taxonomyIndex).join(' / ') || '待确认'}`);
+      eligibilityStatus = 'conditional';
+    }
+  } else {
+    ruleBreakdown.stage = 12;
+    score += 12;
+  }
+
+  const competitionTags = normalizeStringArray([
+    ...(competition.discipline || []),
+    ...(competition.tags || [])
+  ]);
+  const interestOverlap = countSharedTags(profile.interestTags, competitionTags);
+  const targetOverlap = countSharedTags(profile.targetTags, competitionTags);
+  const requiredSkills = normalizeStringArray(competition.requiredSkills);
+  const recommendedSkills = normalizeStringArray(competition.recommendedSkills);
+  const skillOverlap = countSharedTags(profile.skillTags, requiredSkills.length ? requiredSkills : recommendedSkills);
+
+  const interestScore = Math.min(20, interestOverlap * 10);
+  score += interestScore;
+  ruleBreakdown.interest = interestScore;
+  if (interestScore > 0) reasons.push(`兴趣方向匹配：${interestOverlap} 项`);
+  else gaps.push('兴趣方向未明显匹配，建议先确认是否真要投入准备');
+
+  const skillScore = Math.min(15, skillOverlap * 7.5);
+  score += skillScore;
+  ruleBreakdown.skills = skillScore;
+  if (requiredSkills.length && skillOverlap === 0) {
+    gaps.push(`缺少核心技能：${formatTaxonomyLabels('skill', requiredSkills, taxonomyIndex).join(' / ')}`);
+    eligibilityStatus = eligibilityStatus === 'eligible' ? 'conditional' : eligibilityStatus;
+  } else if (skillScore > 0) {
+    reasons.push(`技能基础匹配：${skillOverlap} 项`);
+  }
+
+  const targetScore = Math.min(10, targetOverlap * 5);
+  score += targetScore;
+  ruleBreakdown.target = targetScore;
+  if (targetScore > 0) reasons.push(`目标方向重合：${targetOverlap} 项`);
+
+  const deadline = estimateCompetitionDeadline(competition);
+  if (deadline && Date.now() > deadline.getTime()) {
+    ruleBreakdown.timeline = 0;
+    eligibilityStatus = 'ineligible';
+    gaps.push('报名时间已过，需要改为补登记或训练跟进');
+  } else if (deadline) {
+    ruleBreakdown.timeline = 10;
+    score += 10;
+    reasons.push('报名时间窗口仍可行动');
+  } else {
+    ruleBreakdown.timeline = 5;
+    score += 5;
+    gaps.push('未找到明确报名截止时间，请人工核对');
+  }
+
+  const difficultyMap = { beginner: 10, basic: 10, medium: 7, advanced: 4, hard: 4 };
+  const experienceMap = { beginner: 'beginner', basic: 'basic', medium: 'medium', advanced: 'advanced' };
+  const difficultyKey = String(competition.difficulty || '').trim().toLowerCase();
+  const experienceKey = String(profile.experienceLevel || '').trim().toLowerCase();
+  const difficultyScore = difficultyKey
+    ? ((experienceMap[experienceKey] === difficultyKey || !experienceKey) ? (difficultyMap[difficultyKey] || 6) : 5)
+    : 6;
+  ruleBreakdown.difficulty = difficultyScore;
+  score += difficultyScore;
+  if (difficultyKey && experienceKey && experienceKey !== difficultyKey) {
+    gaps.push(`赛事难度为 ${competition.difficulty}，当前经验为 ${profile.experienceLevel || '未填写'}`);
+  }
+
+  const weeklyHours = Number(profile.weeklyHours || 0);
+  const estimatedHours = Number(competition.estimatedHours || 0);
+  let timeScore = 5;
+  if (estimatedHours > 0 && weeklyHours > 0) {
+    timeScore = weeklyHours >= estimatedHours ? 10 : (weeklyHours >= Math.ceil(estimatedHours * 0.6) ? 6 : 2);
+    if (timeScore < 6) gaps.push(`建议每周至少投入 ${estimatedHours} 小时，目前填写 ${weeklyHours} 小时`);
+  } else if (estimatedHours > 0 && weeklyHours <= 0) {
+    gaps.push(`建议补充每周投入时间，赛事预估需要 ${estimatedHours} 小时`);
+  }
+  ruleBreakdown.time = timeScore;
+  score += timeScore;
+
+  const relatedCourses = normalizeStringArray(competition.relatedCourseIds || []);
+  const courseSignals = relatedCourses.length ? 5 : 0;
+  const knowledgeSignals = knowledge.passedCount > 0 ? 5 : 0;
+  const foundationScore = Math.min(10, courseSignals + knowledgeSignals);
+  ruleBreakdown.foundation = foundationScore;
+  score += foundationScore;
+  if (foundationScore > 0) reasons.push('已有课程或知识闯关基础');
+  else gaps.push('建议先补课程或知识闯关基础');
+
+  const override = db.get(
+    'SELECT * FROM match_overrides WHERE user_id = ? AND target_type = ? AND target_key = ? ORDER BY updated_at DESC, created_at DESC LIMIT 1',
+    [profile.userId, 'competition', competition.slug]
+  );
+  let overrideState = null;
+  if (override) {
+    overrideState = {
+      id: override.id,
+      overrideType: override.override_type,
+      note: override.note || '',
+      createdBy: Number(override.created_by || 0),
+      createdAt: override.created_at,
+      updatedAt: override.updated_at
+    };
+    if (override.override_type === 'boost') score += 8;
+    if (override.override_type === 'suppress') score = Math.max(0, score - 15);
+    if (override.override_type === 'force_include') eligibilityStatus = 'eligible';
+    if (override.override_type === 'force_exclude') eligibilityStatus = 'ineligible';
+  }
+
+  score = Math.max(0, Math.min(100, Math.round(score)));
+
+  const lastInteraction = db.get(
+    'SELECT interaction_type, created_at FROM match_interactions WHERE user_id = ? AND target_type = ? AND target_key = ? ORDER BY created_at DESC LIMIT 1',
+    [profile.userId, 'competition', competition.slug]
+  );
+
+  return {
+    targetType: 'competition',
+    targetKey: competition.slug,
+    competition: enrichCompetition(competition, courseMap),
+    score,
+    eligibilityStatus: MATCH_ELIGIBILITY_STATUSES.has(eligibilityStatus) ? eligibilityStatus : 'conditional',
+    ruleBreakdown,
+    reasons,
+    gaps,
+    aiSummary: '',
+    aiAdvice: '',
+    overrideState,
+    interactionState: lastInteraction
+      ? { interactionType: lastInteraction.interaction_type, createdAt: lastInteraction.created_at }
+      : null,
+    computedAt: now(),
+    sourceSnapshot: {
+      profile: {
+        ...profile,
+        schoolStageLabel: formatTaxonomyLabel('stage', profile.schoolStage, taxonomyIndex),
+        interestTagsLabel: formatBestEffortTaxonomyLabels(['discipline', 'skill'], profile.interestTags, taxonomyIndex),
+        skillTagsLabel: formatTaxonomyLabels('skill', profile.skillTags, taxonomyIndex),
+        targetTagsLabel: formatBestEffortTaxonomyLabels(['discipline', 'skill'], profile.targetTags, taxonomyIndex)
+      },
+      competition: {
+        slug: competition.slug,
+        title: competition.title,
+        tags: competitionTags,
+        requiredSkills,
+        recommendedSkills
+      }
+    }
+  };
+}
+
+function computeProjectTopicMatch(profileRow, topic, courseMap) {
+  const profile = getCanonicalProfileForMatching(profileRow);
+  const taxonomyIndex = getActiveTaxonomyIndex();
+  const knowledge = getKnowledgeSignals(profile.userId);
+  const reasons = [];
+  const gaps = [];
+  const ruleBreakdown = {};
+  let score = 0;
+  let eligibilityStatus = 'eligible';
+
+  const topicTags = normalizeStringArray(topic.tags || []);
+  const interestOverlap = countSharedTags(profile.interestTags, topicTags);
+  const targetOverlap = countSharedTags(profile.targetTags, topicTags);
+  const requiredSkills = normalizeStringArray(topic.requiredSkills || []);
+  const skillOverlap = countSharedTags(profile.skillTags, requiredSkills);
+
+  const interestScore = Math.min(25, interestOverlap * 12.5);
+  score += interestScore;
+  ruleBreakdown.interest = interestScore;
+  if (interestScore > 0) reasons.push(`项目方向匹配：${interestOverlap} 项`);
+  else gaps.push('项目方向与当前兴趣标签重合较少');
+
+  const skillScore = requiredSkills.length
+    ? Math.min(20, skillOverlap * (20 / Math.max(requiredSkills.length, 1)))
+    : 10;
+  score += skillScore;
+  ruleBreakdown.skills = skillScore;
+  if (requiredSkills.length && skillOverlap === 0) {
+    gaps.push(`待补核心技能：${formatTaxonomyLabels('skill', requiredSkills, taxonomyIndex).join(' / ')}`);
+    eligibilityStatus = 'conditional';
+  } else if (skillScore > 0) {
+    reasons.push(`项目技能基础匹配：${skillOverlap || 1} 项`);
+  }
+
+  const targetScore = Math.min(15, targetOverlap * 7.5);
+  score += targetScore;
+  ruleBreakdown.target = targetScore;
+  if (targetScore > 0) reasons.push(`目标方向重合：${targetOverlap} 项`);
+
+  const weeklyHours = Number(profile.weeklyHours || 0);
+  const estimatedHours = Number(topic.estimatedHours || 0);
+  let timeScore = 8;
+  if (estimatedHours > 0 && weeklyHours > 0) {
+    timeScore = weeklyHours >= estimatedHours ? 15 : (weeklyHours >= Math.ceil(estimatedHours * 0.6) ? 10 : 4);
+    if (timeScore < 10) gaps.push(`建议每周至少投入 ${estimatedHours} 小时，目前填写 ${weeklyHours} 小时`);
+  } else if (estimatedHours > 0 && weeklyHours <= 0) {
+    timeScore = 4;
+    gaps.push(`建议补充每周投入时间，项目预估需要 ${estimatedHours} 小时`);
+  }
+  score += timeScore;
+  ruleBreakdown.time = timeScore;
+
+  const difficultyMap = { beginner: 15, basic: 15, intermediate: 10, medium: 10, advanced: 6, hard: 4 };
+  const experienceMap = { beginner: 'beginner', basic: 'basic', medium: 'intermediate', advanced: 'advanced' };
+  const difficultyKey = String(topic.difficulty || '').trim().toLowerCase();
+  const experienceKey = String(profile.experienceLevel || '').trim().toLowerCase();
+  const difficultyScore = difficultyKey
+    ? ((experienceMap[experienceKey] === difficultyKey || !experienceKey) ? (difficultyMap[difficultyKey] || 8) : 6)
+    : 8;
+  score += difficultyScore;
+  ruleBreakdown.difficulty = difficultyScore;
+  if (difficultyKey && experienceKey && experienceMap[experienceKey] && experienceMap[experienceKey] !== difficultyKey) {
+    gaps.push(`项目难度为 ${topic.difficulty}，当前经验为 ${profile.experienceLevel || '未填写'}`);
+  }
+
+  const relatedCourseIds = normalizeStringArray([topic.relatedCourseId].filter(Boolean));
+  const courseSignals = relatedCourseIds.length ? 6 : 0;
+  const knowledgeSignals = knowledge.passedCount > 0 ? 4 : 0;
+  const foundationScore = Math.min(10, courseSignals + knowledgeSignals);
+  score += foundationScore;
+  ruleBreakdown.foundation = foundationScore;
+  if (foundationScore > 0) reasons.push('已有课程或知识闯关基础可迁移');
+  else gaps.push('建议先补充相关课程或基础训练');
+
+  const preferredTeamSize = String(profile.preferredTeamSize || '').trim();
+  const suggestedTeamSize = String(topic.suggestedTeamSize || '').trim();
+  let teamScore = 5;
+  if (preferredTeamSize && suggestedTeamSize) {
+    const normalizedPreferred = preferredTeamSize.replace(/\s+/g, '');
+    const normalizedSuggested = suggestedTeamSize.replace(/\s+/g, '');
+    teamScore = normalizedPreferred === normalizedSuggested ? 10 : 6;
+    if (teamScore < 10) gaps.push(`建议团队规模 ${suggestedTeamSize}，当前偏好 ${preferredTeamSize}`);
+  }
+  score += teamScore;
+  ruleBreakdown.team = teamScore;
+
+  const override = db.get(
+    'SELECT * FROM match_overrides WHERE user_id = ? AND target_type = ? AND target_key = ? ORDER BY updated_at DESC, created_at DESC LIMIT 1',
+    [profile.userId, 'project_topic', String(topic.id)]
+  );
+  let overrideState = null;
+  if (override) {
+    overrideState = {
+      id: override.id,
+      overrideType: override.override_type,
+      note: override.note || '',
+      createdBy: Number(override.created_by || 0),
+      createdAt: override.created_at,
+      updatedAt: override.updated_at
+    };
+    if (override.override_type === 'boost') score += 8;
+    if (override.override_type === 'suppress') score = Math.max(0, score - 15);
+    if (override.override_type === 'force_include') eligibilityStatus = 'eligible';
+    if (override.override_type === 'force_exclude') eligibilityStatus = 'ineligible';
+  }
+
+  score = Math.max(0, Math.min(100, Math.round(score)));
+
+  const lastInteraction = db.get(
+    'SELECT interaction_type, created_at FROM match_interactions WHERE user_id = ? AND target_type = ? AND target_key = ? ORDER BY created_at DESC LIMIT 1',
+    [profile.userId, 'project_topic', String(topic.id)]
+  );
+
+  return {
+    targetType: 'project_topic',
+    targetKey: String(topic.id),
+    projectTopic: topic,
+    score,
+    eligibilityStatus: MATCH_ELIGIBILITY_STATUSES.has(eligibilityStatus) ? eligibilityStatus : 'conditional',
+    ruleBreakdown,
+    reasons,
+    gaps,
+    aiSummary: '',
+    aiAdvice: '',
+    overrideState,
+    interactionState: lastInteraction
+      ? { interactionType: lastInteraction.interaction_type, createdAt: lastInteraction.created_at }
+      : null,
+    computedAt: now(),
+    sourceSnapshot: {
+      profile: {
+        ...profile,
+        schoolStageLabel: formatTaxonomyLabel('stage', profile.schoolStage, taxonomyIndex),
+        interestTagsLabel: formatBestEffortTaxonomyLabels(['discipline', 'skill'], profile.interestTags, taxonomyIndex),
+        skillTagsLabel: formatTaxonomyLabels('skill', profile.skillTags, taxonomyIndex),
+        targetTagsLabel: formatBestEffortTaxonomyLabels(['discipline', 'skill'], profile.targetTags, taxonomyIndex)
+      },
+      projectTopic: {
+        id: topic.id,
+        title: topic.title,
+        tags: normalizeStringArray(topic.tags || []),
+        requiredSkills: normalizeStringArray(topic.requiredSkills || []),
+        relatedCourseId: topic.relatedCourseId || '',
+        relatedCompetitionSlug: topic.relatedCompetitionSlug || ''
+      }
+    }
+  };
+}
+
+function computeCourseMatch(profileRow, course) {
+  const profile = getCanonicalProfileForMatching(profileRow);
+  const taxonomyIndex = getActiveTaxonomyIndex();
+  const signals = inferCourseMatchSignals(course);
+  const reasons = [];
+  const gaps = [];
+  const ruleBreakdown = {};
+  let score = 0;
+  let eligibilityStatus = 'eligible';
+
+  const courseTags = normalizeStringArray(signals.tags);
+  const interestOverlap = countSharedTags(profile.interestTags, courseTags);
+  const targetOverlap = countSharedTags(profile.targetTags, courseTags);
+  const skillOutcomes = normalizeStringArray(signals.skillOutcomes);
+  const skillOverlap = countSharedTags(profile.skillTags, skillOutcomes);
+
+  const interestScore = Math.min(25, interestOverlap * 12.5);
+  score += interestScore;
+  ruleBreakdown.interest = interestScore;
+  if (interestScore > 0) reasons.push(`课程方向匹配：${interestOverlap} 项`);
+  else gaps.push('课程方向与当前兴趣标签重合较少');
+
+  const skillScore = skillOutcomes.length
+    ? Math.min(20, skillOverlap * (20 / Math.max(skillOutcomes.length, 1)))
+    : 8;
+  score += skillScore;
+  ruleBreakdown.skills = skillScore;
+  if (skillOutcomes.length && skillOverlap === 0) {
+    gaps.push(`课程将重点训练：${formatTaxonomyLabels('skill', skillOutcomes, taxonomyIndex).join(' / ')}`);
+    eligibilityStatus = 'conditional';
+  } else if (skillScore > 0) {
+    reasons.push(`课程能力产出匹配：${skillOverlap || 1} 项`);
+  }
+
+  const targetScore = Math.min(15, targetOverlap * 7.5);
+  score += targetScore;
+  ruleBreakdown.target = targetScore;
+  if (targetScore > 0) reasons.push(`目标方向重合：${targetOverlap} 项`);
+
+  const audienceText = String(course.audience || '').trim();
+  let stageScore = 8;
+  if (/高中|高一|高二|高三|初中|初一|初二|初三/.test(audienceText)) {
+    const profileStageLabel = formatTaxonomyLabel('stage', profile.schoolStage, taxonomyIndex);
+    stageScore = audienceText.includes(profileStageLabel) ? 15 : 6;
+    if (stageScore < 10) gaps.push(`课程面向：${audienceText}，当前画像学段：${profileStageLabel || '未填写'}`);
+  }
+  score += stageScore;
+  ruleBreakdown.stage = stageScore;
+
+  const difficultyMap = { beginner: 15, basic: 15, intermediate: 10, medium: 10, advanced: 6, hard: 4 };
+  const experienceMap = { beginner: 'beginner', basic: 'basic', medium: 'intermediate', advanced: 'advanced' };
+  const difficultyKey = String(signals.difficultyPath || '').trim().toLowerCase();
+  const experienceKey = String(profile.experienceLevel || '').trim().toLowerCase();
+  const difficultyScore = difficultyKey
+    ? ((experienceMap[experienceKey] === difficultyKey || !experienceKey) ? (difficultyMap[difficultyKey] || 8) : 6)
+    : 8;
+  score += difficultyScore;
+  ruleBreakdown.difficulty = difficultyScore;
+
+  const foundationScore = Array.isArray(course.relatedProjects) && course.relatedProjects.length ? 10 : 6;
+  score += foundationScore;
+  ruleBreakdown.foundation = foundationScore;
+  if (foundationScore > 6) reasons.push('课程与项目实践链路已关联');
+
+  const override = db.get(
+    'SELECT * FROM match_overrides WHERE user_id = ? AND target_type = ? AND target_key = ? ORDER BY updated_at DESC, created_at DESC LIMIT 1',
+    [profile.userId, 'course', course.id]
+  );
+  let overrideState = null;
+  if (override) {
+    overrideState = {
+      id: override.id,
+      overrideType: override.override_type,
+      note: override.note || '',
+      createdBy: Number(override.created_by || 0),
+      createdAt: override.created_at,
+      updatedAt: override.updated_at
+    };
+    if (override.override_type === 'boost') score += 8;
+    if (override.override_type === 'suppress') score = Math.max(0, score - 15);
+    if (override.override_type === 'force_include') eligibilityStatus = 'eligible';
+    if (override.override_type === 'force_exclude') eligibilityStatus = 'ineligible';
+  }
+
+  score = Math.max(0, Math.min(100, Math.round(score)));
+
+  const lastInteraction = db.get(
+    'SELECT interaction_type, created_at FROM match_interactions WHERE user_id = ? AND target_type = ? AND target_key = ? ORDER BY created_at DESC LIMIT 1',
+    [profile.userId, 'course', course.id]
+  );
+
+  return {
+    targetType: 'course',
+    targetKey: course.id,
+    course,
+    score,
+    eligibilityStatus: MATCH_ELIGIBILITY_STATUSES.has(eligibilityStatus) ? eligibilityStatus : 'conditional',
+    ruleBreakdown,
+    reasons,
+    gaps,
+    aiSummary: '',
+    aiAdvice: '',
+    overrideState,
+    interactionState: lastInteraction
+      ? { interactionType: lastInteraction.interaction_type, createdAt: lastInteraction.created_at }
+      : null,
+    computedAt: now(),
+    sourceSnapshot: {
+      profile: {
+        ...profile,
+        schoolStageLabel: formatTaxonomyLabel('stage', profile.schoolStage, taxonomyIndex),
+        interestTagsLabel: formatBestEffortTaxonomyLabels(['discipline', 'skill'], profile.interestTags, taxonomyIndex),
+        skillTagsLabel: formatTaxonomyLabels('skill', profile.skillTags, taxonomyIndex),
+        targetTagsLabel: formatBestEffortTaxonomyLabels(['discipline', 'skill'], profile.targetTags, taxonomyIndex)
+      },
+      course: {
+        id: course.id,
+        title: course.title,
+        tags: courseTags,
+        skillOutcomes: skillOutcomes,
+        difficultyPath: signals.difficultyPath || ''
+      }
+    }
+  };
+}
+
+function computeTeamCandidateMatch(profileRow, candidateProfileRow, candidateUserRow, relationship = {}) {
+  const profile = getCanonicalProfileForMatching(profileRow);
+  const candidateProfile = getCanonicalProfileForMatching(candidateProfileRow);
+  const taxonomyIndex = getActiveTaxonomyIndex();
+  const reasons = [];
+  const gaps = [];
+  const ruleBreakdown = {};
+  let score = 0;
+  let eligibilityStatus = 'eligible';
+
+  const sourceUserId = Number(profile.userId || 0);
+  const candidateUserId = Number(candidateUserRow?.id || candidateProfile.userId || 0);
+  const sharedTeam = Boolean(relationship.sharedTeam);
+  const sharedProject = Boolean(relationship.sharedProject);
+
+  if (!sourceUserId || !candidateUserId || sourceUserId === candidateUserId) {
+    return null;
+  }
+
+  if (sharedTeam || sharedProject) {
+    eligibilityStatus = 'ineligible';
+    ruleBreakdown.collaboration = 0;
+    gaps.push(sharedTeam ? '该学生已是当前队友，无需重复推荐' : '该学生已与当前项目协作，优先保留给新的组队候选');
+  }
+
+  const sameStage = profile.schoolStage && candidateProfile.schoolStage && profile.schoolStage === candidateProfile.schoolStage;
+  const sameClass = profile.className && candidateProfile.className && profile.className === candidateProfile.className;
+  let stageScore = 10;
+  if (sameStage) {
+    stageScore = 15;
+    reasons.push(`学段一致：${formatTaxonomyLabel('stage', profile.schoolStage, taxonomyIndex)}`);
+  } else if (profile.schoolStage && candidateProfile.schoolStage) {
+    stageScore = 4;
+    eligibilityStatus = eligibilityStatus === 'eligible' ? 'conditional' : eligibilityStatus;
+    gaps.push(`学段不同：你是 ${formatTaxonomyLabel('stage', profile.schoolStage, taxonomyIndex)}，对方是 ${formatTaxonomyLabel('stage', candidateProfile.schoolStage, taxonomyIndex)}`);
+  }
+  if (sameClass) {
+    stageScore += 5;
+    reasons.push(`同班协作成本更低：${profile.className}`);
+  } else if (profile.className && candidateProfile.className) {
+    gaps.push(`当前不在同一班级：${profile.className} / ${candidateProfile.className}`);
+  }
+  ruleBreakdown.stage = Math.min(stageScore, 20);
+  score += ruleBreakdown.stage;
+
+  const interestOverlap = countSharedTags(profile.interestTags, candidateProfile.interestTags);
+  const targetOverlap = countSharedTags(profile.targetTags, candidateProfile.targetTags);
+  const directionScore = Math.min(25, interestOverlap * 7.5 + targetOverlap * 5);
+  ruleBreakdown.direction = Math.round(directionScore);
+  score += ruleBreakdown.direction;
+  if (directionScore > 0) {
+    reasons.push(`兴趣/目标方向重合：${interestOverlap + targetOverlap} 项`);
+  } else {
+    gaps.push('兴趣和目标方向重合较少，建议先确认合作题目');
+  }
+
+  const sourceSkills = normalizeStringArray(profile.skillTags);
+  const candidateSkills = normalizeStringArray(candidateProfile.skillTags);
+  const sharedSkillCount = countSharedTags(sourceSkills, candidateSkills);
+  const complementarySkills = candidateSkills.filter(skill => !sourceSkills.includes(skill));
+  const complementScore = Math.min(25, sharedSkillCount * 5 + complementarySkills.length * 5);
+  ruleBreakdown.skills = Math.round(complementScore);
+  score += ruleBreakdown.skills;
+  if (sharedSkillCount > 0) reasons.push(`具备共同技能基础：${sharedSkillCount} 项`);
+  if (complementarySkills.length > 0) reasons.push(`对方可补位技能：${formatTaxonomyLabels('skill', complementarySkills, taxonomyIndex).slice(0, 3).join(' / ')}`);
+  if (!sharedSkillCount && !complementarySkills.length) {
+    gaps.push('双方技能画像都较少，建议先补充技能标签后再匹配');
+    eligibilityStatus = eligibilityStatus === 'eligible' ? 'conditional' : eligibilityStatus;
+  }
+
+  const sourceHours = Number(profile.weeklyHours || 0);
+  const candidateHours = Number(candidateProfile.weeklyHours || 0);
+  let timeScore = 8;
+  if (sourceHours > 0 && candidateHours > 0) {
+    const delta = Math.abs(sourceHours - candidateHours);
+    timeScore = delta <= 2 ? 15 : (delta <= 5 ? 10 : 4);
+    if (timeScore >= 10) reasons.push('每周可投入时间相近');
+    else gaps.push(`每周可投入时间差异较大：${sourceHours}h / ${candidateHours}h`);
+  } else {
+    gaps.push('建议双方补充每周可投入时间，便于判断协作节奏');
+  }
+  ruleBreakdown.time = timeScore;
+  score += timeScore;
+
+  const sourceTeamSize = parseTeamSizePreference(profile.preferredTeamSize);
+  const candidateTeamSize = parseTeamSizePreference(candidateProfile.preferredTeamSize);
+  let teamSizeScore = 6;
+  if (sourceTeamSize && candidateTeamSize) {
+    teamSizeScore = teamSizeRangesOverlap(sourceTeamSize, candidateTeamSize) ? 10 : 4;
+    if (teamSizeScore >= 10) reasons.push('组队规模偏好一致');
+    else gaps.push(`组队规模偏好不同：${profile.preferredTeamSize || '未填'} / ${candidateProfile.preferredTeamSize || '未填'}`);
+  } else if (profile.preferredTeamSize || candidateProfile.preferredTeamSize) {
+    teamSizeScore = 8;
+  } else {
+    gaps.push('建议补充偏好组队人数，便于后续成队');
+  }
+  ruleBreakdown.teamSize = teamSizeScore;
+  score += teamSizeScore;
+
+  const experienceScore = profile.experienceLevel && candidateProfile.experienceLevel
+    ? (profile.experienceLevel === candidateProfile.experienceLevel ? 5 : 3)
+    : 3;
+  ruleBreakdown.readiness = experienceScore;
+  score += experienceScore;
+  if (experienceScore >= 5) reasons.push('经验层级接近，协作节奏更稳定');
+
+  const override = db.get(
+    'SELECT * FROM match_overrides WHERE user_id = ? AND target_type = ? AND target_key = ? ORDER BY updated_at DESC, created_at DESC LIMIT 1',
+    [profile.userId, 'team_candidate', String(candidateUserId)]
+  );
+  let overrideState = null;
+  if (override) {
+    overrideState = {
+      id: override.id,
+      overrideType: override.override_type,
+      note: override.note || '',
+      createdBy: Number(override.created_by || 0),
+      createdAt: override.created_at,
+      updatedAt: override.updated_at
+    };
+    if (override.override_type === 'boost') score += 8;
+    if (override.override_type === 'suppress') score = Math.max(0, score - 15);
+    if (override.override_type === 'force_include') eligibilityStatus = 'eligible';
+    if (override.override_type === 'force_exclude') eligibilityStatus = 'ineligible';
+  }
+
+  score = Math.max(0, Math.min(100, Math.round(score)));
+
+  const lastInteraction = db.get(
+    'SELECT interaction_type, created_at FROM match_interactions WHERE user_id = ? AND target_type = ? AND target_key = ? ORDER BY created_at DESC LIMIT 1',
+    [profile.userId, 'team_candidate', String(candidateUserId)]
+  );
+
+  return {
+    targetType: 'team_candidate',
+    targetKey: String(candidateUserId),
+    teamCandidate: buildTeamCandidatePreview(candidateUserRow, candidateProfileRow, relationship.candidateContext || null),
+    score,
+    eligibilityStatus: MATCH_ELIGIBILITY_STATUSES.has(eligibilityStatus) ? eligibilityStatus : 'conditional',
+    ruleBreakdown,
+    reasons,
+    gaps,
+    aiSummary: '',
+    aiAdvice: '',
+    overrideState,
+    interactionState: lastInteraction
+      ? { interactionType: lastInteraction.interaction_type, createdAt: lastInteraction.created_at }
+      : null,
+    computedAt: now(),
+    sourceSnapshot: {
+      profile: {
+        ...profile,
+        schoolStageLabel: formatTaxonomyLabel('stage', profile.schoolStage, taxonomyIndex),
+        interestTagsLabel: formatBestEffortTaxonomyLabels(['discipline', 'skill'], profile.interestTags, taxonomyIndex),
+        skillTagsLabel: formatTaxonomyLabels('skill', profile.skillTags, taxonomyIndex),
+        targetTagsLabel: formatBestEffortTaxonomyLabels(['discipline', 'skill'], profile.targetTags, taxonomyIndex)
+      },
+      teamCandidate: {
+        userId: candidateUserId,
+        name: candidateUserRow?.name || '',
+        schoolStage: candidateProfile.schoolStage,
+        schoolStageLabel: formatTaxonomyLabel('stage', candidateProfile.schoolStage, taxonomyIndex),
+        className: candidateProfile.className || '',
+        interestTags: candidateProfile.interestTags,
+        interestTagsLabel: formatBestEffortTaxonomyLabels(['discipline', 'skill'], candidateProfile.interestTags, taxonomyIndex),
+        skillTags: candidateProfile.skillTags,
+        skillTagsLabel: formatTaxonomyLabels('skill', candidateProfile.skillTags, taxonomyIndex),
+        targetTags: candidateProfile.targetTags,
+        targetTagsLabel: formatBestEffortTaxonomyLabels(['discipline', 'skill'], candidateProfile.targetTags, taxonomyIndex),
+        weeklyHours: candidateProfile.weeklyHours,
+        experienceLevel: candidateProfile.experienceLevel || '',
+        preferredTeamSize: candidateProfile.preferredTeamSize || '',
+        sharedTeam,
+        sharedProject
+      }
+    }
+  };
+}
+
+async function buildAiMatchAdvice(match, aiKey) {
+  if (!aiKey) return { aiSummary: '', aiAdvice: '' };
+  try {
+    let targetSummary = { targetType: match.targetType };
+    if (match.targetType === 'project_topic') {
+      targetSummary = {
+        targetType: 'project_topic',
+        projectTopic: {
+          id: match.projectTopic?.id,
+          title: match.projectTopic?.title,
+          difficulty: match.projectTopic?.difficulty || '',
+          tags: match.projectTopic?.tags || [],
+          requiredSkills: match.projectTopic?.requiredSkills || []
+        }
+      };
+    } else if (match.targetType === 'course') {
+      targetSummary = {
+        targetType: 'course',
+        course: {
+          id: match.course?.id,
+          title: match.course?.title,
+          tags: match.course?.tags || [],
+          skillOutcomes: match.course?.skillOutcomes || [],
+          difficultyPath: match.sourceSnapshot?.course?.difficultyPath || ''
+        }
+      };
+    } else if (match.targetType === 'team_candidate') {
+      targetSummary = {
+        targetType: 'team_candidate',
+        teamCandidate: {
+          userId: match.teamCandidate?.userId,
+          name: match.teamCandidate?.name || '',
+          schoolStage: match.teamCandidate?.schoolStage || '',
+          className: match.teamCandidate?.className || '',
+          skillTags: match.teamCandidate?.skillTags || [],
+          interestTags: match.teamCandidate?.interestTags || [],
+          preferredTeamSize: match.teamCandidate?.preferredTeamSize || ''
+        }
+      };
+    } else {
+      targetSummary = {
+        targetType: 'competition',
+        competition: {
+          slug: match.competition?.slug || '',
+          title: match.competition?.title || '',
+          difficulty: match.competition?.difficulty || '',
+          schoolStage: match.competition?.schoolStage || [],
+          tags: match.competition?.tags || []
+        }
+      };
+    }
+    const result = await requestAiChat([
+      {
+        role: 'system',
+        content: '你是校内匹配助手。只能根据给定的结构化信息，输出简短、务实、无夸张的建议。'
+      },
+      {
+        role: 'user',
+        content: JSON.stringify({
+          score: match.score,
+          eligibilityStatus: match.eligibilityStatus,
+          reasons: match.reasons,
+          gaps: match.gaps,
+          ...targetSummary,
+          profile: match.sourceSnapshot.profile
+        })
+      }
+    ], aiKey);
+    const content = String(result.content || '').trim();
+    if (!content) return { aiSummary: '', aiAdvice: '' };
+    const [summary, ...rest] = content.split(/\n+/).filter(Boolean);
+    return {
+      aiSummary: summary.slice(0, 160),
+      aiAdvice: rest.join(' ').slice(0, 320) || summary.slice(0, 320)
+    };
+  } catch {
+    return { aiSummary: '', aiAdvice: '' };
+  }
+}
+
+function persistMatch(userId, match, ruleVersion = MATCH_RULE_VERSION, aiVersion = MATCH_AI_VERSION) {
+  const existing = db.get(
+    'SELECT id FROM match_results WHERE user_id = ? AND target_type = ? AND target_key = ?',
+    [userId, match.targetType, match.targetKey]
+  );
+  if (existing) {
+    db.run(
+      `UPDATE match_results
+       SET score = ?, eligibility_status = ?, rule_breakdown = ?, reasons = ?, gaps = ?, ai_summary = ?, ai_advice = ?, rule_version = ?, ai_version = ?, source_snapshot = ?, computed_at = ?, expires_at = ?, updated_at = ?
+       WHERE id = ?`,
+      [
+        match.score,
+        match.eligibilityStatus,
+        JSON.stringify(match.ruleBreakdown || {}),
+        JSON.stringify(match.reasons || []),
+        JSON.stringify(match.gaps || []),
+        match.aiSummary || '',
+        match.aiAdvice || '',
+        ruleVersion,
+        aiVersion,
+        JSON.stringify(match.sourceSnapshot || {}),
+        match.computedAt,
+        '',
+        now(),
+        existing.id
+      ]
+    );
+    return existing.id;
+  }
+  const createdAt = now();
+  const info = db.run(
+    `INSERT INTO match_results
+     (user_id, target_type, target_key, score, eligibility_status, rule_breakdown, reasons, gaps, ai_summary, ai_advice, rule_version, ai_version, source_snapshot, computed_at, expires_at, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      userId,
+      match.targetType,
+      match.targetKey,
+      match.score,
+      match.eligibilityStatus,
+      JSON.stringify(match.ruleBreakdown || {}),
+      JSON.stringify(match.reasons || []),
+      JSON.stringify(match.gaps || []),
+      match.aiSummary || '',
+      match.aiAdvice || '',
+      ruleVersion,
+      aiVersion,
+      JSON.stringify(match.sourceSnapshot || {}),
+      match.computedAt,
+      '',
+      createdAt,
+      createdAt
+    ]
+  );
+  return info.lastInsertRowid;
+}
+
+function mapMatchResultRow(row, competitionMap = {}, projectTopicMap = {}, courseMap = {}, teamCandidateMap = {}) {
+  if (!row) return null;
+  const competition = competitionMap[row.target_key];
+  const projectTopic = projectTopicMap[row.target_key];
+  const course = courseMap[row.target_key];
+  const teamCandidate = teamCandidateMap[row.target_key];
+  const override = db.get(
+    'SELECT * FROM match_overrides WHERE user_id = ? AND target_type = ? AND target_key = ? ORDER BY updated_at DESC, created_at DESC LIMIT 1',
+    [row.user_id, row.target_type, row.target_key]
+  );
+  const lastInteraction = db.get(
+    'SELECT interaction_type, created_at FROM match_interactions WHERE user_id = ? AND target_type = ? AND target_key = ? ORDER BY created_at DESC LIMIT 1',
+    [row.user_id, row.target_type, row.target_key]
+  );
+  return {
+    id: Number(row.id),
+    targetType: row.target_type,
+    targetKey: row.target_key,
+    score: Number(row.score || 0),
+    eligibilityStatus: row.eligibility_status,
+    ruleBreakdown: safeParseJsonText(row.rule_breakdown, {}),
+    reasons: safeParseJsonText(row.reasons, []),
+    gaps: safeParseJsonText(row.gaps, []),
+    aiSummary: row.ai_summary || '',
+    aiAdvice: row.ai_advice || '',
+    overrideState: override ? {
+      id: override.id,
+      overrideType: override.override_type,
+      note: override.note || '',
+      createdBy: Number(override.created_by || 0),
+      createdAt: override.created_at,
+      updatedAt: override.updated_at
+    } : null,
+    interactionState: lastInteraction ? {
+      interactionType: lastInteraction.interaction_type,
+      createdAt: lastInteraction.created_at
+    } : null,
+    computedAt: row.computed_at,
+    competition,
+    projectTopic,
+    course,
+    teamCandidate
+  };
+}
+
+function resolveMatchCandidateBucket({ targetType = '', eligibilityStatus = '', overrideState = null, interactionState = null, registrationStatus = '' } = {}) {
+  const overrideType = String(overrideState?.overrideType || '').trim();
+  if (overrideType === 'force_exclude' || overrideType === 'suppress') return 'manually_suppressed';
+  if (targetType === 'competition') {
+    if (registrationStatus === 'needs_materials') return 'needs_materials';
+    if (registrationStatus) return 'already_registered';
+  }
+  if (String(interactionState?.interactionType || '').trim() === 'ignore') return 'ignored';
+  if (eligibilityStatus === 'eligible') return 'ready_to_nudge';
+  if (eligibilityStatus === 'conditional') return 'trainable';
+  return 'hold';
+}
+
+function formatMatchCandidateBucketLabel(bucket) {
+  return MATCH_CANDIDATE_BUCKET_LABELS[bucket] || MATCH_CANDIDATE_BUCKET_LABELS.hold;
+}
+
+function mapMatchReminder(row) {
+  if (!row) return null;
+  return {
+    id: Number(row.id || 0),
+    userId: Number(row.user_id || 0),
+    targetType: row.target_type || '',
+    targetKey: row.target_key || '',
+    title: row.title || '',
+    body: row.body || '',
+    candidateBucket: row.candidate_bucket || '',
+    createdBy: Number(row.created_by || 0),
+    createdAt: row.created_at || '',
+    readAt: row.read_at || '',
+    studentName: row.student_name || '',
+    studentEmail: row.student_email || '',
+    teacherName: row.teacher_name || ''
+  };
+}
+
+function sortCandidateItems(items = []) {
+  return [...items].sort((a, b) => {
+    const bucketDiff = (MATCH_CANDIDATE_BUCKET_ORDER[a.candidateBucket] ?? 99) - (MATCH_CANDIDATE_BUCKET_ORDER[b.candidateBucket] ?? 99);
+    if (bucketDiff !== 0) return bucketDiff;
+    return Number(b.score || 0) - Number(a.score || 0);
+  });
+}
+
+function sortMatchItems(items = []) {
+  return [...items].sort((a, b) => {
+    const eligibilityDiff = (MATCH_ELIGIBILITY_ORDER[a.eligibilityStatus] ?? 9) - (MATCH_ELIGIBILITY_ORDER[b.eligibilityStatus] ?? 9);
+    if (eligibilityDiff !== 0) return eligibilityDiff;
+    return Number(b.score || 0) - Number(a.score || 0);
+  });
+}
+
+function resolveMatchReminderTargetConfig(targetType = '', targetKey = '') {
+  const normalizedType = String(targetType || '').trim();
+  const normalizedKey = String(targetKey || '').trim();
+  if (!normalizedType || !normalizedKey) return null;
+  if (normalizedType === 'competition') {
+    return {
+      targetType: normalizedType,
+      targetKey: normalizedKey,
+      listCandidates: ({ actor, aiKey }) => listCompetitionCandidates({ slug: normalizedKey, actor, aiKey })
+    };
+  }
+  if (normalizedType === 'project_topic') {
+    const topicId = Number(normalizedKey);
+    if (!topicId) return null;
+    return {
+      targetType: normalizedType,
+      targetKey: normalizedKey,
+      listCandidates: ({ actor, aiKey }) => listProjectTopicCandidates({ topicId, actor, aiKey })
+    };
+  }
+  if (normalizedType === 'course') {
+    return {
+      targetType: normalizedType,
+      targetKey: normalizedKey,
+      listCandidates: ({ actor, aiKey }) => listCourseCandidates({ courseId: normalizedKey, actor, aiKey })
+    };
+  }
+  if (normalizedType === 'team_candidate') {
+    const userId = Number(normalizedKey);
+    if (!userId) return null;
+    return {
+      targetType: normalizedType,
+      targetKey: normalizedKey,
+      listCandidates: ({ actor, aiKey }) => listStudentsForTeamCandidateTarget({ candidateId: userId, actor, aiKey })
+    };
+  }
+  return null;
+}
+
+async function createMatchReminders({ targetType, targetKey, title, body, candidateBucket = '', studentIds = [], actor = null, aiKey = '' }) {
+  const config = resolveMatchReminderTargetConfig(targetType, targetKey);
+  if (!config) return { error: '匹配提醒目标无效' };
+  let normalizedStudentIds = Array.isArray(studentIds)
+    ? studentIds.map(id => Number(id)).filter(id => Number.isFinite(id) && id > 0)
+    : [];
+  if (!normalizedStudentIds.length && candidateBucket) {
+    const candidates = await config.listCandidates({ actor, aiKey });
+    normalizedStudentIds = candidates
+      .filter(item => item.candidateBucket === candidateBucket)
+      .map(item => Number(item.userId))
+      .filter(id => Number.isFinite(id) && id > 0);
+  }
+  normalizedStudentIds = Array.from(new Set(normalizedStudentIds));
+  if (!normalizedStudentIds.length) {
+    return { error: candidateBucket ? '该候选分组下暂无学生可提醒' : '至少选择一名学生' };
+  }
+  const createdAt = now();
+  const reminderIds = [];
+  db.transaction((trx) => {
+    normalizedStudentIds.forEach((userId) => {
+      const info = trx.run(
+        `INSERT INTO match_reminders (user_id, target_type, target_key, title, body, candidate_bucket, created_by, created_at, read_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, '')`,
+        [userId, config.targetType, config.targetKey, title, body, candidateBucket || '', Number(actor?.id || 0), createdAt]
+      );
+      reminderIds.push(info.lastInsertRowid);
+    });
+  });
+  normalizedStudentIds.forEach((userId) => {
+    logMatchEvent({
+      userId,
+      targetType: config.targetType,
+      targetKey: config.targetKey,
+      eventType: 'teacher_reminder_sent',
+      payload: {
+        title,
+        candidateBucket: candidateBucket || '',
+        source: 'admin.match-reminders'
+      }
+    });
+  });
+  return {
+    success: true,
+    count: normalizedStudentIds.length,
+    reminderIds,
+    candidateBucket: candidateBucket || '',
+    targetType: config.targetType,
+    targetKey: config.targetKey
+  };
+}
+
+function listMatchReminders({ targetType = '', targetKey = '', actor = null } = {}) {
+  const params = [String(targetType || '').trim(), String(targetKey || '').trim()];
+  let sql = `
+    SELECT mr.*, u.name AS student_name, u.email AS student_email, t.name AS teacher_name
+    FROM match_reminders mr
+    JOIN users u ON u.id = mr.user_id
+    LEFT JOIN users t ON t.id = mr.created_by
+    WHERE mr.target_type = ? AND mr.target_key = ?
+  `;
+  if (actor?.role === 'student') {
+    sql += ' AND mr.user_id = ?';
+    params.push(Number(actor.id || 0));
+  }
+  sql += ' ORDER BY mr.created_at DESC, mr.id DESC';
+  return db.all(sql, params).map(mapMatchReminder);
+}
+
+function listUserMatchReminders({ userId, includeRead = true } = {}) {
+  const params = [Number(userId || 0)];
+  let sql = `
+    SELECT mr.*, u.name AS student_name, u.email AS student_email, t.name AS teacher_name
+    FROM match_reminders mr
+    JOIN users u ON u.id = mr.user_id
+    LEFT JOIN users t ON t.id = mr.created_by
+    WHERE mr.user_id = ?
+  `;
+  if (!includeRead) {
+    sql += " AND (mr.read_at IS NULL OR mr.read_at = '')";
+  }
+  sql += ' ORDER BY mr.read_at ASC, mr.created_at DESC, mr.id DESC';
+  return db.all(sql, params).map(mapMatchReminder);
+}
+
+function markMatchReminderRead({ reminderId, targetType = '', targetKey = '', actor = null } = {}) {
+  const params = [now(), Number(reminderId || 0), String(targetType || '').trim(), String(targetKey || '').trim()];
+  let sql = 'UPDATE match_reminders SET read_at = ? WHERE id = ? AND target_type = ? AND target_key = ?';
+  if (actor?.role === 'student') {
+    sql += ' AND user_id = ?';
+    params.push(Number(actor.id || 0));
+  }
+  return db.run(sql, params);
+}
+
+async function recomputeCompetitionMatches({ userIds = [], actor = null, competitionSlugs = [], aiKey = '', preferCached = false, forceRefresh = false } = {}) {
+  const normalizedUserIds = Array.from(new Set(userIds.map(id => Number(id)).filter(id => Number.isFinite(id) && id > 0)));
+  if (!normalizedUserIds.length) return [];
+  const courseMap = buildCoursePreviewMap();
+  const competitions = listPublishedCompetitions()
+    .filter(item => !competitionSlugs.length || competitionSlugs.includes(item.slug));
+  const competitionMap = competitions.reduce((acc, item) => {
+    acc[item.slug] = enrichCompetition(item, courseMap);
+    return acc;
+  }, {});
+
+  const items = [];
+  for (const userId of normalizedUserIds) {
+    seedStudentProfile(userId);
+    const cachedRows = preferCached && !forceRefresh
+      ? db.all('SELECT * FROM match_results WHERE user_id = ? AND target_type = ? ORDER BY score DESC, updated_at DESC', [userId, 'competition'])
+      : [];
+    if (cachedRows.length && !competitionSlugs.length) {
+      cachedRows.forEach((row) => {
+        const item = mapMatchResultRow(row, competitionMap);
+        if (item) items.push(item);
+      });
+      continue;
+    }
+    const profileRow = seedStudentProfile(userId);
+    for (const competition of competitions) {
+      const match = computeCompetitionMatch(profileRow, competition, courseMap);
+      const ai = await buildAiMatchAdvice(match, aiKey);
+      match.aiSummary = ai.aiSummary;
+      match.aiAdvice = ai.aiAdvice;
+      match.computedAt = now();
+      const id = persistMatch(userId, match, MATCH_RULE_VERSION, MATCH_AI_VERSION);
+      logMatchEvent({
+        userId,
+        targetType: 'competition',
+        targetKey: competition.slug,
+        eventType: forceRefresh ? 'manual_recompute' : 'competition_match_computed',
+        payload: { score: match.score, actorId: actor?.id || null }
+      });
+      items.push({
+        id,
+        targetType: match.targetType,
+        targetKey: match.targetKey,
+        score: match.score,
+        eligibilityStatus: match.eligibilityStatus,
+        ruleBreakdown: match.ruleBreakdown,
+        reasons: match.reasons,
+        gaps: match.gaps,
+        aiSummary: match.aiSummary,
+        aiAdvice: match.aiAdvice,
+        overrideState: match.overrideState,
+        interactionState: match.interactionState,
+        computedAt: match.computedAt,
+        competition: match.competition
+      });
+    }
+  }
+
+  return sortMatchItems(items);
+}
+
+async function recomputeProjectTopicMatches({ userIds = [], actor = null, projectTopicIds = [], aiKey = '', preferCached = false, forceRefresh = false } = {}) {
+  const normalizedUserIds = Array.from(new Set(userIds.map(id => Number(id)).filter(id => Number.isFinite(id) && id > 0)));
+  if (!normalizedUserIds.length) return [];
+  const courseMap = buildCoursePreviewMap();
+  const topics = listPublishedProjectTopics()
+    .filter(item => !projectTopicIds.length || projectTopicIds.includes(Number(item.id)));
+  const projectTopicMap = topics.reduce((acc, item) => {
+    acc[String(item.id)] = item;
+    return acc;
+  }, {});
+
+  const items = [];
+  for (const userId of normalizedUserIds) {
+    seedStudentProfile(userId);
+    const cachedRows = preferCached && !forceRefresh
+      ? db.all('SELECT * FROM match_results WHERE user_id = ? AND target_type = ? ORDER BY score DESC, updated_at DESC', [userId, 'project_topic'])
+      : [];
+    if (cachedRows.length && !projectTopicIds.length) {
+      cachedRows.forEach((row) => {
+        const item = mapMatchResultRow(row, {}, projectTopicMap);
+        if (item) items.push(item);
+      });
+      continue;
+    }
+    const profileRow = seedStudentProfile(userId);
+    for (const topic of topics) {
+      const match = computeProjectTopicMatch(profileRow, topic, courseMap);
+      const ai = await buildAiMatchAdvice(match, aiKey);
+      match.aiSummary = ai.aiSummary;
+      match.aiAdvice = ai.aiAdvice;
+      match.computedAt = now();
+      const id = persistMatch(userId, match, PROJECT_TOPIC_MATCH_RULE_VERSION, PROJECT_TOPIC_MATCH_AI_VERSION);
+      logMatchEvent({
+        userId,
+        targetType: 'project_topic',
+        targetKey: String(topic.id),
+        eventType: forceRefresh ? 'manual_recompute' : 'project_topic_match_computed',
+        payload: { score: match.score, actorId: actor?.id || null }
+      });
+      items.push({
+        id,
+        targetType: match.targetType,
+        targetKey: match.targetKey,
+        score: match.score,
+        eligibilityStatus: match.eligibilityStatus,
+        ruleBreakdown: match.ruleBreakdown,
+        reasons: match.reasons,
+        gaps: match.gaps,
+        aiSummary: match.aiSummary,
+        aiAdvice: match.aiAdvice,
+        overrideState: match.overrideState,
+        interactionState: match.interactionState,
+        computedAt: match.computedAt,
+        projectTopic: match.projectTopic
+      });
+    }
+  }
+
+  return sortMatchItems(items);
+}
+
+async function recomputeCourseMatches({ userIds = [], actor = null, courseIds = [], aiKey = '', preferCached = false, forceRefresh = false } = {}) {
+  const normalizedUserIds = Array.from(new Set(userIds.map(id => Number(id)).filter(id => Number.isFinite(id) && id > 0)));
+  if (!normalizedUserIds.length) return [];
+  const courses = loadCourseCatalog()
+    .filter(item => item.status === 'published')
+    .filter(item => !courseIds.length || courseIds.includes(String(item.id)));
+  const courseMap = courses.reduce((acc, item) => {
+    acc[String(item.id)] = item;
+    return acc;
+  }, {});
+
+  const items = [];
+  for (const userId of normalizedUserIds) {
+    seedStudentProfile(userId);
+    const cachedRows = preferCached && !forceRefresh
+      ? db.all('SELECT * FROM match_results WHERE user_id = ? AND target_type = ? ORDER BY score DESC, updated_at DESC', [userId, 'course'])
+      : [];
+    if (cachedRows.length && !courseIds.length) {
+      cachedRows.forEach((row) => {
+        const item = mapMatchResultRow(row, {}, {}, courseMap);
+        if (item) items.push(item);
+      });
+      continue;
+    }
+    const profileRow = seedStudentProfile(userId);
+    for (const course of courses) {
+      const match = computeCourseMatch(profileRow, course);
+      const ai = await buildAiMatchAdvice(match, aiKey);
+      match.aiSummary = ai.aiSummary;
+      match.aiAdvice = ai.aiAdvice;
+      match.computedAt = now();
+      const id = persistMatch(userId, match, COURSE_MATCH_RULE_VERSION, COURSE_MATCH_AI_VERSION);
+      logMatchEvent({
+        userId,
+        targetType: 'course',
+        targetKey: String(course.id),
+        eventType: forceRefresh ? 'manual_recompute' : 'course_match_computed',
+        payload: { score: match.score, actorId: actor?.id || null }
+      });
+      items.push({
+        id,
+        targetType: match.targetType,
+        targetKey: match.targetKey,
+        score: match.score,
+        eligibilityStatus: match.eligibilityStatus,
+        ruleBreakdown: match.ruleBreakdown,
+        reasons: match.reasons,
+        gaps: match.gaps,
+        aiSummary: match.aiSummary,
+        aiAdvice: match.aiAdvice,
+        overrideState: match.overrideState,
+        interactionState: match.interactionState,
+        computedAt: match.computedAt,
+        course: match.course
+      });
+    }
+  }
+
+  return sortMatchItems(items);
+}
+
+async function recomputeTeamCandidateMatches({ userIds = [], actor = null, teamCandidateIds = [], aiKey = '', preferCached = false, forceRefresh = false } = {}) {
+  const normalizedUserIds = Array.from(new Set(userIds.map(id => Number(id)).filter(id => Number.isFinite(id) && id > 0)));
+  if (!normalizedUserIds.length) return [];
+  const candidateFilter = new Set(teamCandidateIds.map(id => Number(id)).filter(id => Number.isFinite(id) && id > 0));
+  const studentRows = listStudentUsers();
+  const studentMap = studentRows.reduce((acc, row) => {
+    acc[Number(row.id)] = row;
+    return acc;
+  }, {});
+  const profileRows = db.all('SELECT * FROM student_profiles');
+  const profileMap = profileRows.reduce((acc, row) => {
+    acc[Number(row.user_id)] = row;
+    return acc;
+  }, {});
+  const collaborationMap = getStudentCollaborationContext(studentRows.map(row => Number(row.id)));
+
+  const items = [];
+  for (const userId of normalizedUserIds) {
+    seedStudentProfile(userId);
+    const cachedRows = preferCached && !forceRefresh
+      ? db.all('SELECT * FROM match_results WHERE user_id = ? AND target_type = ? ORDER BY score DESC, updated_at DESC', [userId, 'team_candidate'])
+      : [];
+    if (cachedRows.length && !candidateFilter.size) {
+      const teamCandidateMap = {};
+      cachedRows.forEach((row) => {
+        const candidateId = Number(row.target_key || 0);
+        if (!candidateId || !studentMap[candidateId]) return;
+        teamCandidateMap[row.target_key] = buildTeamCandidatePreview(
+          studentMap[candidateId],
+          profileMap[candidateId] || seedStudentProfile(candidateId),
+          collaborationMap.get(candidateId) || null
+        );
+      });
+      cachedRows.forEach((row) => {
+        const item = mapMatchResultRow(row, {}, {}, {}, teamCandidateMap);
+        if (item) items.push(item);
+      });
+      continue;
+    }
+
+    const profileRow = profileMap[userId] || seedStudentProfile(userId);
+    const sourceContext = collaborationMap.get(userId) || {
+      teamIds: new Set(),
+      projectIds: new Set(),
+      teammateIds: new Set(),
+      projectPartnerIds: new Set()
+    };
+
+    for (const candidate of studentRows) {
+      const candidateId = Number(candidate.id || 0);
+      if (!candidateId || candidateId === userId) continue;
+      if (candidateFilter.size && !candidateFilter.has(candidateId)) continue;
+      const candidateProfileRow = profileMap[candidateId] || seedStudentProfile(candidateId);
+      const candidateContext = collaborationMap.get(candidateId) || null;
+      const match = computeTeamCandidateMatch(profileRow, candidateProfileRow, candidate, {
+        sharedTeam: sourceContext.teammateIds.has(candidateId),
+        sharedProject: sourceContext.projectPartnerIds.has(candidateId),
+        candidateContext
+      });
+      if (!match) continue;
+      const ai = await buildAiMatchAdvice(match, aiKey);
+      match.aiSummary = ai.aiSummary;
+      match.aiAdvice = ai.aiAdvice;
+      match.computedAt = now();
+      const id = persistMatch(userId, match, TEAM_CANDIDATE_MATCH_RULE_VERSION, TEAM_CANDIDATE_MATCH_AI_VERSION);
+      logMatchEvent({
+        userId,
+        targetType: 'team_candidate',
+        targetKey: String(candidateId),
+        eventType: forceRefresh ? 'manual_recompute' : 'team_candidate_match_computed',
+        payload: { score: match.score, actorId: actor?.id || null }
+      });
+      items.push({
+        id,
+        targetType: match.targetType,
+        targetKey: match.targetKey,
+        score: match.score,
+        eligibilityStatus: match.eligibilityStatus,
+        ruleBreakdown: match.ruleBreakdown,
+        reasons: match.reasons,
+        gaps: match.gaps,
+        aiSummary: match.aiSummary,
+        aiAdvice: match.aiAdvice,
+        overrideState: match.overrideState,
+        interactionState: match.interactionState,
+        computedAt: match.computedAt,
+        teamCandidate: match.teamCandidate
+      });
+    }
+  }
+
+  return sortMatchItems(items);
+}
+
+async function getCompetitionMatchDetail({ userId, slug, actor, aiKey }) {
+  const items = await recomputeCompetitionMatches({
+    userIds: [userId],
+    actor,
+    competitionSlugs: [slug],
+    aiKey,
+    preferCached: true
+  });
+  return items.find(item => item.targetKey === slug) || null;
+}
+
+async function getProjectTopicMatchDetail({ userId, topicId, actor, aiKey }) {
+  const items = await recomputeProjectTopicMatches({
+    userIds: [userId],
+    actor,
+    projectTopicIds: [Number(topicId)],
+    aiKey,
+    preferCached: true
+  });
+  return items.find(item => String(item.targetKey) === String(topicId)) || null;
+}
+
+async function getCourseMatchDetail({ userId, courseId, actor, aiKey }) {
+  const items = await recomputeCourseMatches({
+    userIds: [userId],
+    actor,
+    courseIds: [String(courseId)],
+    aiKey,
+    preferCached: true
+  });
+  return items.find(item => String(item.targetKey) === String(courseId)) || null;
+}
+
+async function getTeamCandidateMatchDetail({ userId, candidateId, actor, aiKey }) {
+  const items = await recomputeTeamCandidateMatches({
+    userIds: [userId],
+    actor,
+    teamCandidateIds: [Number(candidateId)],
+    aiKey,
+    preferCached: true
+  });
+  return items.find(item => Number(item.targetKey) === Number(candidateId)) || null;
+}
+
+async function listProjectTopicCandidates({ topicId, actor, aiKey }) {
+  const studentRows = db.all('SELECT id, name, email FROM users WHERE role = ?', ['student']);
+  const matches = await recomputeProjectTopicMatches({
+    userIds: studentRows.map(row => Number(row.id)),
+    actor,
+    projectTopicIds: [Number(topicId)],
+    aiKey,
+    preferCached: true
+  });
+  return sortCandidateItems(matches.map((item) => {
+    const matchRow = db.get('SELECT user_id FROM match_results WHERE id = ?', [item.id]);
+    const userId = Number(matchRow?.user_id || 0);
+    const row = studentRows.find(entry => Number(entry.id) === userId);
+    const bucket = resolveMatchCandidateBucket({
+      targetType: 'project_topic',
+      eligibilityStatus: item.eligibilityStatus,
+      overrideState: item.overrideState,
+      interactionState: item.interactionState
+    });
+    return {
+      ...item,
+      userId,
+      studentName: row?.name || '',
+      studentEmail: row?.email || '',
+      candidateBucket: bucket,
+      candidateBucketLabel: formatMatchCandidateBucketLabel(bucket)
+    };
+  }));
+}
+
+async function listCourseCandidates({ courseId, actor, aiKey }) {
+  const studentRows = db.all('SELECT id, name, email FROM users WHERE role = ?', ['student']);
+  const matches = await recomputeCourseMatches({
+    userIds: studentRows.map(row => Number(row.id)),
+    actor,
+    courseIds: [String(courseId)],
+    aiKey,
+    preferCached: true
+  });
+  return sortCandidateItems(matches.map((item) => {
+    const matchRow = db.get('SELECT user_id FROM match_results WHERE id = ?', [item.id]);
+    const userId = Number(matchRow?.user_id || 0);
+    const row = studentRows.find(entry => Number(entry.id) === userId);
+    const bucket = resolveMatchCandidateBucket({
+      targetType: 'course',
+      eligibilityStatus: item.eligibilityStatus,
+      overrideState: item.overrideState,
+      interactionState: item.interactionState
+    });
+    return {
+      ...item,
+      userId,
+      studentName: row?.name || '',
+      studentEmail: row?.email || '',
+      candidateBucket: bucket,
+      candidateBucketLabel: formatMatchCandidateBucketLabel(bucket)
+    };
+  }));
+}
+
+async function listTeamCandidateCandidates({ userId, actor, aiKey }) {
+  const studentRows = listStudentUsers();
+  const row = studentRows.find(entry => Number(entry.id) === Number(userId));
+  if (!row) return [];
+  const matches = await recomputeTeamCandidateMatches({
+    userIds: [Number(userId)],
+    actor,
+    aiKey,
+    preferCached: true
+  });
+  return sortCandidateItems(matches.map((item) => {
+    const bucket = resolveMatchCandidateBucket({
+      targetType: 'team_candidate',
+      eligibilityStatus: item.eligibilityStatus,
+      overrideState: item.overrideState,
+      interactionState: item.interactionState
+    });
+    return {
+      ...item,
+      userId: Number(userId),
+      studentName: row.name || '',
+      studentEmail: row.email || '',
+      candidateBucket: bucket,
+      candidateBucketLabel: formatMatchCandidateBucketLabel(bucket)
+    };
+  }));
+}
+
+async function listStudentsForTeamCandidateTarget({ candidateId, actor, aiKey }) {
+  const studentRows = listStudentUsers();
+  const candidateUserId = Number(candidateId || 0);
+  if (!candidateUserId) return [];
+  const sourceStudentIds = studentRows
+    .map(row => Number(row.id))
+    .filter(id => id > 0 && id !== candidateUserId);
+  const sourceMap = studentRows.reduce((acc, row) => {
+    acc[Number(row.id)] = row;
+    return acc;
+  }, {});
+  const matches = await recomputeTeamCandidateMatches({
+    userIds: sourceStudentIds,
+    actor,
+    teamCandidateIds: [candidateUserId],
+    aiKey,
+    preferCached: true
+  });
+  return sortCandidateItems(matches.map((item) => {
+    const matchRow = db.get('SELECT user_id FROM match_results WHERE id = ?', [item.id]);
+    const userId = Number(matchRow?.user_id || 0);
+    const sourceRow = sourceMap[userId];
+    const bucket = resolveMatchCandidateBucket({
+      targetType: 'team_candidate',
+      eligibilityStatus: item.eligibilityStatus,
+      overrideState: item.overrideState,
+      interactionState: item.interactionState
+    });
+    return {
+      ...item,
+      userId,
+      studentName: sourceRow?.name || '',
+      studentEmail: sourceRow?.email || '',
+      candidateBucket: bucket,
+      candidateBucketLabel: formatMatchCandidateBucketLabel(bucket)
+    };
+  }));
+}
+
+async function getUserMatchOverview({ userId, actor, aiKey }) {
+  const [competitionItems, projectTopicItems, courseItems, teamCandidateItems] = await Promise.all([
+    recomputeCompetitionMatches({
+      userIds: [userId],
+      actor,
+      aiKey,
+      preferCached: true
+    }),
+    recomputeProjectTopicMatches({
+      userIds: [userId],
+      actor,
+      aiKey,
+      preferCached: true
+    }),
+    recomputeCourseMatches({
+      userIds: [userId],
+      actor,
+      aiKey,
+      preferCached: true
+    }),
+    recomputeTeamCandidateMatches({
+      userIds: [userId],
+      actor,
+      aiKey,
+      preferCached: true
+    })
+  ]);
+  return [...competitionItems, ...projectTopicItems, ...courseItems, ...teamCandidateItems]
+    .sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
+}
+
+async function getAdminUserMatchDashboard({ userId, actor, aiKey }) {
+  const [matches, reminders] = await Promise.all([
+    getUserMatchOverview({ userId, actor, aiKey }),
+    Promise.resolve(listUserMatchReminders({ userId, includeRead: true }))
+  ]);
+  return {
+    matches,
+    reminders,
+    stats: {
+      totalMatches: matches.length,
+      eligibleMatches: matches.filter(item => item.eligibilityStatus === 'eligible').length,
+      conditionalMatches: matches.filter(item => item.eligibilityStatus === 'conditional').length,
+      totalReminders: reminders.length,
+      unreadReminders: reminders.filter(item => !item.readAt).length
+    }
+  };
+}
+
+async function listAdminMatchCandidates({ actor, aiKey, targetType = '', candidateBucket = '', userId = 0 } = {}) {
+  const normalizedTargetType = String(targetType || '').trim();
+  const normalizedCandidateBucket = String(candidateBucket || '').trim();
+  const normalizedUserId = Number(userId || 0);
+  const items = [];
+
+  if (!normalizedTargetType || normalizedTargetType === 'competition') {
+    const competitions = listPublishedCompetitions();
+    for (const competition of competitions) {
+      const candidateItems = await listCompetitionCandidates({
+        slug: competition.slug,
+        actor,
+        aiKey
+      });
+      candidateItems.forEach((item) => {
+        items.push({
+          ...item,
+          targetLabel: item.competition?.title || item.targetKey
+        });
+      });
+    }
+  }
+
+  if (!normalizedTargetType || normalizedTargetType === 'project_topic') {
+    const topics = listPublishedProjectTopics();
+    for (const topic of topics) {
+      const candidateItems = await listProjectTopicCandidates({
+        topicId: Number(topic.id),
+        actor,
+        aiKey
+      });
+      candidateItems.forEach((item) => {
+        items.push({
+          ...item,
+          targetLabel: item.projectTopic?.title || item.targetKey
+        });
+      });
+    }
+  }
+
+  if (!normalizedTargetType || normalizedTargetType === 'course') {
+    const courses = loadCourseCatalog().filter(item => item.status === 'published');
+    for (const course of courses) {
+      const candidateItems = await listCourseCandidates({
+        courseId: String(course.id),
+        actor,
+        aiKey
+      });
+      candidateItems.forEach((item) => {
+        items.push({
+          ...item,
+          targetLabel: item.course?.title || item.targetKey
+        });
+      });
+    }
+  }
+
+  if (!normalizedTargetType || normalizedTargetType === 'team_candidate') {
+    const students = listStudentUsers();
+    for (const student of students) {
+      const candidateItems = await listTeamCandidateCandidates({
+        userId: Number(student.id),
+        actor,
+        aiKey
+      });
+      candidateItems.forEach((item) => {
+        items.push({
+          ...item,
+          targetLabel: item.teamCandidate?.name || item.targetKey
+        });
+      });
+    }
+  }
+
+  return items
+    .filter(item => !normalizedCandidateBucket || item.candidateBucket === normalizedCandidateBucket)
+    .filter(item => !normalizedUserId || Number(item.userId) === normalizedUserId)
+    .sort((a, b) => {
+      const bucketDiff = (MATCH_CANDIDATE_BUCKET_ORDER[a.candidateBucket] ?? 99) - (MATCH_CANDIDATE_BUCKET_ORDER[b.candidateBucket] ?? 99);
+      if (bucketDiff !== 0) return bucketDiff;
+      return Number(b.score || 0) - Number(a.score || 0);
+    });
+}
+
+async function listCompetitionCandidates({ slug, actor, aiKey }) {
+  const studentRows = db.all('SELECT id, name, email FROM users WHERE role = ?', ['student']);
+  const matches = await recomputeCompetitionMatches({
+    userIds: studentRows.map(row => Number(row.id)),
+    actor,
+    competitionSlugs: [slug],
+    aiKey,
+    preferCached: true
+  });
+  const registrationMap = db.all(
+    'SELECT student_id, status FROM competition_registrations WHERE competition_slug = ?',
+    [slug]
+  ).reduce((acc, row) => {
+    acc[Number(row.student_id)] = row.status;
+    return acc;
+  }, {});
+  return sortCandidateItems(matches.map((item) => {
+    const matchRow = db.get('SELECT user_id FROM match_results WHERE id = ?', [item.id]);
+    const userId = Number(matchRow?.user_id || 0);
+    const row = studentRows.find(entry => Number(entry.id) === userId);
+    const registrationStatus = registrationMap[userId] || '';
+    const bucket = resolveMatchCandidateBucket({
+      targetType: 'competition',
+      eligibilityStatus: item.eligibilityStatus,
+      overrideState: item.overrideState,
+      interactionState: item.interactionState,
+      registrationStatus
+    });
+    return {
+      ...item,
+      userId,
+      studentName: row?.name || '',
+      studentEmail: row?.email || '',
+      registrationStatus,
+      candidateBucket: bucket,
+      candidateBucketLabel: formatMatchCandidateBucketLabel(bucket)
+    };
+  }));
+}
+
+function saveMatchOverride({ userId, targetType, targetKey, overrideType, note, createdBy }) {
+  const existing = db.get(
+    'SELECT id FROM match_overrides WHERE user_id = ? AND target_type = ? AND target_key = ?',
+    [userId, targetType, targetKey]
+  );
+  if (existing) {
+    db.run(
+      'UPDATE match_overrides SET override_type = ?, note = ?, created_by = ?, updated_at = ? WHERE id = ?',
+      [overrideType, note, createdBy, now(), existing.id]
+    );
+    return db.get('SELECT * FROM match_overrides WHERE id = ?', [existing.id]);
+  }
+  const createdAt = now();
+  const info = db.run(
+    `INSERT INTO match_overrides (user_id, target_type, target_key, override_type, note, created_by, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [userId, targetType, targetKey, overrideType, note, createdBy, createdAt, createdAt]
+  );
+  return db.get('SELECT * FROM match_overrides WHERE id = ?', [info.lastInsertRowid]);
+}
+
+function logMatchInteraction({ userId, targetType, targetKey, interactionType, metadata = {} }) {
+  if (!MATCH_INTERACTION_TYPES.has(interactionType)) return null;
+  return db.run(
+    `INSERT INTO match_interactions (user_id, target_type, target_key, interaction_type, metadata, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [userId, targetType, targetKey, interactionType, JSON.stringify(metadata || {}), now()]
+  );
+}
+
+function logMatchEvent({ userId = null, targetType = '', targetKey = '', eventType, payload = {} }) {
+  return db.run(
+    `INSERT INTO match_events (user_id, target_type, target_key, event_type, payload, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [userId, targetType, targetKey, eventType, JSON.stringify(payload || {}), now()]
+  );
+}
+
+function getMatchAnalytics() {
+  const studentTotal = getStudentCount();
+  const rows = db.all('SELECT id, user_id, target_type, target_key, eligibility_status, score FROM match_results');
+  const interactions = db.all('SELECT interaction_type, target_type, user_id, target_key FROM match_interactions');
+  const registrations = db.all('SELECT competition_slug, student_id, status FROM competition_registrations');
+  const overrides = db.all('SELECT * FROM match_overrides ORDER BY updated_at DESC, created_at DESC');
+  const latestOverrideMap = new Map();
+  overrides.forEach((row) => {
+    const key = `${row.user_id}:${row.target_type}:${row.target_key}`;
+    if (!latestOverrideMap.has(key)) latestOverrideMap.set(key, row);
+  });
+  const latestInteractionMap = new Map();
+  db.all('SELECT interaction_type, created_at, user_id, target_type, target_key FROM match_interactions ORDER BY created_at DESC')
+    .forEach((row) => {
+      const key = `${row.user_id}:${row.target_type}:${row.target_key}`;
+      if (!latestInteractionMap.has(key)) latestInteractionMap.set(key, row);
+    });
+  const registrationMap = new Map();
+  registrations.forEach((row) => {
+    registrationMap.set(`${Number(row.student_id)}:${row.competition_slug}`, row.status || '');
+  });
+  const exposureCount = interactions.filter(row => row.interaction_type === 'view').length;
+  const clickCount = interactions.filter(row => row.interaction_type === 'click').length;
+  const applyCount = interactions.filter(row => row.interaction_type === 'apply').length;
+  const approvedCount = registrations.filter(row => row.status === 'approved').length;
+  const targetTypes = ['competition', 'project_topic', 'course'];
+  const recommendationCountByType = (targetType) => rows.filter(row => row.target_type === targetType).length;
+  const targetTypesWithTeam = [...targetTypes, 'team_candidate'];
+  const byTargetType = targetTypesWithTeam.reduce((acc, targetType) => {
+    const scopedRows = rows.filter(row => row.target_type === targetType);
+    const scopedInteractions = interactions.filter(row => row.target_type === targetType);
+    const scopedExposureCount = scopedInteractions.filter(row => row.interaction_type === 'view').length;
+    const scopedClickCount = scopedInteractions.filter(row => row.interaction_type === 'click').length;
+    const scopedApplyCount = scopedInteractions.filter(row => row.interaction_type === 'apply').length;
+    const candidateBuckets = scopedRows.reduce((bucketAcc, row) => {
+      const key = `${row.user_id}:${row.target_type}:${row.target_key}`;
+      const overrideRow = latestOverrideMap.get(key);
+      const interactionRow = latestInteractionMap.get(key);
+      const bucket = resolveMatchCandidateBucket({
+        targetType,
+        eligibilityStatus: row.eligibility_status,
+        overrideState: overrideRow ? { overrideType: overrideRow.override_type } : null,
+        interactionState: interactionRow ? { interactionType: interactionRow.interaction_type } : null,
+        registrationStatus: targetType === 'competition' ? (registrationMap.get(`${Number(row.user_id)}:${row.target_key}`) || '') : ''
+      });
+      bucketAcc[bucket] = (bucketAcc[bucket] || 0) + 1;
+      return bucketAcc;
+    }, {});
+    acc[targetType] = {
+      recommendationCount: scopedRows.length,
+      coverageRate: studentTotal > 0 ? Number((new Set(scopedRows.map(row => row.user_id)).size / studentTotal).toFixed(2)) : 0,
+      exposureCount: scopedExposureCount,
+      clickCount: scopedClickCount,
+      applyCount: scopedApplyCount,
+      clickThroughRate: scopedExposureCount > 0 ? Number((scopedClickCount / scopedExposureCount).toFixed(2)) : 0,
+      applyRate: scopedClickCount > 0 ? Number((scopedApplyCount / scopedClickCount).toFixed(2)) : 0,
+      candidateBuckets
+    };
+    return acc;
+  }, {});
+  return {
+    studentTotal,
+    recommendationCount: rows.length,
+    competitionRecommendationCount: rows.filter(row => row.target_type === 'competition').length,
+    projectTopicRecommendationCount: rows.filter(row => row.target_type === 'project_topic').length,
+    courseRecommendationCount: rows.filter(row => row.target_type === 'course').length,
+    teamCandidateRecommendationCount: recommendationCountByType('team_candidate'),
+    coverageRate: studentTotal > 0 ? Number((new Set(rows.map(row => row.user_id)).size / studentTotal).toFixed(2)) : 0,
+    exposureCount,
+    clickCount,
+    applyCount,
+    clickThroughRate: exposureCount > 0 ? Number((clickCount / exposureCount).toFixed(2)) : 0,
+    applyRate: clickCount > 0 ? Number((applyCount / clickCount).toFixed(2)) : 0,
+    approvedRate: applyCount > 0 ? Number((approvedCount / applyCount).toFixed(2)) : 0,
+    byTargetType
+  };
 }
 
 function getAssignmentStats(assignmentId) {
@@ -1581,15 +3832,37 @@ function mapCompetitionRegistration(row) {
   };
 }
 
+function mapCompetitionReminder(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    competitionSlug: row.competition_slug,
+    studentId: row.student_id,
+    studentName: row.student_name || '',
+    studentEmail: row.student_email || '',
+    title: row.title || '',
+    body: row.body || '',
+    targetGroup: row.target_group || '',
+    teacherName: row.teacher_name || '',
+    createdBy: row.created_by || null,
+    createdAt: row.created_at,
+    readAt: row.read_at || ''
+  };
+}
+
 function mapProjectTopic(row) {
   if (!row) return null;
+  const taxonomyIndex = getActiveTaxonomyIndex();
   return {
     id: row.id,
     title: row.title,
     description: row.description || '',
     background: row.background || '',
     goals: row.goals || '',
-    difficulty: row.difficulty || '',
+    difficulty: formatTaxonomyLabel('difficulty', row.difficulty || '', taxonomyIndex),
+    tags: parseJsonArray(row.tags).map(item => formatTaxonomyLabel('discipline', item, taxonomyIndex) || formatTaxonomyLabel('skill', item, taxonomyIndex)),
+    requiredSkills: formatTaxonomyLabels('skill', parseJsonArray(row.required_skills), taxonomyIndex),
+    estimatedHours: row.estimated_hours === null || row.estimated_hours === undefined ? null : Number(row.estimated_hours),
     suggestedTeamSize: row.suggested_team_size || '',
     deliverables: row.deliverables || '',
     relatedCourseId: row.related_course_id || '',
@@ -1603,12 +3876,21 @@ function mapProjectTopic(row) {
 
 function normalizeProjectTopicPayload(input = {}, existing = {}) {
   const status = String(input.status || existing.status || 'draft').trim();
+  const taxonomyIndex = getActiveTaxonomyIndex();
   return {
     title: String(input.title || existing.title || '').trim(),
     description: String(input.description || existing.description || '').trim(),
     background: String(input.background || existing.background || '').trim(),
     goals: String(input.goals || existing.goals || '').trim(),
-    difficulty: String(input.difficulty || existing.difficulty || '').trim(),
+    difficulty: normalizeTaxonomyValue(input.difficulty || existing.difficulty, ['difficulty'], taxonomyIndex),
+    tags: JSON.stringify(normalizeTaxonomyArray(input.tags ?? existing.tags ?? parseJsonArray(existing.tags), ['discipline', 'skill'], taxonomyIndex)),
+    requiredSkills: JSON.stringify(normalizeTaxonomyArray(
+      input.requiredSkills ?? input.required_skills ?? existing.requiredSkills ?? existing.required_skills ?? parseJsonArray(existing.required_skills)
+      , ['skill'], taxonomyIndex
+    )),
+    estimatedHours: normalizeNullableNumber(
+      input.estimatedHours ?? input.estimated_hours ?? existing.estimatedHours ?? existing.estimated_hours
+    ),
     suggestedTeamSize: String(input.suggestedTeamSize || input.suggested_team_size || existing.suggested_team_size || '').trim(),
     deliverables: String(input.deliverables || existing.deliverables || '').trim(),
     relatedCourseId: String(input.relatedCourseId || input.related_course_id || existing.related_course_id || '').trim(),
@@ -1617,169 +3899,99 @@ function normalizeProjectTopicPayload(input = {}, existing = {}) {
   };
 }
 
-function saveCourseDetail(course) {
-  writeJsonFile(courseFilePath(course.id), course);
-  const catalog = loadCourseCatalog();
-  const nextEntry = toCatalogEntry(course);
-  const existingIndex = catalog.findIndex(item => item.id === course.id);
-  if (existingIndex >= 0) {
-    catalog[existingIndex] = nextEntry;
-  } else {
-    catalog.push(nextEntry);
-  }
-  writeJsonFile(COURSE_CATALOG_PATH, catalog);
-}
-
-function normalizeLessonPayload(input = {}, existingLesson = {}, lessonId, courseId) {
-  const safeLessonId = normalizeCourseId(lessonId).replace(/-/g, '') || String(lessonId || '').trim() || 'lesson1';
-  const normalizedId = safeLessonId.startsWith('lesson') ? safeLessonId : `lesson${safeLessonId.replace(/^lesson/i, '')}`;
-  const order = Number.isFinite(Number(input.order)) ? Number(input.order) : (
-    Number.isFinite(Number(existingLesson.order)) ? Number(existingLesson.order) : lessonSortValue(normalizedId)
-  );
-  const normalizeTextList = (value, fallback = []) => {
-    if (Array.isArray(value)) {
-      return value.map(item => String(item || '').trim()).filter(Boolean);
-    }
-    if (Array.isArray(fallback)) {
-      return fallback.map(item => String(item || '').trim()).filter(Boolean);
-    }
-    return [];
-  };
-  const normalizeLessonResourceList = (value, fallback = []) => {
-    const source = Array.isArray(value) ? value : (Array.isArray(fallback) ? fallback : []);
-    return source
-      .filter(item => item && typeof item === 'object')
-      .map(item => ({
-        type: String(item.type || '').trim() || 'resource',
-        title: String(item.title || '').trim(),
-        path: normalizeRelativePath(item.path || '')
-      }))
-      .filter(item => item.title || item.path);
-  };
+function mapTaxonomyTerm(row) {
+  if (!row) return null;
   return {
-    id: String(input.id || existingLesson.id || `${courseId}-${normalizedId}`).trim(),
-    project: input.project || existingLesson.project || courseId,
-    title: String(input.title || existingLesson.title || normalizedId).trim(),
-    duration: Number.isFinite(Number(input.duration)) ? Number(input.duration) : (Number.isFinite(Number(existingLesson.duration)) ? Number(existingLesson.duration) : 45),
-    description: String(input.description || existingLesson.description || '').trim(),
-    moduleId: String(input.moduleId || existingLesson.moduleId || '').trim(),
-    essentialQuestion: String(input.essentialQuestion || existingLesson.essentialQuestion || '').trim(),
-    learningObjectives: normalizeTextList(input.learningObjectives, existingLesson.learningObjectives),
-    knowledgePoints: normalizeTextList(input.knowledgePoints, existingLesson.knowledgePoints),
-    equipment: normalizeTextList(input.equipment, existingLesson.equipment),
-    classroomTasks: normalizeTextList(input.classroomTasks, existingLesson.classroomTasks),
-    deliverables: normalizeTextList(input.deliverables, existingLesson.deliverables),
-    commonMisconceptions: normalizeTextList(input.commonMisconceptions, existingLesson.commonMisconceptions),
-    assessmentCriteria: normalizeTextList(input.assessmentCriteria, existingLesson.assessmentCriteria),
-    homework: normalizeTextList(input.homework, existingLesson.homework),
-    lessonResources: normalizeLessonResourceList(input.lessonResources, existingLesson.lessonResources),
-    order,
-    units: Array.isArray(input.units) ? input.units : (Array.isArray(existingLesson.units) ? existingLesson.units : []),
-    phases: Array.isArray(input.phases) ? input.phases : (Array.isArray(existingLesson.phases) ? existingLesson.phases : [])
+    id: Number(row.id || 0),
+    termType: row.term_type || '',
+    termKey: row.term_key || '',
+    label: row.label || '',
+    aliases: parseJsonArray(row.aliases),
+    status: row.status || 'active',
+    createdAt: row.created_at || '',
+    updatedAt: row.updated_at || ''
   };
 }
 
-fastify.get(`${API_PREFIX}/courses`, async () => {
-  return { courses: loadCourseCatalog() };
-});
+function normalizeTaxonomyTermPayload(input = {}, existing = {}) {
+  const termType = String(input.termType || input.term_type || existing.term_type || '').trim();
+  const rawTermKey = String(input.termKey || input.term_key || existing.term_key || input.label || existing.label || '').trim();
+  const termKey = rawTermKey
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+  const status = String(input.status || existing.status || 'active').trim().toLowerCase();
+  return {
+    term_type: termType,
+    term_key: termKey,
+    label: String(input.label || existing.label || '').trim(),
+    aliases: JSON.stringify(normalizeJsonArray(input.aliases ?? existing.aliases ?? parseJsonArray(existing.aliases))),
+    status: ['active', 'draft', 'disabled', 'archived'].includes(status) ? status : 'active'
+  };
+}
 
-fastify.get(`${API_PREFIX}/courses/:id`, async (request, reply) => {
-  const course = loadCourseDetail(request.params.id);
-  if (!course) {
-    reply.code(404);
-    return { error: 'Course not found' };
+function listTaxonomyTerms({ termType = '', status = '' } = {}) {
+  const where = [];
+  const params = [];
+  if (termType) {
+    where.push('term_type = ?');
+    params.push(termType);
   }
-  return { course };
-});
+  if (status) {
+    where.push('status = ?');
+    params.push(status);
+  }
+  const sql = `SELECT * FROM match_taxonomy_terms${where.length ? ` WHERE ${where.join(' AND ')}` : ''} ORDER BY term_type ASC, term_key ASC, updated_at DESC`;
+  return db.all(sql, params).map(mapTaxonomyTerm);
+}
 
-fastify.get(`${API_PREFIX}/courses/:id/lessons`, async (request, reply) => {
-  const course = loadCourseDetail(request.params.id);
-  if (!course) {
-    reply.code(404);
-    return { error: 'Course not found' };
+function upsertTaxonomyTerm(input = {}) {
+  const payload = normalizeTaxonomyTermPayload(input);
+  if (!payload.term_type || !payload.term_key || !payload.label) return null;
+  const existing = db.get(
+    'SELECT * FROM match_taxonomy_terms WHERE term_type = ? AND term_key = ?',
+    [payload.term_type, payload.term_key]
+  );
+  if (existing) {
+    db.run(
+      `UPDATE match_taxonomy_terms
+       SET label = ?, aliases = ?, status = ?, updated_at = ?
+       WHERE id = ?`,
+      [payload.label, payload.aliases, payload.status, now(), existing.id]
+    );
+    return db.get('SELECT * FROM match_taxonomy_terms WHERE id = ?', [existing.id]);
   }
-  return { lessons: listCourseLessons(course) };
-});
+  const createdAt = now();
+  const info = db.run(
+    `INSERT INTO match_taxonomy_terms (term_type, term_key, label, aliases, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [payload.term_type, payload.term_key, payload.label, payload.aliases, payload.status, createdAt, createdAt]
+  );
+  return db.get('SELECT * FROM match_taxonomy_terms WHERE id = ?', [info.lastInsertRowid]);
+}
 
-fastify.get(`${API_PREFIX}/courses/:id/materials`, async (request, reply) => {
-  const course = loadCourseDetail(request.params.id);
-  if (!course) {
-    reply.code(404);
-    return { error: 'Course not found' };
-  }
-  return { materials: listCourseMaterials(course) };
-});
-
-fastify.post(`${API_PREFIX}/courses`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher', 'judge'])) return;
-  const payload = normalizeCoursePayload(request.body || {});
-  payload.createdBy = request.user.id;
-  if (!payload.id || !payload.title) {
-    reply.code(400);
-    return { error: 'Course id and title are required' };
-  }
-  if (loadCourseDetail(payload.id)) {
-    reply.code(409);
-    return { error: 'Course already exists' };
-  }
-  saveCourseDetail(payload);
-  reply.code(201);
-  return { course: payload };
-});
-
-fastify.patch(`${API_PREFIX}/courses/:id`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher', 'judge'])) return;
-  const current = loadCourseDetail(request.params.id);
-  if (!current) {
-    reply.code(404);
-    return { error: 'Course not found' };
-  }
-  const payload = normalizeCoursePayload(request.body || {}, current);
-  payload.id = current.id;
-  saveCourseDetail(payload);
-  return { course: payload };
-});
-
-fastify.post(`${API_PREFIX}/courses/:id/lessons`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher', 'judge'])) return;
-  const course = loadCourseDetail(request.params.id);
-  if (!course) {
-    reply.code(404);
-    return { error: 'Course not found' };
-  }
-  const rawLessonId = String(request.body?.lessonId || request.body?.id || '').trim();
-  const lessonId = rawLessonId || `lesson${listCourseLessons(course).length + 1}`;
-  const lessonsDir = path.join(MATERIALS_DIR, course.materialsRoot, 'lessons');
-  ensureDir(lessonsDir);
-  const fileName = `${lessonId.replace(/\.json$/i, '')}.json`;
-  const targetPath = path.join(lessonsDir, fileName);
-  if (fs.existsSync(targetPath)) {
-    reply.code(409);
-    return { error: 'Lesson already exists' };
-  }
-  const lesson = normalizeLessonPayload(request.body || {}, {}, lessonId, course.id);
-  writeJsonFile(targetPath, lesson);
-  reply.code(201);
-  return { lesson };
-});
-
-fastify.patch(`${API_PREFIX}/courses/:id/lessons/:lessonId`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher', 'judge'])) return;
-  const course = loadCourseDetail(request.params.id);
-  if (!course) {
-    reply.code(404);
-    return { error: 'Course not found' };
-  }
-  const lessonId = String(request.params.lessonId || '').trim();
-  const targetPath = path.join(MATERIALS_DIR, course.materialsRoot, 'lessons', `${lessonId.replace(/\.json$/i, '')}.json`);
-  const existingLesson = readJsonFile(targetPath, null);
-  if (!existingLesson) {
-    reply.code(404);
-    return { error: 'Lesson not found' };
-  }
-  const lesson = normalizeLessonPayload(request.body || {}, existingLesson, lessonId, course.id);
-  writeJsonFile(targetPath, lesson);
-  return { lesson };
+registerCourseRoutes(fastify, {
+  API_PREFIX,
+  path,
+  fs,
+  MATERIALS_DIR,
+  ensureDir,
+  requireRole,
+  loadCourseCatalog,
+  loadCourseDetail,
+  listCourseLessons,
+  listCourseMaterials,
+  normalizeCoursePayload,
+  saveCourseDetail,
+  normalizeLessonPayload,
+  readJsonFile,
+  writeJsonFile,
+  logMatchEvent,
+  recomputeCourseMatches,
+  db: routeDb,
+  now
 });
 
 function canAccessProject(user, project) {
@@ -1793,7 +4005,7 @@ function syncLegacyAttachments() {
     )
   );
   const submissions = db.all(
-    'SELECT id, attachments, created_at FROM submissions WHERE attachments IS NOT NULL AND attachments != ""'
+    "SELECT id, attachments, created_at FROM submissions WHERE attachments IS NOT NULL AND attachments != ''"
   );
   submissions.forEach(submission => {
     const attachments = parseAttachmentList(submission.attachments);
@@ -1841,29 +4053,6 @@ function normalizeScoreTemplateCriteria(criteria) {
   return normalized.length ? normalized : null;
 }
 
-function addProjectMembers(projectId, memberIds, role = 'member') {
-  if (!memberIds.length) return;
-  const placeholders = memberIds.map(() => '?').join(',');
-  const rows = db.all(
-    `SELECT id FROM users WHERE id IN (${placeholders})`,
-    memberIds
-  );
-  const validIds = new Set(rows.map(row => row.id));
-  const createdAt = now();
-  memberIds.forEach(id => {
-    if (!validIds.has(id)) return;
-    const existing = db.get(
-      'SELECT id FROM project_members WHERE project_id = ? AND user_id = ?',
-      [projectId, id]
-    );
-    if (existing) return;
-    db.run(
-      'INSERT INTO project_members (project_id, user_id, role, created_at) VALUES (?, ?, ?, ?)',
-      [projectId, id, role, createdAt]
-    );
-  });
-}
-
 function canRegisterTeacher(inviteCode) {
   const existing = db.get('SELECT id FROM users WHERE role = ?', ['teacher']);
   if (!existing) return true;
@@ -1907,6 +4096,42 @@ async function requestGitea(pathname, options = {}) {
     }
   }
   return { ok: res.ok, status: res.status, data };
+}
+
+async function ensureGiteaUser({ user, username = '', password = '', mustChangePassword = false }) {
+  const baseUrl = envValue('GITEA_BASE_URL', GITEA_BASE_URL);
+  if (!baseUrl || !envValue('GITEA_ADMIN_TOKEN', GITEA_ADMIN_TOKEN)) {
+    throw new Error('Gitea 用户同步服务未配置');
+  }
+  const fallback = `student-${user.id}`;
+  const loginName = slugifyGiteaUsername(username || user.gitea_username || user.username || user.name || user.email, fallback);
+  const email = String(user.email || `${loginName}@school.local`).trim();
+  const generatedPassword = crypto.randomBytes(9).toString('base64url').slice(0, 12);
+  const finalPassword = String(password || generatedPassword).trim();
+  const payload = {
+    username: loginName,
+    email,
+    password: finalPassword,
+    must_change_password: Boolean(mustChangePassword)
+  };
+
+  const result = await requestGitea('/api/v1/admin/users', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+
+  if (!result.ok && result.status !== 409) {
+    throw new Error(result.data?.message || 'Gitea 用户创建失败');
+  }
+
+  return {
+    username: loginName,
+    email,
+    created: result.ok,
+    alreadyExists: result.status === 409,
+    password: result.ok && !password ? finalPassword : undefined,
+    htmlUrl: result.data?.html_url || `${baseUrl.replace(/\/$/, '')}/${loginName}`
+  };
 }
 
 async function requestAiChat(messages, apiKey) {
@@ -1993,2772 +4218,283 @@ async function ensureGiteaRepo(project, request) {
   return repoUrl;
 }
 
-fastify.get(`${API_PREFIX}/public/banners`, async () => {
-  return { items: loadPortalBanners() };
-});
-
-fastify.get(`${API_PREFIX}/public/competitions`, async () => {
-  const courseMap = buildCoursePreviewMap();
-  return {
-    items: listPublishedCompetitions().map(item => enrichCompetition(item, courseMap))
-  };
-});
-
-fastify.get(`${API_PREFIX}/public/competitions/:slug`, async (request, reply) => {
-  const competition = listPublishedCompetitions().find(item => item.slug === request.params.slug);
-  if (!competition) {
-    reply.code(404);
-    return { error: 'Competition not found' };
-  }
-  const courseMap = buildCoursePreviewMap();
-  return {
-    item: {
-      ...enrichCompetition(competition, courseMap),
-      detail: loadPortalCompetitionDetail(competition.slug)
-    }
-  };
-});
-
-fastify.get(`${API_PREFIX}/public/stories`, async () => {
-  const competitionMap = listPublishedCompetitions().reduce((acc, item) => {
-    acc[item.slug] = item;
-    return acc;
-  }, {});
-  const courseMap = buildCoursePreviewMap();
-  return {
-    items: loadPortalStories().map(story => buildStoryResponse(story, competitionMap, courseMap))
-  };
-});
-
-fastify.get(`${API_PREFIX}/public/stories/:slug`, async (request, reply) => {
-  const story = loadPortalStories().find(item => item.slug === request.params.slug);
-  if (!story) {
-    reply.code(404);
-    return { error: 'Story not found' };
-  }
-  const competitionMap = listPublishedCompetitions().reduce((acc, item) => {
-    acc[item.slug] = item;
-    return acc;
-  }, {});
-  const courseMap = buildCoursePreviewMap();
-  return { item: buildStoryResponse(story, competitionMap, courseMap) };
-});
-
-fastify.get(`${API_PREFIX}/public/path-mappings`, async () => {
-  const courseMap = buildCoursePreviewMap();
-  const competitions = listPublishedCompetitions().map(item => enrichCompetition(item, courseMap));
-  const stories = loadPortalStories();
-  return {
-    items: Object.values(courseMap).map(course => ({
-      ...course,
-      competitions: competitions
-        .filter(item => item.relatedCourseIds.includes(course.id))
-        .map(item => ({
-          slug: item.slug,
-          title: item.title,
-          tier: item.tier,
-          status: item.status
-        })),
-      stories: stories
-        .filter(item => item.relatedCourseIds.includes(course.id))
-        .map(item => ({
-          slug: item.slug,
-          title: item.title,
-          result: item.result,
-          cover: item.cover
-        }))
-    }))
-  };
-});
-
-fastify.get(`${API_PREFIX}/admin/banners`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher', 'judge'])) return;
-  return { banners: loadPortalBanners() };
-});
-
-fastify.post(`${API_PREFIX}/admin/banners`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  const banner = normalizeBannerPayload(request.body || {});
-  if (!banner.title || !banner.targetUrl) {
-    reply.code(400);
-    return { error: 'Banner 标题与目标链接必填' };
-  }
-  const banners = loadPortalBanners();
-  banners.push(banner);
-  savePortalBanners(banners);
-  logAudit('banner.create', request, { title: banner.title });
-  reply.code(201);
-  return { banner };
-});
-
-fastify.patch(`${API_PREFIX}/admin/banners/:index`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  const index = Number.parseInt(String(request.params.index || ''), 10);
-  const banners = loadPortalBanners();
-  if (!Number.isFinite(index) || index < 0 || index >= banners.length) {
-    reply.code(404);
-    return { error: 'Banner 不存在' };
-  }
-  banners[index] = normalizeBannerPayload(request.body || {}, banners[index]);
-  if (!banners[index].title || !banners[index].targetUrl) {
-    reply.code(400);
-    return { error: 'Banner 标题与目标链接必填' };
-  }
-  savePortalBanners(banners);
-  logAudit('banner.update', request, { index });
-  return { banner: banners[index] };
-});
-
-fastify.delete(`${API_PREFIX}/admin/banners/:index`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  const index = Number.parseInt(String(request.params.index || ''), 10);
-  const banners = loadPortalBanners();
-  if (!Number.isFinite(index) || index < 0 || index >= banners.length) {
-    reply.code(404);
-    return { error: 'Banner 不存在' };
-  }
-  const [removed] = banners.splice(index, 1);
-  savePortalBanners(banners);
-  logAudit('banner.delete', request, { index, title: removed?.title || '' });
-  return { success: true };
-});
-
-fastify.get(`${API_PREFIX}/admin/stories`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher', 'judge'])) return;
-  const competitionMap = listPublishedCompetitions().reduce((acc, item) => {
-    acc[item.slug] = item;
-    return acc;
-  }, {});
-  const courseMap = buildCoursePreviewMap();
-  return { stories: loadPortalStories().map(story => buildStoryResponse(story, competitionMap, courseMap)) };
-});
-
-fastify.post(`${API_PREFIX}/admin/stories`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  const story = normalizeStoryPayload(request.body || {});
-  if (!story.title || !story.slug) {
-    reply.code(400);
-    return { error: '故事标题与 slug 必填' };
-  }
-  const stories = loadPortalStories();
-  if (stories.some(item => item.slug === story.slug)) {
-    reply.code(409);
-    return { error: '故事 slug 已存在' };
-  }
-  stories.unshift(story);
-  savePortalStories(stories);
-  logAudit('story.create', request, { slug: story.slug });
-  reply.code(201);
-  return { story };
-});
-
-fastify.patch(`${API_PREFIX}/admin/stories/:slug`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  const stories = loadPortalStories();
-  const index = stories.findIndex(item => item.slug === request.params.slug);
-  if (index < 0) {
-    reply.code(404);
-    return { error: '故事不存在' };
-  }
-  const story = normalizeStoryPayload(request.body || {}, stories[index]);
-  story.slug = stories[index].slug;
-  stories[index] = story;
-  savePortalStories(stories);
-  logAudit('story.update', request, { slug: story.slug });
-  return { story };
-});
-
-fastify.delete(`${API_PREFIX}/admin/stories/:slug`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  const stories = loadPortalStories();
-  const index = stories.findIndex(item => item.slug === request.params.slug);
-  if (index < 0) {
-    reply.code(404);
-    return { error: '故事不存在' };
-  }
-  const [removed] = stories.splice(index, 1);
-  savePortalStories(stories);
-  logAudit('story.delete', request, { slug: removed?.slug || request.params.slug });
-  return { success: true };
-});
-
-fastify.get(`${API_PREFIX}/assignments`, async (request, reply) => {
-  if (!requireRole(request, reply, ['student', 'teacher', 'judge'])) return;
-  const courseId = String(request.query?.courseId || '').trim();
-  const lessonId = String(request.query?.lessonId || '').trim();
-  const status = String(request.query?.status || '').trim();
-  const conditions = [];
-  const params = [];
-  if (courseId) {
-    conditions.push('course_id = ?');
-    params.push(courseId);
-  }
-  if (lessonId) {
-    conditions.push('lesson_id = ?');
-    params.push(lessonId);
-  }
-  if (request.user.role === 'student') {
-    conditions.push('status = ?');
-    params.push('published');
-  } else if (status) {
-    conditions.push('status = ?');
-    params.push(status);
-  }
-  let sql = 'SELECT * FROM assignments';
-  if (conditions.length) sql += ` WHERE ${conditions.join(' AND ')}`;
-  sql += ' ORDER BY due_at IS NULL, due_at ASC, updated_at DESC';
-  return { assignments: db.all(sql, params).map(row => mapAssignment(row)) };
-});
-
-fastify.post(`${API_PREFIX}/assignments`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  const payload = normalizeAssignmentPayload(request.body || {});
-  if (!payload.courseId || !payload.title) {
-    reply.code(400);
-    return { error: '课程与作业标题必填' };
-  }
-  const createdAt = now();
-  const info = db.run(
-    `INSERT INTO assignments (course_id, lesson_id, title, description, requirements, due_at, submit_type, rubric, status, created_by, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      payload.courseId,
-      payload.lessonId,
-      payload.title,
-      payload.description,
-      payload.requirements,
-      payload.dueAt,
-      payload.submitType,
-      JSON.stringify(payload.rubric || []),
-      payload.status,
-      request.user.id,
-      createdAt,
-      createdAt
-    ]
-  );
-  const assignment = db.get('SELECT * FROM assignments WHERE id = ?', [info.lastInsertRowid]);
-  logAudit('assignment.create', request, { assignmentId: info.lastInsertRowid });
-  reply.code(201);
-  return { assignment: mapAssignment(assignment) };
-});
-
-fastify.patch(`${API_PREFIX}/assignments/:id`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  const assignmentId = parseProjectId(request.params.id);
-  if (!assignmentId) {
-    reply.code(400);
-    return { error: '作业ID无效' };
-  }
-  const existing = db.get('SELECT * FROM assignments WHERE id = ?', [assignmentId]);
-  if (!existing) {
-    reply.code(404);
-    return { error: '作业不存在' };
-  }
-  const payload = normalizeAssignmentPayload(request.body || {}, existing);
-  if (!payload.courseId || !payload.title) {
-    reply.code(400);
-    return { error: '课程与作业标题必填' };
-  }
-  db.run(
-    `UPDATE assignments
-     SET course_id = ?, lesson_id = ?, title = ?, description = ?, requirements = ?, due_at = ?, submit_type = ?, rubric = ?, status = ?, updated_at = ?
-     WHERE id = ?`,
-    [
-      payload.courseId,
-      payload.lessonId,
-      payload.title,
-      payload.description,
-      payload.requirements,
-      payload.dueAt,
-      payload.submitType,
-      JSON.stringify(payload.rubric || []),
-      payload.status,
-      now(),
-      assignmentId
-    ]
-  );
-  const assignment = db.get('SELECT * FROM assignments WHERE id = ?', [assignmentId]);
-  logAudit('assignment.update', request, { assignmentId });
-  return { assignment: mapAssignment(assignment) };
-});
-
-fastify.get(`${API_PREFIX}/assignments/:id/submissions`, async (request, reply) => {
-  if (!requireRole(request, reply, ['student', 'teacher', 'judge'])) return;
-  const assignmentId = parseProjectId(request.params.id);
-  if (!assignmentId) {
-    reply.code(400);
-    return { error: '作业ID无效' };
-  }
-  const assignment = db.get('SELECT * FROM assignments WHERE id = ?', [assignmentId]);
-  if (!assignment) {
-    reply.code(404);
-    return { error: '作业不存在' };
-  }
-  const params = [assignmentId];
-  let sql = `
-    SELECT s.*, u.name AS student_name, u.email AS student_email
-    FROM assignment_submissions s
-    JOIN users u ON u.id = s.student_id
-    WHERE s.assignment_id = ?
-  `;
-  if (request.user.role === 'student') {
-    sql += ' AND s.student_id = ?';
-    params.push(request.user.id);
-  }
-  sql += ' ORDER BY s.updated_at DESC';
-  return {
-    assignment: mapAssignment(assignment),
-    submissions: db.all(sql, params).map(mapAssignmentSubmission)
-  };
-});
-
-fastify.post(`${API_PREFIX}/assignments/:id/submissions`, async (request, reply) => {
-  if (!requireRole(request, reply, ['student', 'teacher'])) return;
-  const assignmentId = parseProjectId(request.params.id);
-  if (!assignmentId) {
-    reply.code(400);
-    return { error: '作业ID无效' };
-  }
-  const assignment = db.get('SELECT * FROM assignments WHERE id = ?', [assignmentId]);
-  if (!assignment || (request.user.role === 'student' && assignment.status !== 'published')) {
-    reply.code(404);
-    return { error: '作业不存在或未发布' };
-  }
-  const payload = request.body || {};
-  const content = String(payload.content || '').trim();
-  const link = String(payload.link || '').trim();
-  const attachmentNote = String(payload.attachmentNote || payload.attachment_note || '').trim();
-  if (!content && !link && !attachmentNote) {
-    reply.code(400);
-    return { error: '提交内容、链接或附件说明至少填写一项' };
-  }
-  if (link && !/^https?:\/\//i.test(link)) {
-    reply.code(400);
-    return { error: '链接必须以 http(s) 开头' };
-  }
-  const studentId = request.user.id;
-  const existing = db.get(
-    'SELECT id FROM assignment_submissions WHERE assignment_id = ? AND student_id = ?',
-    [assignmentId, studentId]
-  );
-  const submittedAt = now();
-
-  // Retrieve AI API key for instant review
-  const headerKey = request.headers['x-model-key'];
-  const apiKey = String(headerKey || process.env.AI_API_KEY || '').trim();
-
-  let aiFeedback = '';
-  let status = 'submitted';
-  let reviewedBy = null;
-  let reviewedAt = null;
-  let score = null;
-
-  if (apiKey) {
-    try {
-      const messages = [
-        {
-          role: 'system',
-          content: `你是一名温暖、亲切的初中（七年级）人工智能与科创课程的“AI助教小破”。
-你的任务是对学生的作业提交进行【即时评测与启发式反馈】。
-请用极其鼓励、通俗易懂且简短的语言（150字以内）进行评价：
-1. 肯定学生付出的努力（给出正面情感回馈，比如“哇！你已经迈出了关键的一步！”）。
-2. 用生活中的生动比喻或浅显逻辑点评他们的提交内容，指出亮点。
-3. 给出1个非常具体、有趣的下一步改进建议或思考题，引导他们继续探索。
-注意：保持亲和力，适合12岁左右的孩子，排版要清晰美观。`
-        },
-        {
-          role: 'user',
-          content: `【作业标题】：${assignment.title}
-【作业要求】：${assignment.requirements || assignment.description || '无具体要求'}
-【学生提交内容】：
-- 作业文本/代码：${content || '(未填写)'}
-- 作品/项目链接：${link || '(未提供)'}
-- 附件说明：${attachmentNote || '(无)'}`
-        }
-      ];
-
-      const result = await requestAiChat(messages, apiKey);
-      if (result && result.content) {
-        aiFeedback = result.content;
-        status = 'reviewed';
-        reviewedBy = 'AI_Assistant';
-        reviewedAt = submittedAt;
-        score = 100;
-      }
-    } catch (err) {
-      console.error('AI Assignment Auto-Review failed:', err.message);
-    }
-  }
-
-  if (existing) {
-    db.run(
-      `UPDATE assignment_submissions
-       SET content = ?, link = ?, attachment_note = ?, status = ?, score = ?, feedback = ?, reviewed_by = ?, reviewed_at = ?, submitted_at = ?, updated_at = ?
-       WHERE id = ?`,
-      [content, link, attachmentNote, status, score, aiFeedback, reviewedBy, reviewedAt, submittedAt, submittedAt, existing.id]
-    );
-  } else {
-    db.run(
-      `INSERT INTO assignment_submissions (assignment_id, student_id, content, link, attachment_note, status, score, feedback, reviewed_by, submitted_at, reviewed_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [assignmentId, studentId, content, link, attachmentNote, status, score, aiFeedback, reviewedBy, submittedAt, reviewedAt, submittedAt]
-    );
-  }
-  const row = db.get(
-    `SELECT s.*, u.name AS student_name, u.email AS student_email
-     FROM assignment_submissions s
-     JOIN users u ON u.id = s.student_id
-     WHERE s.assignment_id = ? AND s.student_id = ?`,
-    [assignmentId, studentId]
-  );
-  logAudit('assignment.submit', request, { assignmentId });
-  return { submission: mapAssignmentSubmission(row) };
-});
-
-fastify.patch(`${API_PREFIX}/assignments/:id/submissions/:submissionId`, async (request, reply) => {
-  return fastify.inject({
-    method: 'POST',
-    url: `${API_PREFIX}/assignments/${request.params.id}/submissions/${request.params.submissionId}/review`,
-    headers: request.headers,
-    payload: request.body
-  }).then(response => {
-    reply.code(response.statusCode);
-    Object.entries(response.headers).forEach(([key, value]) => reply.header(key, value));
-    return JSON.parse(response.body || '{}');
-  });
-});
-
-fastify.post(`${API_PREFIX}/assignments/:id/submissions/:submissionId/review`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  const assignmentId = parseProjectId(request.params.id);
-  const submissionId = parseProjectId(request.params.submissionId);
-  if (!assignmentId || !submissionId) {
-    reply.code(400);
-    return { error: '作业或提交ID无效' };
-  }
-  const status = String(request.body?.status || 'reviewed').trim();
-  const score = request.body?.score === '' || request.body?.score === null || request.body?.score === undefined
-    ? null
-    : Number(request.body.score);
-  const feedback = String(request.body?.feedback || '').trim();
-  if (!ASSIGNMENT_SUBMISSION_STATUSES.has(status) || status === 'submitted') {
-    reply.code(400);
-    return { error: '批改状态无效' };
-  }
-  if (score !== null && (!Number.isFinite(score) || score < 0 || score > 100)) {
-    reply.code(400);
-    return { error: '分数必须在 0-100 之间' };
-  }
-  if (status === 'needs_changes' && !feedback) {
-    reply.code(400);
-    return { error: '退回修改必须填写反馈' };
-  }
-  const reviewedAt = now();
-  const result = db.run(
-    `UPDATE assignment_submissions
-     SET status = ?, score = ?, feedback = ?, reviewed_by = ?, reviewed_at = ?, updated_at = ?
-     WHERE id = ? AND assignment_id = ?`,
-    [status, score, feedback, request.user.id, reviewedAt, reviewedAt, submissionId, assignmentId]
-  );
-  if (!result.changes) {
-    reply.code(404);
-    return { error: '提交不存在' };
-  }
-  const row = db.get(
-    `SELECT s.*, u.name AS student_name, u.email AS student_email
-     FROM assignment_submissions s
-     JOIN users u ON u.id = s.student_id
-     WHERE s.id = ?`,
-    [submissionId]
-  );
-  logAudit('assignment.review', request, { assignmentId, submissionId, status });
-  return { submission: mapAssignmentSubmission(row) };
-});
-
-fastify.get(`${API_PREFIX}/admin/competitions`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher', 'judge'])) return;
-  const courseMap = buildCoursePreviewMap();
-  return { competitions: loadPortalCompetitions().map(item => enrichCompetition(item, courseMap)) };
-});
-
-fastify.post(`${API_PREFIX}/admin/competitions`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  const competition = normalizeCompetitionPayload(request.body || {});
-  competition.createdBy = request.user.id;
-  if (!competition.title || !competition.slug) {
-    reply.code(400);
-    return { error: '赛事标题与 slug 必填' };
-  }
-  if (loadPortalCompetitions().some(item => item.slug === competition.slug)) {
-    reply.code(409);
-    return { error: '赛事 slug 已存在' };
-  }
-  savePortalCompetition(competition);
-  logAudit('competition.create', request, { slug: competition.slug });
-  reply.code(201);
-  return { competition: enrichCompetition(competition, buildCoursePreviewMap()) };
-});
-
-fastify.patch(`${API_PREFIX}/admin/competitions/:slug`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  const current = loadPortalCompetitions().find(item => item.slug === request.params.slug);
-  if (!current) {
-    reply.code(404);
-    return { error: '赛事不存在' };
-  }
-  const competition = normalizeCompetitionPayload(request.body || {}, current);
-  competition.slug = current.slug;
-  savePortalCompetition(competition);
-  logAudit('competition.update', request, { slug: competition.slug });
-  return { competition: enrichCompetition(competition, buildCoursePreviewMap()) };
-});
-
-fastify.get(`${API_PREFIX}/competitions/:slug/registrations`, async (request, reply) => {
-  if (!requireRole(request, reply, ['student', 'teacher', 'judge'])) return;
-  const slug = String(request.params.slug || '').trim();
-  const competition = loadPortalCompetitions().find(item => item.slug === slug);
-  if (!competition) {
-    reply.code(404);
-    return { error: '赛事不存在' };
-  }
-  const params = [slug];
-  let sql = `
-    SELECT r.*, u.name AS student_name, u.email AS student_email
-    FROM competition_registrations r
-    JOIN users u ON u.id = r.student_id
-    WHERE r.competition_slug = ?
-  `;
-  if (request.user.role === 'student') {
-    sql += ' AND r.student_id = ?';
-    params.push(request.user.id);
-  }
-  sql += ' ORDER BY r.updated_at DESC';
-  return {
-    stats: getCompetitionRegistrationStats(slug),
-    registrations: db.all(sql, params).map(mapCompetitionRegistration)
-  };
-});
-
-fastify.post(`${API_PREFIX}/competitions/:slug/registrations`, async (request, reply) => {
-  if (!requireRole(request, reply, ['student', 'teacher'])) return;
-  const slug = String(request.params.slug || '').trim();
-  if (!loadPortalCompetitions().some(item => item.slug === slug)) {
-    reply.code(404);
-    return { error: '赛事不存在' };
-  }
-  const payload = request.body || {};
-  const studentId = request.user.id;
-  const teamName = String(payload.teamName || payload.team_name || '').trim();
-  const className = String(payload.className || payload.class_name || '').trim();
-  const members = String(payload.members || '').trim();
-  const materials = String(payload.materials || '').trim();
-  const note = String(payload.note || '').trim();
-  const createdAt = now();
-  const existing = db.get(
-    'SELECT id FROM competition_registrations WHERE competition_slug = ? AND student_id = ?',
-    [slug, studentId]
-  );
-  if (existing) {
-    db.run(
-      `UPDATE competition_registrations
-       SET team_name = ?, class_name = ?, members = ?, materials = ?, status = ?, note = ?, updated_at = ?
-       WHERE id = ?`,
-      [teamName, className, members, materials, 'pending', note, createdAt, existing.id]
-    );
-  } else {
-    db.run(
-      `INSERT INTO competition_registrations (competition_slug, student_id, team_name, class_name, members, materials, status, note, teacher_feedback, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?)`,
-      [slug, studentId, teamName, className, members, materials, 'pending', note, createdAt, createdAt]
-    );
-  }
-  logAudit('competition.registration.submit', request, { slug });
-  return { success: true, stats: getCompetitionRegistrationStats(slug) };
-});
-
-fastify.patch(`${API_PREFIX}/competitions/:slug/registrations/:id`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  const registrationId = parseProjectId(request.params.id);
-  if (!registrationId) {
-    reply.code(400);
-    return { error: '报名ID无效' };
-  }
-  const status = String(request.body?.status || '').trim();
-  const teacherFeedback = String(request.body?.teacherFeedback || request.body?.teacher_feedback || '').trim();
-  if (!COMPETITION_REGISTRATION_STATUSES.has(status)) {
-    reply.code(400);
-    return { error: '报名状态无效' };
-  }
-  const updatedAt = now();
-  const result = db.run(
-    `UPDATE competition_registrations
-     SET status = ?, teacher_feedback = ?, updated_at = ?
-     WHERE id = ? AND competition_slug = ?`,
-    [status, teacherFeedback, updatedAt, registrationId, request.params.slug]
-  );
-  if (!result.changes) {
-    reply.code(404);
-    return { error: '报名记录不存在' };
-  }
-  const row = db.get(
-    `SELECT r.*, u.name AS student_name, u.email AS student_email
-     FROM competition_registrations r
-     JOIN users u ON u.id = r.student_id
-     WHERE r.id = ?`,
-    [registrationId]
-  );
-  logAudit('competition.registration.review', request, { registrationId, status });
-  return { registration: mapCompetitionRegistration(row), stats: getCompetitionRegistrationStats(request.params.slug) };
-});
-
-fastify.get(`${API_PREFIX}/admin/project-topics`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher', 'judge'])) return;
-  return {
-    topics: db.all('SELECT * FROM project_topics ORDER BY updated_at DESC').map(mapProjectTopic)
-  };
-});
-
-fastify.post(`${API_PREFIX}/admin/project-topics`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  const payload = normalizeProjectTopicPayload(request.body || {});
-  if (!payload.title) {
-    reply.code(400);
-    return { error: '项目题目标题必填' };
-  }
-  const createdAt = now();
-  const info = db.run(
-    `INSERT INTO project_topics (title, description, background, goals, difficulty, suggested_team_size, deliverables, related_course_id, related_competition_slug, status, created_by, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      payload.title,
-      payload.description,
-      payload.background,
-      payload.goals,
-      payload.difficulty,
-      payload.suggestedTeamSize,
-      payload.deliverables,
-      payload.relatedCourseId,
-      payload.relatedCompetitionSlug,
-      payload.status,
-      request.user.id,
-      createdAt,
-      createdAt
-    ]
-  );
-  const row = db.get('SELECT * FROM project_topics WHERE id = ?', [info.lastInsertRowid]);
-  logAudit('project_topic.create', request, { topicId: info.lastInsertRowid });
-  reply.code(201);
-  return { topic: mapProjectTopic(row) };
-});
-
-fastify.patch(`${API_PREFIX}/admin/project-topics/:id`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  const topicId = parseProjectId(request.params.id);
-  if (!topicId) {
-    reply.code(400);
-    return { error: '题目ID无效' };
-  }
-  const existing = db.get('SELECT * FROM project_topics WHERE id = ?', [topicId]);
-  if (!existing) {
-    reply.code(404);
-    return { error: '项目题目不存在' };
-  }
-  const payload = normalizeProjectTopicPayload(request.body || {}, existing);
-  if (!payload.title) {
-    reply.code(400);
-    return { error: '项目题目标题必填' };
-  }
-  db.run(
-    `UPDATE project_topics
-     SET title = ?, description = ?, background = ?, goals = ?, difficulty = ?, suggested_team_size = ?, deliverables = ?, related_course_id = ?, related_competition_slug = ?, status = ?, updated_at = ?
-     WHERE id = ?`,
-    [
-      payload.title,
-      payload.description,
-      payload.background,
-      payload.goals,
-      payload.difficulty,
-      payload.suggestedTeamSize,
-      payload.deliverables,
-      payload.relatedCourseId,
-      payload.relatedCompetitionSlug,
-      payload.status,
-      now(),
-      topicId
-    ]
-  );
-  const row = db.get('SELECT * FROM project_topics WHERE id = ?', [topicId]);
-  logAudit('project_topic.update', request, { topicId });
-  return { topic: mapProjectTopic(row) };
-});
-
-fastify.get(`${API_PREFIX}/project-topics`, async () => {
-  return {
-    topics: db.all('SELECT * FROM project_topics WHERE status = ? ORDER BY updated_at DESC', ['published']).map(mapProjectTopic)
-  };
-});
-
-fastify.get(`${API_PREFIX}/health`, async () => ({ ok: true }));
-
-fastify.post(`${API_PREFIX}/auth/register`, async (request, reply) => {
-  const payload = request.body || {};
-  const name = String(payload.name || '').trim();
-  const email = normalizeEmail(payload.email);
-  const password = String(payload.password || '');
-  const roleInput = String(payload.role || '').trim();
-  const inviteCode = String(payload.inviteCode || '').trim();
-  const avatarUrl = String(payload.avatarUrl || '').trim();
-
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    reply.code(400);
-    return { error: '邮箱格式无效' };
-  }
-  if (password.length < 6) {
-    reply.code(400);
-    return { error: '密码至少 6 位' };
-  }
-
-  const existing = db.get('SELECT id FROM users WHERE email = ?', [email]);
-  if (existing) {
-    reply.code(409);
-    return { error: '邮箱已注册' };
-  }
-
-  let role = 'student';
-  if (roleInput === 'teacher') role = 'teacher';
-  if (roleInput === 'judge') role = 'judge';
-  if (role === 'teacher' && !canRegisterTeacher(inviteCode)) {
-    reply.code(403);
-    return { error: '老师邀请码无效' };
-  }
-  if (role === 'judge' && !canRegisterJudge(inviteCode)) {
-    reply.code(403);
-    return { error: '评委邀请码无效' };
-  }
-
-  const createdAt = now();
-  const info = db.run(
-    'INSERT INTO users (name, email, password_hash, role, avatar_url, created_at) VALUES (?, ?, ?, ?, ?, ?)',
-    [name, email, hashPassword(password), role, avatarUrl, createdAt]
-  );
-
-  const user = { id: info.lastInsertRowid, name, email, role, avatar_url: avatarUrl };
-  const { token, exp } = createToken({ sub: user.id, role: user.role, email: user.email });
-  logAudit('auth.register', request, { userId: user.id, role: user.role });
-  return { user, token, expiresAt: exp };
-});
-
-fastify.post(`${API_PREFIX}/auth/login`, async (request, reply) => {
-  const payload = request.body || {};
-  const identifier = String(payload.email || payload.username || '').trim(); // Accept 'email' field as generic identifier
-  const password = String(payload.password || '');
-  
-  if (!identifier || !password) {
-    reply.code(400);
-    return { error: '账号与密码必填' };
-  }
-
-  // Find user by email OR name (username)
-  const user = db.get(
-    'SELECT id, name, email, role, avatar_url, password_hash FROM users WHERE email = ? OR name = ?',
-    [identifier, identifier]
-  );
-
-  if (!user || !verifyPassword(password, user.password_hash)) {
-    reply.code(401);
-    return { error: '账号或密码错误' };
-  }
-
-  const { token, exp } = createToken({ sub: user.id, role: user.role, email: user.email });
-  logAudit('auth.login', request, { userId: user.id });
-  return {
-    user: { id: user.id, name: user.name, email: user.email, role: user.role, avatar_url: user.avatar_url },
-    token,
-    expiresAt: exp
-  };
-});
-
-fastify.get(`${API_PREFIX}/auth/me`, async (request, reply) => {
-  if (!requireAuth(request, reply)) return;
-  return { user: request.user };
-});
-
-fastify.post(`${API_PREFIX}/gitea/validate-repo`, async (request, reply) => {
-  if (!requireRole(request, reply, ['student', 'teacher', 'judge'])) return;
-  const repoUrl = String(request.body?.repoUrl || request.body?.repo_url || '').trim();
-  const validation = await validateGiteaRepo(repoUrl);
-  if (!validation.ok) {
-    reply.code(validation.status || 400);
-    return { error: validation.error };
-  }
-  logAudit('gitea.repo.validate', request, validation.repo);
-  return { ok: true, repo: validation.repo };
-});
-
-fastify.post(`${API_PREFIX}/ai/chat`, async (request, reply) => {
-  if (!requireAuth(request, reply)) return;
-  const payload = request.body || {};
-  let messages = payload.messages;
-  if (!Array.isArray(messages) || !messages.length) {
-    const prompt = String(payload.prompt || payload.message || '').trim();
-    if (prompt) {
-      messages = [{ role: 'user', content: prompt }];
-    }
-  }
-  if (!Array.isArray(messages) || !messages.length) {
-    reply.code(400);
-    return { error: '缺少消息内容' };
-  }
-  const headerKey = request.headers['x-model-key'];
-  const apiKey = String(headerKey || process.env.AI_API_KEY || '').trim();
-  if (!apiKey) {
-    reply.code(400);
-    return { error: 'AI Key 未配置' };
-  }
-  try {
-    const result = await requestAiChat(messages, apiKey);
-    logAudit('ai.chat', request, { messageCount: messages.length });
-    return { reply: result.content };
-  } catch (err) {
-    reply.code(502);
-    return { error: err.message || 'AI 服务不可用' };
-  }
-});
-
-fastify.patch(`${API_PREFIX}/users/me`, async (request, reply) => {
-  if (!requireAuth(request, reply)) return;
-  const payload = request.body || {};
-  const name = String(payload.name || '').trim();
-  const avatarUrl = String(payload.avatarUrl || '').trim();
-
-  if (name && name.length > 80) {
-    reply.code(400);
-    return { error: '昵称过长' };
-  }
-  if (avatarUrl && !/^https?:\/\//i.test(avatarUrl)) {
-    reply.code(400);
-    return { error: '头像地址格式无效' };
-  }
-
-  db.run(
-    'UPDATE users SET name = ?, avatar_url = ? WHERE id = ?',
-    [name || request.user.name, avatarUrl, request.user.id]
-  );
-  const updated = db.get(
-    'SELECT id, name, email, role, avatar_url FROM users WHERE id = ?',
-    [request.user.id]
-  );
-  logAudit('user.profile.update', request, { userId: request.user.id });
-  return { user: updated };
-});
-
-fastify.get(`${API_PREFIX}/users/search`, async (request, reply) => {
-  if (!requireRole(request, reply, ['student', 'teacher', 'judge'])) return;
-  const keyword = String(request.query?.keyword || '').trim();
-  if (!keyword) {
-    return { users: [] };
-  }
-  const like = `%${keyword}%`;
-  const rows = db.all(
-    `SELECT id, name, email, role, avatar_url FROM users
-     WHERE name LIKE ? OR email LIKE ?
-     ORDER BY created_at DESC
-     LIMIT 10`,
-    [like, like]
-  );
-  return { users: rows };
-});
-
-fastify.get(`${API_PREFIX}/admin/users`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  const keyword = String(request.query?.keyword || '').trim();
-  const role = String(request.query?.role || '').trim();
-  const conditions = [];
-  const params = [];
-  if (keyword) {
-    conditions.push('(name LIKE ? OR email LIKE ?)');
-    params.push(`%${keyword}%`, `%${keyword}%`);
-  }
-  if (role) {
-    conditions.push('role = ?');
-    params.push(role);
-  }
-  let sql = 'SELECT id, name, email, role, avatar_url, created_at FROM users';
-  if (conditions.length) {
-    sql += ` WHERE ${conditions.join(' AND ')}`;
-  }
-  sql += ' ORDER BY created_at DESC';
-  const users = db.all(sql, params);
-  return { users };
-});
-
-fastify.post(`${API_PREFIX}/admin/users/:id/reset-password`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  const userId = parseProjectId(request.params.id);
-  if (!userId) {
-    reply.code(400);
-    return { error: '用户ID无效' };
-  }
-  const payload = request.body || {};
-  let password = String(payload.password || '').trim();
-  if (!password) {
-    password = crypto.randomBytes(6).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 10);
-  }
-  if (password.length < 6) {
-    reply.code(400);
-    return { error: '密码至少 6 位' };
-  }
-  const existing = db.get('SELECT id FROM users WHERE id = ?', [userId]);
-  if (!existing) {
-    reply.code(404);
-    return { error: '用户不存在' };
-  }
-  db.run('UPDATE users SET password_hash = ? WHERE id = ?', [hashPassword(password), userId]);
-  logAudit('admin.user.reset_password', request, { userId });
-  return { success: true, password };
-});
-
-fastify.post(`${API_PREFIX}/projects`, async (request, reply) => {
-  if (!requireRole(request, reply, ['student', 'teacher'])) return;
-  const payload = request.body || {};
-  const title = String(payload.title || '').trim();
-  if (!title) {
-    reply.code(400);
-    return { error: '项目名称必填' };
-  }
-
-  const summary = String(payload.summary || '').trim();
-  const teamMembers = String(payload.teamMembers || '').trim();
-  const className = String(payload.className || '').trim();
-  const giteaRepoUrl = String(payload.giteaRepoUrl || '').trim();
-  const memberIds = normalizeMemberIds(payload.memberIds);
-  const createdAt = now();
-  const createdBy = request.user.id;
-
-  if (giteaRepoUrl && !/^https?:\/\//i.test(giteaRepoUrl)) {
-    reply.code(400);
-    return { error: 'Gitea 仓库地址格式无效' };
-  }
-  if (giteaRepoUrl) {
-    const validation = await validateGiteaRepo(giteaRepoUrl);
-    if (!validation.ok) {
-      reply.code(validation.status || 400);
-      return { error: validation.error };
-    }
-  }
-
-  const info = db.run(
-    `INSERT INTO projects (title, summary, team_members, class_name, status, created_at, updated_at, created_by, gitea_repo_url)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  , [
-    title,
-    summary,
-    teamMembers,
-    className,
-    'submitted',
-    createdAt,
-    createdAt,
-    createdBy,
-    giteaRepoUrl
-  ]);
-
-  const projectId = info.lastInsertRowid;
-  insertProjectLog(projectId, 'submitted', '立项提交');
-  addProjectMembers(projectId, [createdBy], 'owner');
-  if (memberIds.length) {
-    addProjectMembers(projectId, memberIds, 'member');
-  }
-
-  const project = getProject(projectId);
-  logAudit('project.create', request, { projectId });
-  return { project };
-});
-
-fastify.get(`${API_PREFIX}/projects`, async (request, reply) => {
-  if (!requireRole(request, reply, ['student', 'teacher', 'judge'])) return;
-  const { conditions, params } = buildProjectFilters(request.query);
-  if (request.user.role === 'student') {
-    conditions.push('(created_by = ? OR id IN (SELECT project_id FROM project_members WHERE user_id = ?))');
-    params.push(request.user.id, request.user.id);
-  }
-
-  let sql = 'SELECT * FROM projects';
-  if (conditions.length) {
-    sql += ` WHERE ${conditions.join(' AND ')}`;
-  }
-  sql += ' ORDER BY updated_at DESC';
-
-  const projects = db.all(sql, params);
-  return { projects };
-});
-
-fastify.get(`${API_PREFIX}/admin/project-review-queue`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher', 'judge'])) return;
-  const { conditions, params } = buildProjectFilters(request.query, 'p');
-  let sql = 'SELECT p.* FROM projects p';
-  if (conditions.length) {
-    sql += ` WHERE ${conditions.join(' AND ')}`;
-  }
-  sql += ' ORDER BY p.updated_at DESC';
-
-  const projects = db.all(sql, params).map(project => {
-    const detail = getProjectDetail(project.id);
-    const milestones = getProjectMilestones(project.id);
-    const resources = getProjectResources(project.id);
-    const devLogs = getProjectDevLogs(project.id);
-    const meta = buildProjectReviewMeta(detail, milestones, resources, devLogs);
-    const memberNames = (detail.members || []).map(item => item.name).filter(Boolean);
-    return {
-      ...project,
-      members: detail.members || [],
-      memberNames,
-      latestSubmission: meta.latestSubmission,
-      pendingSubmissionCount: meta.pendingSubmissionCount,
-      pendingMilestoneCount: meta.pendingMilestoneCount,
-      milestoneProgress: meta.milestoneProgress,
-      resourcesPendingCount: meta.resourcesPendingCount,
-      implementationLogCount: meta.implementationLogCount,
-      reviewBucket: meta.reviewBucket,
-      alerts: meta.alerts,
-      latestActivityAt: [
-        project.updated_at,
-        meta.latestSubmission?.created_at,
-        devLogs[0]?.created_at,
-        resources[0]?.updated_at
-      ].filter(Boolean).sort().at(-1) || project.updated_at
-    };
-  });
-
-  return { projects };
-});
-
-fastify.get(`${API_PREFIX}/admin/projects/:id/review-dossier`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher', 'judge'])) return;
-  const projectId = parseProjectId(request.params.id);
-  if (!projectId) {
-    reply.code(400);
-    return { error: '项目ID无效' };
-  }
-  const dossier = buildProjectReviewDossier(projectId);
-  if (!dossier) {
-    reply.code(404);
-    return { error: '项目不存在' };
-  }
-  return dossier;
-});
-
-fastify.get(`${API_PREFIX}/exports/projects.csv`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  const { conditions, params } = buildProjectFilters(request.query);
-  let sql = 'SELECT id, title, class_name, team_members, summary, status, created_at, updated_at FROM projects';
-  if (conditions.length) {
-    sql += ` WHERE ${conditions.join(' AND ')}`;
-  }
-  sql += ' ORDER BY updated_at DESC';
-
-  const rows = db.all(sql, params);
-  const header = [
-    '项目ID',
-    '项目名称',
-    '班级/组别',
-    '团队成员',
-    '项目简介',
-    '状态',
-    '创建时间',
-    '更新时间'
-  ];
-  const lines = [toCsvLine(header)];
-  rows.forEach(row => {
-    lines.push(toCsvLine([
-      row.id,
-      row.title,
-      row.class_name || '',
-      row.team_members || '',
-      row.summary || '',
-      row.status,
-      row.created_at,
-      row.updated_at
-    ]));
-  });
-
-  logAudit('export.projects.csv', request, { total: rows.length, filters: request.query || {} });
-  reply
-    .header('Content-Type', 'text/csv; charset=utf-8')
-    .header('Content-Disposition', 'attachment; filename="projects.csv"')
-    .send(lines.join('\n'));
-});
-
-fastify.get(`${API_PREFIX}/exports/attachments.zip`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  const { conditions, params } = buildProjectFilters(request.query, 'p');
-  let sql = `
-    SELECT a.file_name, a.file_path, s.type AS submission_type, s.id AS submission_id, s.project_id
-    FROM attachments a
-    JOIN submissions s ON s.id = a.submission_id
-    JOIN projects p ON p.id = s.project_id
-  `;
-  if (conditions.length) {
-    sql += ` WHERE ${conditions.join(' AND ')}`;
-  }
-  sql += ' ORDER BY s.project_id, s.created_at DESC';
-  const rows = db.all(sql, params);
-  logAudit('export.attachments.zip', request, { total: rows.length, filters: request.query || {} });
-
-  streamZip(reply, 'attachments.zip', (archive) => {
-    const missing = [];
-    rows.forEach(row => {
-      const safeType = sanitizeName(row.submission_type || 'submission');
-      const safeName = sanitizeName(row.file_name || 'file');
-      const archivePath = `project-${row.project_id}/${safeType}/${row.submission_id}_${safeName}`;
-      const absolutePath = path.join(UPLOAD_DIR, row.file_path);
-      appendFileSafe(archive, absolutePath, archivePath, missing);
-    });
-    if (missing.length) {
-      archive.append(missing.join('\n'), { name: 'missing_files.txt' });
-    }
-  });
-});
-
-fastify.get(`${API_PREFIX}/showcase`, async (request) => {
-  const { conditions, params } = buildProjectFilters(request.query, 'p');
-  let sql = `
-    SELECT
-      p.id AS project_id,
-      p.title AS project_title,
-      p.summary AS project_summary,
-      p.team_members AS project_team_members,
-      p.class_name AS project_class_name,
-      p.status AS project_status,
-      p.created_at AS project_created_at,
-      p.updated_at AS project_updated_at,
-      s.id AS submission_id,
-      s.title AS submission_title,
-      s.content AS submission_content,
-      s.details AS submission_details,
-      s.attachments AS submission_attachments,
-      s.created_at AS submission_created_at
-    FROM projects p
-    JOIN submissions s ON s.project_id = p.id
-    WHERE s.type = 'showcase'
-  `;
-  if (conditions.length) {
-    sql += ` AND ${conditions.join(' AND ')}`;
-  }
-  sql += ` ORDER BY s.created_at DESC `;
-
-  const rows = db.all(sql, params);
-  const items = rows.map(row => ({
-    project: {
-      id: row.project_id,
-      title: row.project_title,
-      summary: row.project_summary,
-      team_members: row.project_team_members,
-      class_name: row.project_class_name,
-      status: row.project_status,
-      created_at: row.project_created_at,
-      updated_at: row.project_updated_at
-    },
-    showcase: {
-      id: row.submission_id,
-      title: row.submission_title,
-      content: row.submission_content,
-      details: safeParseJson(row.submission_details),
-      created_at: row.submission_created_at,
-      attachments: getSubmissionAttachments(row.submission_id, row.submission_attachments)
-    }
-  }));
-
-  return { items };
-});
-
-fastify.get(`${API_PREFIX}/projects/:id`, async (request, reply) => {
-  if (!requireRole(request, reply, ['student', 'teacher', 'judge'])) return;
-  const projectId = parseProjectId(request.params.id);
-  if (!projectId) {
-    reply.code(400);
-    return { error: '项目ID无效' };
-  }
-
-  const project = getProject(projectId);
-  if (!project) {
-    reply.code(404);
-    return { error: '项目不存在' };
-  }
-
-  if (!requireProjectAccess(request, reply, project, 'read')) return;
-
-  const detail = getProjectDetail(projectId);
-  return detail;
-});
-
-fastify.patch(`${API_PREFIX}/projects/:id`, async (request, reply) => {
-  if (!requireRole(request, reply, ['student', 'teacher'])) return;
-  const projectId = parseProjectId(request.params.id);
-  if (!projectId) {
-    reply.code(400);
-    return { error: '项目ID无效' };
-  }
-
-  const project = getProject(projectId);
-  if (!project) {
-    reply.code(404);
-    return { error: '项目不存在' };
-  }
-
-  if (!requireProjectAccess(request, reply, project, 'write')) return;
-
-  const payload = request.body || {};
-  const giteaRepoUrl = String(payload.giteaRepoUrl || '').trim();
-  if (giteaRepoUrl && !/^https?:\/\//i.test(giteaRepoUrl)) {
-    reply.code(400);
-    return { error: 'Gitea 仓库地址格式无效' };
-  }
-  if (giteaRepoUrl) {
-    const validation = await validateGiteaRepo(giteaRepoUrl);
-    if (!validation.ok) {
-      reply.code(validation.status || 400);
-      return { error: validation.error };
-    }
-  }
-
-  db.run(
-    'UPDATE projects SET gitea_repo_url = ?, updated_at = ? WHERE id = ?',
-    [giteaRepoUrl, now(), projectId]
-  );
-  logAudit('project.update', request, { projectId, giteaRepoUrl });
-  return { success: true };
-});
-
-fastify.post(`${API_PREFIX}/projects/:id/members`, async (request, reply) => {
-  if (!requireRole(request, reply, ['student', 'teacher'])) return;
-  const projectId = parseProjectId(request.params.id);
-  if (!projectId) {
-    reply.code(400);
-    return { error: '项目ID无效' };
-  }
-
-  const project = getProject(projectId);
-  if (!project) {
-    reply.code(404);
-    return { error: '项目不存在' };
-  }
-  if (!requireProjectAccess(request, reply, project, 'write')) return;
-
-  const payload = request.body || {};
-  const memberIds = normalizeMemberIds(payload.memberIds);
-  if (!memberIds.length) {
-    reply.code(400);
-    return { error: '成员列表为空' };
-  }
-  addProjectMembers(projectId, memberIds, 'member');
-  logAudit('project.members.add', request, { projectId, memberIds });
-  return { success: true };
-});
-
-fastify.get(`${API_PREFIX}/projects/:id/tool-data`, async (request, reply) => {
-  if (!requireRole(request, reply, ['student', 'teacher', 'judge'])) return;
-  const projectId = parseProjectId(request.params.id);
-  if (!projectId) {
-    reply.code(400);
-    return { error: '项目ID无效' };
-  }
-  const project = getProject(projectId);
-  if (!project) {
-    reply.code(404);
-    return { error: '项目不存在' };
-  }
-  if (!requireProjectAccess(request, reply, project, 'read')) return;
-  const items = loadProjectToolData(projectId);
-  const data = items.reduce((acc, item) => {
-    acc[item.tool_key] = item.data || {};
-    return acc;
-  }, {});
-  return { items, data };
-});
-
-fastify.get(`${API_PREFIX}/projects/:id/tool-data/:toolKey`, async (request, reply) => {
-  if (!requireRole(request, reply, ['student', 'teacher', 'judge'])) return;
-  const projectId = parseProjectId(request.params.id);
-  const toolKey = normalizeToolKey(request.params.toolKey);
-  if (!projectId || !toolKey) {
-    reply.code(400);
-    return { error: '项目ID或工具类型无效' };
-  }
-  const project = getProject(projectId);
-  if (!project) {
-    reply.code(404);
-    return { error: '项目不存在' };
-  }
-  if (!requireProjectAccess(request, reply, project, 'read')) return;
-  const row = getProjectToolData(projectId, toolKey);
-  return {
-    item: row ? { ...row, data: safeParseJson(row.data) || {} } : null,
-    data: row ? (safeParseJson(row.data) || {}) : null
-  };
-});
-
-fastify.put(`${API_PREFIX}/projects/:id/tool-data/:toolKey`, async (request, reply) => {
-  if (!requireRole(request, reply, ['student', 'teacher'])) return;
-  const projectId = parseProjectId(request.params.id);
-  const toolKey = normalizeToolKey(request.params.toolKey);
-  if (!projectId || !toolKey) {
-    reply.code(400);
-    return { error: '项目ID或工具类型无效' };
-  }
-  const project = getProject(projectId);
-  if (!project) {
-    reply.code(404);
-    return { error: '项目不存在' };
-  }
-  if (!requireProjectAccess(request, reply, project, 'write')) return;
-  const payload = request.body && Object.prototype.hasOwnProperty.call(request.body, 'data')
-    ? request.body.data
-    : request.body;
-  const item = upsertProjectToolData(projectId, toolKey, payload || {}, request.user.id);
-  logAudit('project.tool_data.upsert', request, { projectId, toolKey });
-  return { item, data: item.data };
-});
-
-fastify.post(`${API_PREFIX}/projects/:id/sync-wbs`, async (request, reply) => {
-  if (!requireRole(request, reply, ['student', 'teacher'])) return;
-  const projectId = parseProjectId(request.params.id);
-  if (!projectId) {
-    reply.code(400);
-    return { error: '项目ID无效' };
-  }
-  const project = getProject(projectId);
-  if (!project) {
-    reply.code(404);
-    return { error: '项目不存在' };
-  }
-  if (!requireProjectAccess(request, reply, project, 'write')) return;
-
-  const tasks = Array.isArray(request.body?.tasks) ? request.body.tasks : [];
-  const source = normalizeToolKey(request.body?.source || 'wbs') || 'wbs';
-  const synced = [];
-  const nowAt = now();
-  tasks.forEach((task, index) => {
-    const title = String(task?.title || '').trim();
-    if (!title) return;
-    const phase = String(task?.phase || task?.description || 'm1').trim() || 'm1';
-    const sourceKey = String(task?.sourceKey || task?.source_key || buildMilestoneSourceKey(task, index)).trim();
-    const output = String(task?.output || task?.deliverables?.output || '').trim();
-    const deliverables = {
-      ...(typeof task?.deliverables === 'object' && task.deliverables !== null ? task.deliverables : {}),
-      output
-    };
-    const sortOrder = Number.isFinite(Number(task?.sort_order ?? task?.sortOrder))
-      ? Number(task?.sort_order ?? task?.sortOrder)
-      : index;
-    const existing = db.get(
-      'SELECT id FROM project_milestones WHERE project_id = ? AND source = ? AND source_key = ?',
-      [projectId, source, sourceKey]
-    );
-    if (existing) {
-      db.run(
-        `UPDATE project_milestones
-         SET title = ?, description = ?, sort_order = ?, deliverables = ?, updated_at = ?
-         WHERE id = ?`,
-        [title, phase, sortOrder, JSON.stringify(deliverables), nowAt, existing.id]
-      );
-      synced.push(existing.id);
-      return;
-    }
-    const info = db.run(
-      `INSERT INTO project_milestones (project_id, title, description, parent_id, sort_order, assignee, start_date, end_date, deadline, deliverables, source, source_key, status, created_at, updated_at)
-       VALUES (?, ?, ?, NULL, ?, NULL, NULL, NULL, NULL, ?, ?, ?, 'pending', ?, ?)`,
-      [projectId, title, phase, sortOrder, JSON.stringify(deliverables), source, sourceKey, nowAt, nowAt]
-    );
-    synced.push(info.lastInsertRowid);
-  });
-  logAudit('project.wbs.sync', request, { projectId, count: synced.length });
-  return { success: true, synced, milestones: getProjectMilestones(projectId) };
-});
-
-fastify.get(`${API_PREFIX}/projects/:id/attachments.zip`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  const projectId = parseProjectId(request.params.id);
-  if (!projectId) {
-    reply.code(400);
-    return { error: '项目ID无效' };
-  }
-  const project = getProject(projectId);
-  if (!project) {
-    reply.code(404);
-    return { error: '项目不存在' };
-  }
-
-  const rows = db.all(
-    `SELECT a.file_name, a.file_path, s.type AS submission_type, s.id AS submission_id
-     FROM attachments a
-     JOIN submissions s ON s.id = a.submission_id
-     WHERE s.project_id = ?
-     ORDER BY s.created_at DESC`,
-    [projectId]
-  );
-  logAudit('project.attachments.zip', request, { projectId, total: rows.length });
-
-  streamZip(reply, `project-${projectId}-attachments.zip`, (archive) => {
-    const missing = [];
-    rows.forEach(row => {
-      const safeType = sanitizeName(row.submission_type || 'submission');
-      const safeName = sanitizeName(row.file_name || 'file');
-      const archivePath = `project-${projectId}/${safeType}/${row.submission_id}_${safeName}`;
-      const absolutePath = path.join(UPLOAD_DIR, row.file_path);
-      appendFileSafe(archive, absolutePath, archivePath, missing);
-    });
-    if (missing.length) {
-      archive.append(missing.join('\n'), { name: 'missing_files.txt' });
-    }
-  });
-});
-
-fastify.get(`${API_PREFIX}/projects/:id/archive.zip`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  const projectId = parseProjectId(request.params.id);
-  if (!projectId) {
-    reply.code(400);
-    return { error: '项目ID无效' };
-  }
-  const detail = getProjectDetail(projectId);
-  if (!detail) {
-    reply.code(404);
-    return { error: '项目不存在' };
-  }
-
-  const comments = getProjectComments(projectId);
-  const scores = getProjectScores(projectId);
-  const attachments = db.all(
-    `SELECT a.file_name, a.file_path, s.type AS submission_type, s.id AS submission_id
-     FROM attachments a
-     JOIN submissions s ON s.id = a.submission_id
-     WHERE s.project_id = ?
-     ORDER BY s.created_at DESC`,
-    [projectId]
-  );
-  logAudit('project.archive.zip', request, { projectId, total: attachments.length });
-
-  streamZip(reply, `project-${projectId}-archive.zip`, (archive) => {
-    const missing = [];
-    archive.append(JSON.stringify(detail.project, null, 2), { name: 'project.json' });
-    archive.append(JSON.stringify(detail.members || [], null, 2), { name: 'members.json' });
-    archive.append(JSON.stringify(detail.submissions || [], null, 2), { name: 'submissions.json' });
-    archive.append(JSON.stringify(detail.logs || [], null, 2), { name: 'status_logs.json' });
-    archive.append(JSON.stringify(comments || [], null, 2), { name: 'comments.json' });
-    archive.append(JSON.stringify(scores || [], null, 2), { name: 'scores.json' });
-
-    attachments.forEach(row => {
-      const safeType = sanitizeName(row.submission_type || 'submission');
-      const safeName = sanitizeName(row.file_name || 'file');
-      const archivePath = `attachments/${safeType}/${row.submission_id}_${safeName}`;
-      const absolutePath = path.join(UPLOAD_DIR, row.file_path);
-      appendFileSafe(archive, absolutePath, archivePath, missing);
-    });
-
-    if (missing.length) {
-      archive.append(missing.join('\n'), { name: 'missing_files.txt' });
-    }
-  });
-});
-
-fastify.post(`${API_PREFIX}/projects/:id/status`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  const projectId = parseProjectId(request.params.id);
-  if (!projectId) {
-    reply.code(400);
-    return { error: '项目ID无效' };
-  }
-
-  const payload = request.body || {};
-  const nextStatus = String(payload.status || '').trim();
-  const note = String(payload.note || '').trim();
-
-  if (!PROJECT_STATUSES.has(nextStatus)) {
-    reply.code(400);
-    return { error: '项目状态无效' };
-  }
-
-  const project = getProject(projectId);
-  if (!project) {
-    reply.code(404);
-    return { error: '项目不存在' };
-  }
-  const transitionError = validateStatusTransition(project.status, nextStatus);
-  if (transitionError) {
-    reply.code(400);
-    return { error: transitionError };
-  }
-
-  updateProjectStatus(projectId, nextStatus, note);
-  logAudit('project.status.update', request, { projectId, status: nextStatus });
-  if (nextStatus === 'approved') {
-    try {
-      await ensureGiteaRepo(getProject(projectId), request);
-    } catch (err) {
-      fastify.log.error(err, 'auto create gitea repo failed');
-      logAudit('gitea.repo.error', request, { projectId, message: err.message });
-    }
-  }
-  return { success: true };
-});
-
-// --- Dev Logs APIs ---
-fastify.get(`${API_PREFIX}/projects/:id/logs`, async (request, reply) => {
-  if (!requireAuth(request, reply)) return;
-  const projectId = parseProjectId(request.params.id);
-  const project = getProject(projectId);
-  if (!project) {
-    reply.code(404);
-    return { error: '项目不存在' };
-  }
-  if (!requireProjectAccess(request, reply, project, 'read')) return;
-  const logs = db.all(
-    `SELECT l.id, l.content, l.tags, l.created_at, u.name AS author_name, u.avatar_url
-     FROM dev_logs l
-     JOIN users u ON u.id = l.author_id
-     WHERE l.project_id = ?
-     ORDER BY l.created_at DESC`,
-    [projectId]
-  );
-  return { logs };
-});
-
-fastify.post(`${API_PREFIX}/projects/:id/logs`, async (request, reply) => {
-  if (!requireRole(request, reply, ['student', 'teacher'])) return;
-  const projectId = parseProjectId(request.params.id);
-  const project = getProject(projectId);
-  if (!project) {
-    reply.code(404);
-    return { error: '项目不存在' };
-  }
-  if (!requireProjectAccess(request, reply, project, 'write')) return;
-  const payload = request.body || {};
-  const content = String(payload.content || '').trim();
-  const tags = String(payload.tags || '').trim();
-
-  if (!content) {
-    reply.code(400);
-    return { error: '日志内容必填' };
-  }
-
-  db.run(
-    'INSERT INTO dev_logs (project_id, author_id, content, tags, created_at) VALUES (?, ?, ?, ?, ?)',
-    [projectId, request.user.id, content, tags, now()]
-  );
-  return { success: true };
-});
-
-// --- Resource Request APIs ---
-fastify.get(`${API_PREFIX}/projects/:id/resources`, async (request, reply) => {
-  if (!requireAuth(request, reply)) return;
-  const projectId = parseProjectId(request.params.id);
-  const project = getProject(projectId);
-  if (!project) {
-    reply.code(404);
-    return { error: '项目不存在' };
-  }
-  if (!requireProjectAccess(request, reply, project, 'read')) return;
-  const requests = db.all(
-    `SELECT r.*, u.name AS requester_name
-     FROM resource_requests r
-     JOIN users u ON u.id = r.requester_id
-     WHERE r.project_id = ?
-     ORDER BY r.created_at DESC`,
-    [projectId]
-  );
-  return { requests };
-});
-
-fastify.post(`${API_PREFIX}/projects/:id/resources`, async (request, reply) => {
-  if (!requireRole(request, reply, ['student'])) return;
-  const projectId = parseProjectId(request.params.id);
-  const project = getProject(projectId);
-  if (!project) {
-    reply.code(404);
-    return { error: '项目不存在' };
-  }
-  if (!requireProjectAccess(request, reply, project, 'write')) return;
-  const payload = request.body || {};
-  const type = String(payload.type || 'hardware');
-  const itemName = String(payload.item_name || '').trim();
-  const quantity = Number(payload.quantity) || 1;
-  const reason = String(payload.reason || '').trim();
-
-  if (!itemName) {
-    reply.code(400);
-    return { error: '物资名称必填' };
-  }
-
-  db.run(
-    `INSERT INTO resource_requests (project_id, requester_id, type, item_name, quantity, reason, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
-    [projectId, request.user.id, type, itemName, quantity, reason, now(), now()]
-  );
-  // Notify teacher? (Log for now)
-  logAudit('resource.request', request, { projectId, item: itemName });
-  return { success: true };
-});
-
-fastify.patch(`${API_PREFIX}/resources/:id/status`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  const requestId = parseProjectId(request.params.id);
-  const payload = request.body || {};
-  const status = String(payload.status || '').trim();
-  const replyText = String(payload.reply || '').trim();
-
-  if (!['approved', 'rejected'].includes(status)) {
-    reply.code(400);
-    return { error: '状态无效' };
-  }
-
-  db.run(
-    'UPDATE resource_requests SET status = ?, reply = ?, updated_at = ? WHERE id = ?',
-    [status, replyText, now(), requestId]
-  );
-  return { success: true };
-});
-
-// --- Help Ticket APIs ---
-fastify.get(`${API_PREFIX}/projects/:id/tickets`, async (request, reply) => {
-  if (!requireAuth(request, reply)) return;
-  const projectId = parseProjectId(request.params.id);
-  const project = getProject(projectId);
-  if (!project) {
-    reply.code(404);
-    return { error: '项目不存在' };
-  }
-  if (!requireProjectAccess(request, reply, project, 'read')) return;
-  const tickets = db.all(
-    `SELECT t.*, u.name AS requester_name, u.avatar_url
-     FROM help_tickets t
-     JOIN users u ON u.id = t.requester_id
-     WHERE t.project_id = ?
-     ORDER BY t.status ASC, t.priority DESC, t.created_at DESC`, // Open first, then urgent
-    [projectId]
-  );
-  return { tickets };
-});
-
-fastify.post(`${API_PREFIX}/projects/:id/tickets`, async (request, reply) => {
-  if (!requireRole(request, reply, ['student'])) return;
-  const projectId = parseProjectId(request.params.id);
-  const project = getProject(projectId);
-  if (!project) {
-    reply.code(404);
-    return { error: '项目不存在' };
-  }
-  if (!requireProjectAccess(request, reply, project, 'write')) return;
-  const payload = request.body || {};
-  const title = String(payload.title || '').trim();
-  const description = String(payload.description || '').trim();
-  const priority = String(payload.priority || 'normal');
-
-  if (!title) {
-    reply.code(400);
-    return { error: '标题必填' };
-  }
-
-  db.run(
-    `INSERT INTO help_tickets (project_id, requester_id, title, description, priority, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, 'open', ?, ?)`,
-    [projectId, request.user.id, title, description, priority, now(), now()]
-  );
-  logAudit('ticket.create', request, { projectId, title });
-  return { success: true };
-});
-
-fastify.patch(`${API_PREFIX}/tickets/:id`, async (request, reply) => {
-  if (!requireRole(request, reply, ['student', 'teacher'])) return;
-  const ticketId = parseProjectId(request.params.id);
-  const payload = request.body || {};
-  
-  // Logic: Student can close their own ticket. Teacher can resolve/reply.
-  const ticket = db.get('SELECT * FROM help_tickets WHERE id = ?', [ticketId]);
-  if (!ticket) {
-    reply.code(404);
-    return { error: '工单不存在' };
-  }
-  const project = getProject(ticket.project_id);
-  if (!project) {
-    reply.code(404);
-    return { error: '项目不存在' };
-  }
-  if (!requireProjectAccess(request, reply, project, 'write')) return;
-
-  const status = payload.status || ticket.status;
-  const resolution = payload.resolution || ticket.resolution;
-
-  db.run(
-    'UPDATE help_tickets SET status = ?, resolution = ?, updated_at = ? WHERE id = ?',
-    [status, resolution, now(), ticketId]
-  );
-  return { success: true };
-});
-
-// --- Admin Resource API ---
-fastify.get(`${API_PREFIX}/admin/resources`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher', 'judge'])) return;
-  const status = request.query.status;
-  let sql = `SELECT r.*, u.name AS requester_name, p.title AS project_title
-             FROM resource_requests r
-             JOIN users u ON u.id = r.requester_id
-             JOIN projects p ON p.id = r.project_id`;
-  const params = [];
-  if (status) {
-    sql += ' WHERE r.status = ?';
-    params.push(status);
-  }
-  sql += ' ORDER BY r.created_at DESC';
-  const requests = db.all(sql, params);
-  return { requests };
-});
-
-// --- Milestone/WBS API ---
-fastify.get(`${API_PREFIX}/projects/:id/milestones`, async (request, reply) => {
-  if (!requireAuth(request, reply)) return;
-  const projectId = parseProjectId(request.params.id);
-  const project = getProject(projectId);
-  if (!project) {
-    reply.code(404);
-    return { error: '项目不存在' };
-  }
-  if (!requireProjectAccess(request, reply, project, 'read')) return;
-  const milestones = db.all(
-    `SELECT * FROM project_milestones
-     WHERE project_id = ?
-     ORDER BY COALESCE(sort_order, id) ASC, id ASC`,
-    [projectId]
-  );
-  return { milestones };
-});
-
-fastify.post(`${API_PREFIX}/projects/:id/milestones`, async (request, reply) => {
-  if (!requireRole(request, reply, ['student', 'teacher'])) return;
-  const projectId = parseProjectId(request.params.id);
-  const project = getProject(projectId);
-  if (!project) {
-    reply.code(404);
-    return { error: '项目不存在' };
-  }
-  if (!requireProjectAccess(request, reply, project, 'write')) return;
-  const payload = request.body || {};
-  // Simple WBS task creation
-  const title = String(payload.title || '').trim();
-  const rawPhase = payload.phase ?? payload.description ?? 'm1';
-  const description = String(rawPhase || 'm1').trim() || 'm1'; // reusing description field for phase/tag
-  const deadline = payload.deadline ? String(payload.deadline).trim() : null;
-  const assignee = payload.assignee ? String(payload.assignee).trim() : null;
-  const startDate = payload.start_date ?? payload.startDate ?? payload.start ?? null;
-  const endDate = payload.end_date ?? payload.endDate ?? payload.end ?? null;
-  const output = payload.output;
-  const deliverablesPayload = payload.deliverables;
-  const source = payload.source ? normalizeToolKey(payload.source) : null;
-  const sourceKey = payload.sourceKey || payload.source_key
-    ? String(payload.sourceKey || payload.source_key).trim()
-    : null;
-  const rawParentId = payload.parent_id ?? payload.parentId ?? null;
-  let parentId = rawParentId === '' ? null : rawParentId;
-  if (parentId !== null && parentId !== undefined) {
-    parentId = Number(parentId);
-    if (Number.isNaN(parentId)) parentId = null;
-  } else {
-    parentId = null;
-  }
-  const rawSortOrder = payload.sort_order ?? payload.sortOrder ?? null;
-  let sortOrder = rawSortOrder === '' ? null : rawSortOrder;
-  if (sortOrder !== null && sortOrder !== undefined) {
-    sortOrder = Number(sortOrder);
-    if (Number.isNaN(sortOrder)) sortOrder = null;
-  } else {
-    sortOrder = null;
-  }
-  
-  if (!title) { 
-      reply.code(400);
-      return { error: '任务名称必填' };
-  }
-
-  if (sortOrder === null) {
-    const row = db.get(
-      'SELECT MAX(COALESCE(sort_order, id)) AS max_order FROM project_milestones WHERE project_id = ? AND description = ? AND parent_id IS ?',
-      [projectId, description, parentId]
-    );
-    const maxOrder = row && row.max_order !== null && row.max_order !== undefined ? Number(row.max_order) : null;
-    sortOrder = Number.isFinite(maxOrder) ? maxOrder + 1 : 0;
-  }
-
-  let deliverables = null;
-  if (deliverablesPayload !== undefined) {
-    if (typeof deliverablesPayload === 'string') {
-      deliverables = deliverablesPayload;
-    } else {
-      deliverables = JSON.stringify(deliverablesPayload);
-    }
-  } else if (output !== undefined) {
-    deliverables = JSON.stringify({ output: String(output || '').trim() });
-  }
-
-  const info = db.run(
-    `INSERT INTO project_milestones (project_id, title, description, parent_id, sort_order, assignee, start_date, end_date, deadline, deliverables, source, source_key, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
-    [
-      projectId,
-      title,
-      description,
-      parentId,
-      sortOrder,
-      assignee,
-      startDate ? String(startDate).trim() : null,
-      endDate ? String(endDate).trim() : null,
-      deadline,
-      deliverables,
-      source,
-      sourceKey,
-      now(),
-      now()
-    ]
-  );
-  return { success: true, id: info.lastInsertRowid };
-});
-
-fastify.patch(`${API_PREFIX}/milestones/:id`, async (request, reply) => {
-  if (!requireRole(request, reply, ['student', 'teacher'])) return;
-  const id = parseProjectId(request.params.id);
-  const milestone = db.get('SELECT * FROM project_milestones WHERE id = ?', [id]);
-  if (!milestone) {
-    reply.code(404);
-    return { error: '任务不存在' };
-  }
-  const project = getProject(milestone.project_id);
-  if (!project) {
-    reply.code(404);
-    return { error: '项目不存在' };
-  }
-  if (!requireProjectAccess(request, reply, project, 'write')) return;
-  const payload = request.body || {};
-  const status = payload.status; // e.g. move to another phase or mark done
-  const description = payload.phase ?? payload.description; // update phase
-  const deadline = payload.deadline;
-  const assignee = payload.assignee;
-  const title = payload.title;
-  const startDate = payload.start_date ?? payload.startDate ?? payload.start;
-  const endDate = payload.end_date ?? payload.endDate ?? payload.end;
-  const output = payload.output;
-  const deliverablesPayload = payload.deliverables;
-  const hasParent = Object.prototype.hasOwnProperty.call(payload, 'parent_id') || Object.prototype.hasOwnProperty.call(payload, 'parentId');
-  const hasSort = Object.prototype.hasOwnProperty.call(payload, 'sort_order') || Object.prototype.hasOwnProperty.call(payload, 'sortOrder');
-
-  // Construct update
-  if (title !== undefined) {
-      db.run('UPDATE project_milestones SET title = ?, updated_at = ? WHERE id = ?', [String(title || '').trim(), now(), id]);
-  }
-  if (status) {
-      db.run('UPDATE project_milestones SET status = ?, updated_at = ? WHERE id = ?', [status, now(), id]);
-  }
-  if (description !== undefined) {
-      db.run('UPDATE project_milestones SET description = ?, updated_at = ? WHERE id = ?', [description, now(), id]);
-  }
-  if (deadline !== undefined) {
-      db.run('UPDATE project_milestones SET deadline = ?, updated_at = ? WHERE id = ?', [deadline ? String(deadline).trim() : null, now(), id]);
-  }
-  if (assignee !== undefined) {
-      db.run('UPDATE project_milestones SET assignee = ?, updated_at = ? WHERE id = ?', [assignee ? String(assignee).trim() : null, now(), id]);
-  }
-  if (startDate !== undefined) {
-      db.run('UPDATE project_milestones SET start_date = ?, updated_at = ? WHERE id = ?', [startDate ? String(startDate).trim() : null, now(), id]);
-  }
-  if (endDate !== undefined) {
-      db.run('UPDATE project_milestones SET end_date = ?, updated_at = ? WHERE id = ?', [endDate ? String(endDate).trim() : null, now(), id]);
-  }
-  if (deliverablesPayload !== undefined || output !== undefined) {
-      const row = db.get('SELECT deliverables FROM project_milestones WHERE id = ?', [id]);
-      let current = safeParseJson(row?.deliverables) || {};
-      if (deliverablesPayload !== undefined) {
-        if (typeof deliverablesPayload === 'string') {
-          const parsed = safeParseJson(deliverablesPayload);
-          current = parsed ? { ...current, ...parsed } : current;
-        } else if (typeof deliverablesPayload === 'object' && deliverablesPayload !== null) {
-          current = { ...current, ...deliverablesPayload };
-        }
-      }
-      if (output !== undefined) {
-        current = { ...current, output: String(output || '').trim() };
-      }
-      db.run('UPDATE project_milestones SET deliverables = ?, updated_at = ? WHERE id = ?', [JSON.stringify(current), now(), id]);
-  }
-  if (hasParent) {
-      const rawParentId = payload.parent_id ?? payload.parentId ?? null;
-      let parentId = rawParentId === '' ? null : rawParentId;
-      if (parentId !== null && parentId !== undefined) {
-        parentId = Number(parentId);
-        if (Number.isNaN(parentId)) parentId = null;
-      } else {
-        parentId = null;
-      }
-      db.run('UPDATE project_milestones SET parent_id = ?, updated_at = ? WHERE id = ?', [parentId, now(), id]);
-  }
-  if (hasSort) {
-      const rawSortOrder = payload.sort_order ?? payload.sortOrder ?? null;
-      let sortOrder = rawSortOrder === '' ? null : rawSortOrder;
-      if (sortOrder !== null && sortOrder !== undefined) {
-        sortOrder = Number(sortOrder);
-        if (Number.isNaN(sortOrder)) sortOrder = null;
-      } else {
-        sortOrder = null;
-      }
-      db.run('UPDATE project_milestones SET sort_order = ?, updated_at = ? WHERE id = ?', [sortOrder, now(), id]);
-  }
-  return { success: true };
-});
-
-fastify.delete(`${API_PREFIX}/milestones/:id`, async (request, reply) => {
-  if (!requireRole(request, reply, ['student', 'teacher'])) return;
-  const id = parseProjectId(request.params.id);
-  const milestone = db.get('SELECT * FROM project_milestones WHERE id = ?', [id]);
-  if (!milestone) {
-    reply.code(404);
-    return { error: '任务不存在' };
-  }
-  const project = getProject(milestone.project_id);
-  if (!project) {
-    reply.code(404);
-    return { error: '项目不存在' };
-  }
-  if (!requireProjectAccess(request, reply, project, 'write')) return;
-  db.run('DELETE FROM project_milestones WHERE id = ?', [id]);
-  return { success: true };
-});
-
-// --- Project Blueprint API ---
-fastify.get(`${API_PREFIX}/projects/:id/blueprint`, async (request, reply) => {
-  if (!requireAuth(request, reply)) return;
-  const projectId = parseProjectId(request.params.id);
-  const project = getProject(projectId);
-  if (!project) {
-    reply.code(404);
-    return { error: '项目不存在' };
-  }
-  if (!requireProjectAccess(request, reply, project, 'read')) return;
-  const row = db.get('SELECT data FROM project_blueprints WHERE project_id = ?', [projectId]);
-  return { data: row ? safeParseJson(row.data) : null };
-});
-
-fastify.post(`${API_PREFIX}/projects/:id/blueprint`, async (request, reply) => {
-  if (!requireRole(request, reply, ['student', 'teacher'])) return;
-  const projectId = parseProjectId(request.params.id);
-  const project = getProject(projectId);
-  if (!project) {
-    reply.code(404);
-    return { error: '项目不存在' };
-  }
-  if (!requireProjectAccess(request, reply, project, 'write')) return;
-  const payload = request.body || {};
-  
-  // Validate basic structure
-  if (!payload.strategy || !Array.isArray(payload.wbs)) {
-    reply.code(400);
-    return { error: 'Invalid blueprint format' };
-  }
-
-  const dataJson = JSON.stringify(payload);
-  const existing = db.get('SELECT id FROM project_blueprints WHERE project_id = ?', [projectId]);
-  const nowAt = now();
-  
-  if (existing) {
-    db.run(
-      'UPDATE project_blueprints SET data = ?, updated_at = ? WHERE id = ?',
-      [dataJson, nowAt, existing.id]
-    );
-  } else {
-    db.run(
-      'INSERT INTO project_blueprints (project_id, data, created_at, updated_at) VALUES (?, ?, ?, ?)',
-      [projectId, dataJson, nowAt, nowAt]
-    );
-  }
-  
-  return { success: true };
-});
-
-async function collectMultipart(request) {
-  const fields = {};
-  const tempFiles = [];
-
-  for await (const part of request.parts()) {
-    if (part.type === 'file') {
-      if (!part.filename) continue;
-      const fileError = validateFileType(part.filename, part.mimetype);
-      if (fileError) {
-        throw new Error(fileError);
-      }
-      const safeName = sanitizeName(part.filename) || 'upload';
-      const tmpName = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}_${safeName}`;
-      const tmpPath = path.join(os.tmpdir(), tmpName);
-      await pump(part.file, fs.createWriteStream(tmpPath));
-      if (part.file.truncated) {
-        throw new Error(`文件大小超过限制 (${UPLOAD_MAX_MB}MB)`);
-      }
-      const stats = fs.statSync(tmpPath);
-      if (stats.size > UPLOAD_MAX_BYTES) {
-        throw new Error(`文件大小超过限制 (${UPLOAD_MAX_MB}MB)`);
-      }
-      tempFiles.push({ tmpPath, originalName: safeName });
-    } else {
-      fields[part.fieldname] = part.value;
-    }
-  }
-
-  return { fields, tempFiles };
-}
-
-function moveTempFiles(tempFiles, projectId, type) {
-  const attachments = [];
-  const safeType = sanitizeName(type);
-  const targetDir = path.join(UPLOAD_DIR, `project-${projectId}`, safeType);
-  ensureDir(targetDir);
-
-  tempFiles.forEach(file => {
-    const safeName = sanitizeName(file.originalName) || 'upload';
-    const finalName = `${Date.now()}_${safeName}`;
-    const finalPath = path.join(targetDir, finalName);
-    fs.renameSync(file.tmpPath, finalPath);
-    const stats = fs.statSync(finalPath);
-    attachments.push({
-      name: safeName,
-      path: path.relative(UPLOAD_DIR, finalPath).replace(/\\/g, '/'),
-      size: stats.size
-    });
-  });
-
-  return attachments;
-}
-
-function cleanupTempFiles(tempFiles) {
-  tempFiles.forEach(file => {
-    try {
-      fs.unlinkSync(file.tmpPath);
-    } catch (err) {}
-  });
-}
-
-fastify.post(`${API_PREFIX}/projects/:id/submissions`, async (request, reply) => {
-  const projectId = parseProjectId(request.params.id);
-  if (!projectId) {
-    reply.code(400);
-    return { error: '项目ID无效' };
-  }
-  const project = getProject(projectId);
-  if (!project) {
-    reply.code(404);
-    return { error: '项目不存在' };
-  }
-  if (project.status === 'archived') {
-    reply.code(400);
-    return { error: '项目已归档，无法提交' };
-  }
-
-  let fields;
-  let tempFiles;
-  try {
-    const collected = await collectMultipart(request);
-    fields = collected.fields;
-    tempFiles = collected.tempFiles;
-  } catch (err) {
-    cleanupTempFiles(tempFiles || []);
-    reply.code(400);
-    return { error: err.message || '提交失败' };
-  }
-
-  const type = String(fields.type || '').trim();
-  
-  // Auth Check
-  if (type !== 'showcase') {
-    if (!request.user) {
-      cleanupTempFiles(tempFiles);
-      reply.code(401);
-      return { error: '未登录' };
-    }
-    if (!['student', 'teacher'].includes(request.user.role)) {
-      cleanupTempFiles(tempFiles);
-      reply.code(403);
-      return { error: '权限不足' };
-    }
-    if (!canAccessProject(request.user, project)) {
-      cleanupTempFiles(tempFiles);
-      reply.code(403);
-      return { error: '无权限提交到该项目' };
-    }
-  }
-
-  if (!SUBMISSION_TYPES.has(type)) {
-    cleanupTempFiles(tempFiles);
-    reply.code(400);
-    return { error: '提交类型无效' };
-  }
-
-  const title = String(fields.title || '').trim();
-  const content = String(fields.content || '').trim();
-  let details = safeParseJson(fields.details) || {};
-  
-  // Handle Anonymous Name
-  if (type === 'showcase' && !request.user) {
-    const studentName = String(fields.studentName || '').trim();
-    if (studentName) {
-      details.studentName = studentName; // Store in details
-    }
-  }
-
-  const detailError = validateSubmissionDetails(type, details);
-  if (detailError) {
-    cleanupTempFiles(tempFiles);
-    reply.code(400);
-    return { error: detailError };
-  }
-
-  const repoUrl = String(details.codeRepo || '').trim();
-  if (repoUrl) {
-    const validation = await validateGiteaRepo(repoUrl);
-    if (!validation.ok) {
-      cleanupTempFiles(tempFiles);
-      reply.code(validation.status || 400);
-      return { error: validation.error };
-    }
-  }
-
-  let autoStatus = null;
-  if (type === 'proposal') {
-    autoStatus = 'reviewing';
-  } else if (type === 'midterm') {
-    autoStatus = 'midterm_review';
-  } else if (type === 'final') {
-    autoStatus = 'final_review';
-  }
-  if (autoStatus) {
-    const transitionError = validateStatusTransition(project.status, autoStatus);
-    if (transitionError) {
-      cleanupTempFiles(tempFiles);
-      reply.code(400);
-      return { error: transitionError };
-    }
-  }
-
-  const attachments = moveTempFiles(tempFiles, projectId, type);
-  // Use 0 for anonymous/guest submissions
-  const submittedBy = request.user ? request.user.id : 0;
-
-  const createdAt = now();
-  const info = db.run(
-    `INSERT INTO submissions (project_id, submitted_by, type, title, content, details, attachments, status, feedback, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  , [
-    projectId,
-    submittedBy,
-    type,
-    title,
-    content,
-    JSON.stringify(details),
-    JSON.stringify(attachments),
-    'submitted',
-    '',
-    createdAt
-  ]);
-
-  const submissionId = info.lastInsertRowid;
-  attachments.forEach(att => {
-    db.run(
-      'INSERT INTO attachments (submission_id, file_name, file_path, file_size, created_at) VALUES (?, ?, ?, ?, ?)',
-      [submissionId, att.name || '', att.path || '', att.size || 0, createdAt]
-    );
-  });
-
-  if (autoStatus) {
-    updateProjectStatus(projectId, autoStatus, `提交${type}`);
-  } else {
-    db.run('UPDATE projects SET updated_at = ? WHERE id = ?', [now(), projectId]);
-  }
-
-  logAudit('submission.create', request, { projectId, submissionId, type, userId: submittedBy });
-  return { success: true, submissionId };
-});
-
-fastify.post(`${API_PREFIX}/submissions/:id/feedback`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  const submissionId = parseProjectId(request.params.id);
-  if (!submissionId) {
-    reply.code(400);
-    return { error: '提交ID无效' };
-  }
-
-  const payload = request.body || {};
-  const status = String(payload.status || '').trim();
-  const feedback = String(payload.feedback || '').trim();
-
-  if (!SUBMISSION_STATUSES.has(status)) {
-    reply.code(400);
-    return { error: '反馈状态无效' };
-  }
-
-  const submission = db.get('SELECT * FROM submissions WHERE id = ?', [submissionId]);
-  if (!submission) {
-    reply.code(404);
-    return { error: '提交记录不存在' };
-  }
-
-  const reviewedAt = now();
-  db.run(
-    'UPDATE submissions SET status = ?, feedback = ?, reviewed_at = ? WHERE id = ?',
-    [status, feedback, reviewedAt, submissionId]
-  );
-
-  const existingFeedback = db.get(
-    'SELECT id FROM feedback WHERE submission_id = ?',
-    [submissionId]
-  );
-  if (existingFeedback) {
-    db.run(
-      'UPDATE feedback SET comment = ?, teacher_id = ?, created_at = ? WHERE id = ?',
-      [feedback, request.user.id, reviewedAt, existingFeedback.id]
-    );
-  } else {
-    db.run(
-      'INSERT INTO feedback (submission_id, teacher_id, comment, created_at) VALUES (?, ?, ?, ?)',
-      [submissionId, request.user.id, feedback, reviewedAt]
-    );
-  }
-
-  logAudit('submission.feedback', request, { submissionId, status });
-  return { success: true };
-});
-
-fastify.get(`${API_PREFIX}/submissions/:id/scores`, async (request, reply) => {
-  if (!requireRole(request, reply, ['student', 'teacher', 'judge'])) return;
-  const submissionId = parseProjectId(request.params.id);
-  if (!submissionId) {
-    reply.code(400);
-    return { error: '提交ID无效' };
-  }
-
-  const submission = db.get(
-    `SELECT s.id, s.project_id, s.type, p.created_by
-     FROM submissions s
-     JOIN projects p ON p.id = s.project_id
-     WHERE s.id = ?`,
-    [submissionId]
-  );
-  if (!submission) {
-    reply.code(404);
-    return { error: '提交记录不存在' };
-  }
-  if (request.user.role === 'student' && Number(submission.created_by) !== Number(request.user.id)) {
-    reply.code(403);
-    return { error: '无权限查看评分' };
-  }
-
-  const rows = db.all(
-    `SELECT rs.id, rs.submission_id, rs.reviewer_id, rs.role, rs.scores, rs.total_score,
-            rs.comment, rs.created_at, rs.updated_at,
-            u.name AS reviewer_name, u.email AS reviewer_email, u.avatar_url AS reviewer_avatar
-     FROM review_scores rs
-     JOIN users u ON u.id = rs.reviewer_id
-     WHERE rs.submission_id = ?
-     ORDER BY rs.updated_at DESC`,
-    [submissionId]
-  );
-  return { scores: rows };
-});
-
-fastify.post(`${API_PREFIX}/submissions/:id/scores`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher', 'judge'])) return;
-  const submissionId = parseProjectId(request.params.id);
-  if (!submissionId) {
-    reply.code(400);
-    return { error: '提交ID无效' };
-  }
-
-  const submission = db.get(
-    'SELECT id, type FROM submissions WHERE id = ?',
-    [submissionId]
-  );
-  if (!submission) {
-    reply.code(404);
-    return { error: '提交记录不存在' };
-  }
-
-  const payload = request.body || {};
-  const rawScores = payload.scores && typeof payload.scores === 'object' ? payload.scores : {};
-  const comment = String(payload.comment || '').trim();
-  const template = db.get('SELECT id, criteria FROM score_templates WHERE type = ?', [submission.type]);
-  let scores = {};
-  let totalScore = 0;
-
-  if (template) {
-    const criteria = safeParseJson(template.criteria) || [];
-    if (!Array.isArray(criteria) || !criteria.length) {
-      reply.code(400);
-      return { error: '评分标准未配置' };
-    }
-    for (const item of criteria) {
-      const value = Number(rawScores[item.key]);
-      if (!Number.isFinite(value)) {
-        reply.code(400);
-        return { error: `评分项缺失：${item.label}` };
-      }
-      if (value < 0 || value > item.max) {
-        reply.code(400);
-        return { error: `评分项 ${item.label} 超出范围` };
-      }
-      scores[item.key] = value;
-      totalScore += value;
-    }
-  } else {
-    const fallbackTotal = Number(payload.totalScore);
-    if (!Number.isFinite(fallbackTotal)) {
-      reply.code(400);
-      return { error: '评分标准未配置且总分无效' };
-    }
-    totalScore = fallbackTotal;
-    scores = rawScores;
-  }
-
-  const existing = db.get(
-    'SELECT id FROM review_scores WHERE submission_id = ? AND reviewer_id = ?',
-    [submissionId, request.user.id]
-  );
-  const nowAt = now();
-  if (existing) {
-    db.run(
-      'UPDATE review_scores SET scores = ?, total_score = ?, comment = ?, updated_at = ? WHERE id = ?',
-      [JSON.stringify(scores), totalScore, comment, nowAt, existing.id]
-    );
-  } else {
-    db.run(
-      `INSERT INTO review_scores (submission_id, reviewer_id, role, scores, total_score, comment, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        submissionId,
-        request.user.id,
-        request.user.role,
-        JSON.stringify(scores),
-        totalScore,
-        comment,
-        nowAt,
-        nowAt
-      ]
-    );
-  }
-
-  logAudit('submission.score', request, { submissionId, totalScore });
-  return { success: true, totalScore };
-});
-
-fastify.get(`${API_PREFIX}/score-templates`, async (request, reply) => {
-  if (!requireRole(request, reply, ['student', 'teacher', 'judge'])) return;
-  const type = String(request.query?.type || '').trim();
-  const params = [];
-  let sql = 'SELECT id, type, criteria, updated_at FROM score_templates';
-  if (type) {
-    sql += ' WHERE type = ?';
-    params.push(type);
-  }
-  sql += ' ORDER BY updated_at DESC';
-  const templates = db.all(sql, params);
-  return { templates };
-});
-
-fastify.post(`${API_PREFIX}/score-templates`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  const payload = request.body || {};
-  const type = String(payload.type || '').trim();
-  const criteria = normalizeScoreTemplateCriteria(payload.criteria);
-
-  if (!SUBMISSION_TYPES.has(type)) {
-    reply.code(400);
-    return { error: '阶段类型无效' };
-  }
-  if (!criteria) {
-    reply.code(400);
-    return { error: '评分标准无效' };
-  }
-
-  const nowAt = now();
-  const existing = db.get('SELECT id FROM score_templates WHERE type = ?', [type]);
-  if (existing) {
-    db.run(
-      'UPDATE score_templates SET criteria = ?, updated_at = ? WHERE id = ?',
-      [JSON.stringify(criteria), nowAt, existing.id]
-    );
-  } else {
-    db.run(
-      'INSERT INTO score_templates (type, criteria, updated_at) VALUES (?, ?, ?)',
-      [type, JSON.stringify(criteria), nowAt]
-    );
-  }
-
-  logAudit('score.template.update', request, { type });
-  return { success: true };
-});
-
-fastify.delete(`${API_PREFIX}/score-templates/:id`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  const templateId = parseProjectId(request.params.id);
-  if (!templateId) {
-    reply.code(400);
-    return { error: '模板ID无效' };
-  }
-  db.run('DELETE FROM score_templates WHERE id = ?', [templateId]);
-  logAudit('score.template.delete', request, { templateId });
-  return { success: true };
-});
-
-fastify.get(`${API_PREFIX}/projects/:id/comments`, async (request, reply) => {
-  if (!requireRole(request, reply, ['student', 'teacher', 'judge'])) return;
-  const projectId = parseProjectId(request.params.id);
-  if (!projectId) {
-    reply.code(400);
-    return { error: '项目ID无效' };
-  }
-  const project = getProject(projectId);
-  if (!project) {
-    reply.code(404);
-    return { error: '项目不存在' };
-  }
-  if (!canAccessProject(request.user, project)) {
-    reply.code(403);
-    return { error: '无权限查看讨论' };
-  }
-
-  const comments = getProjectComments(projectId);
-  return { comments };
-});
-
-fastify.post(`${API_PREFIX}/projects/:id/comments`, async (request, reply) => {
-  if (!requireRole(request, reply, ['student', 'teacher', 'judge'])) return;
-  const projectId = parseProjectId(request.params.id);
-  if (!projectId) {
-    reply.code(400);
-    return { error: '项目ID无效' };
-  }
-  const project = getProject(projectId);
-  if (!project) {
-    reply.code(404);
-    return { error: '项目不存在' };
-  }
-  if (!canAccessProject(request.user, project)) {
-    reply.code(403);
-    return { error: '无权限评论' };
-  }
-
-  const payload = request.body || {};
-  const content = String(payload.content || '').trim();
-  if (!content) {
-    reply.code(400);
-    return { error: '评论内容不能为空' };
-  }
-  const createdAt = now();
-  db.run(
-    'INSERT INTO comments (project_id, user_id, content, created_at) VALUES (?, ?, ?, ?)',
-    [projectId, request.user.id, content, createdAt]
-  );
-  logAudit('comment.create', request, { projectId });
-  return { success: true };
-});
-
-fastify.get(`${API_PREFIX}/announcements`, async () => {
-  const announcements = db.all(
-    `SELECT a.id, a.title, a.body, a.created_at, u.name AS author_name
-     FROM announcements a
-     LEFT JOIN users u ON u.id = a.created_by
-     ORDER BY a.created_at DESC
-     LIMIT 10`
-  );
-  return { announcements };
-});
-
-fastify.post(`${API_PREFIX}/announcements`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  const payload = request.body || {};
-  const title = String(payload.title || '').trim();
-  const body = String(payload.body || '').trim();
-  if (!title) {
-    reply.code(400);
-    return { error: '公告标题必填' };
-  }
-  const createdAt = now();
-  db.run(
-    'INSERT INTO announcements (title, body, created_by, created_at) VALUES (?, ?, ?, ?)',
-    [title, body, request.user.id, createdAt]
-  );
-  logAudit('announcement.create', request, { title });
-  return { success: true };
-});
-
-fastify.delete(`${API_PREFIX}/announcements/:id`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  const announcementId = parseProjectId(request.params.id);
-  if (!announcementId) {
-    reply.code(400);
-    return { error: '公告ID无效' };
-  }
-  db.run('DELETE FROM announcements WHERE id = ?', [announcementId]);
-  logAudit('announcement.delete', request, { announcementId });
-  return { success: true };
-});
-
-fastify.get(`${API_PREFIX}/stats`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  const { conditions, params } = buildProjectFilters(request.query);
-  const whereSql = conditions.length ? ` WHERE ${conditions.join(' AND ')}` : '';
-  const totalRow = db.get(`SELECT COUNT(*) AS count FROM projects${whereSql}`, params);
-  const byStatus = db.all(
-    `SELECT status, COUNT(*) AS count FROM projects${whereSql} GROUP BY status`,
-    params
-  );
-  logAudit('stats.view', request, { filters: request.query || {} });
-  return { total: totalRow ? totalRow.count : 0, byStatus };
-});
-
-// --- Assessment Data Manager ---
-fastify.get(`${API_PREFIX}/assessments`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  const files = db.all(
-    'SELECT id, title, original_name, file_path, file_size, uploaded_by, created_at FROM assessment_files ORDER BY created_at DESC'
-  );
-  return { files };
-});
-
-fastify.post(`${API_PREFIX}/assessments`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  let fields;
-  let tempFiles;
-  try {
-    const collected = await collectMultipart(request);
-    fields = collected.fields;
-    tempFiles = collected.tempFiles;
-  } catch (err) {
-    cleanupTempFiles(tempFiles || []);
-    reply.code(400);
-    return { error: err.message || '上传失败' };
-  }
-  if (!tempFiles || tempFiles.length !== 1) {
-    cleanupTempFiles(tempFiles || []);
-    reply.code(400);
-    return { error: '请上传单个 CSV 文件' };
-  }
-  const file = tempFiles[0];
-  const safeName = sanitizeName(file.originalName) || 'assessment.csv';
-  const finalName = `${Date.now()}_${safeName}`;
-  const finalPath = path.join(ASSESSMENT_DIR, finalName);
-  try {
-    fs.renameSync(file.tmpPath, finalPath);
-  } catch (err) {
-    cleanupTempFiles(tempFiles || []);
-    reply.code(500);
-    return { error: '保存文件失败' };
-  }
-  const stats = fs.statSync(finalPath);
-  const title = String(fields?.title || '').trim();
-  const createdAt = now();
-  const info = db.run(
-    'INSERT INTO assessment_files (title, original_name, file_path, file_size, uploaded_by, created_at) VALUES (?, ?, ?, ?, ?, ?)',
-    [title, safeName, finalName, stats.size, request.user?.id || null, createdAt]
-  );
-  logAudit('assessment.upload', request, { fileId: info.lastInsertRowid, fileName: safeName });
-  return {
-    success: true,
-    file: {
-      id: info.lastInsertRowid,
-      title,
-      original_name: safeName,
-      file_path: finalName,
-      file_size: stats.size,
-      created_at: createdAt
-    }
-  };
-});
-
-fastify.get(`${API_PREFIX}/assessments/:id/download`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  const fileId = parseProjectId(request.params.id);
-  if (!fileId) {
-    reply.code(400);
-    return { error: '文件ID无效' };
-  }
-  const row = db.get('SELECT * FROM assessment_files WHERE id = ?', [fileId]);
-  if (!row) {
-    reply.code(404);
-    return { error: '文件不存在' };
-  }
-  const absolutePath = path.join(ASSESSMENT_DIR, row.file_path);
-  if (!absolutePath.startsWith(ASSESSMENT_DIR)) {
-    reply.code(403);
-    return { error: 'Access denied' };
-  }
-  if (!fs.existsSync(absolutePath)) {
-    reply.code(404);
-    return { error: '文件已丢失' };
-  }
-  const ext = path.extname(row.original_name || '').toLowerCase();
-  const mimeType = (EXTENSION_MIME_MAP[ext] && EXTENSION_MIME_MAP[ext][0]) || 'text/csv';
-  reply.header('Content-Type', mimeType);
-  reply.header('Content-Disposition', `attachment; filename="${encodeURIComponent(row.original_name)}"`);
-  logAudit('assessment.download', request, { fileId });
-  return reply.send(fs.createReadStream(absolutePath));
-});
-
-fastify.delete(`${API_PREFIX}/assessments/:id`, async (request, reply) => {
-  if (!requireRole(request, reply, ['teacher'])) return;
-  const fileId = parseProjectId(request.params.id);
-  if (!fileId) {
-    reply.code(400);
-    return { error: '文件ID无效' };
-  }
-  const row = db.get('SELECT * FROM assessment_files WHERE id = ?', [fileId]);
-  if (!row) {
-    reply.code(404);
-    return { error: '文件不存在' };
-  }
-  const absolutePath = path.join(ASSESSMENT_DIR, row.file_path);
-  try {
-    if (absolutePath.startsWith(ASSESSMENT_DIR) && fs.existsSync(absolutePath)) {
-      fs.unlinkSync(absolutePath);
-    }
-  } catch (err) {
-    fastify.log.error(err);
-  }
-  db.run('DELETE FROM assessment_files WHERE id = ?', [fileId]);
-  logAudit('assessment.delete', request, { fileId });
-  return { success: true };
-});
-
-// --- Resources API ---
-fastify.get(`${API_PREFIX}/files/:project`, async (request, reply) => {
-  // Note: Allow read access to materials for all authenticated users (or even public if needed)
-  // if (!requireAuth(request, reply)) return; 
-
-  const projectId = request.params.project;
-  const subPath = request.query.path || '';
-  
-  // Security check
-  if (subPath.includes('..') || projectId.includes('..')) {
-    reply.code(400);
-    return { error: 'Invalid path' };
-  }
-
-  const projectDir = path.join(MATERIALS_DIR, projectId);
-  const targetDir = path.join(projectDir, subPath);
-
-  // Prevent traversal out of materials dir
-  if (!targetDir.startsWith(MATERIALS_DIR)) { 
-     reply.code(403);
-     return { error: 'Access denied' };
-  }
-
-  if (!fs.existsSync(targetDir)) {
-    return { files: [] };
-  }
-
-  try {
-    const dirents = fs.readdirSync(targetDir, { withFileTypes: true });
-    const files = dirents.map(dirent => {
-      let size = 0;
-      if (dirent.isFile()) {
-          try {
-              size = fs.statSync(path.join(targetDir, dirent.name)).size;
-          } catch (e) {}
-      }
-      return {
-        name: dirent.name,
-        isDirectory: dirent.isDirectory(),
-        size: size,
-        path: subPath ? path.join(subPath, dirent.name) : dirent.name
-      };
-    });
-    // Sort: Folders first, then files
-    files.sort((a, b) => {
-        if (a.isDirectory === b.isDirectory) return a.name.localeCompare(b.name);
-        return a.isDirectory ? -1 : 1;
-    });
-    return { files };
-  } catch (err) {
-    fastify.log.error(err);
-    return { files: [] };
-  }
-});
-
-fastify.get(`${API_PREFIX}/download/*`, async (request, reply) => {
-  const wildcard = request.params['*'];
-  const parts = wildcard.split('/');
-  
-  if (parts.length < 2) {
-    reply.code(400);
-    return { error: 'Invalid path format' };
-  }
-
-  const projectId = parts[0];
-  const filePath = parts.slice(1).join('/'); // Rejoin the rest
-  
-  if (filePath.includes('..') || projectId.includes('..')) {
-    reply.code(400);
-    return { error: 'Invalid path' };
-  }
-  
-  const absolutePath = path.join(MATERIALS_DIR, projectId, filePath);
-  
-  if (!absolutePath.startsWith(MATERIALS_DIR)) {
-      reply.code(403);
-      return { error: 'Access denied' };
-  }
-
-  if (!fs.existsSync(absolutePath)) {
-    reply.code(404);
-    return { error: 'File not found' };
-  }
-
-  const filename = path.basename(absolutePath);
-  const ext = path.extname(filename).toLowerCase();
-  const mimeType = (EXTENSION_MIME_MAP[ext] && EXTENSION_MIME_MAP[ext][0]) || 'application/octet-stream';
-  
-  reply.header('Content-Type', mimeType);
-  reply.header('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
-  
-  const stream = fs.createReadStream(absolutePath);
-  return reply.send(stream);
-});
-
-fastify.get(`${API_PREFIX}/mission/projects`, async (request, reply) => {
-  // Public or Teacher only? Teacher only usually.
-  // if (!requireRole(request, reply, ['teacher'])) return; 
-  // Let's allow public for the big screen display scenario if needed, or stick to teacher.
-  // Assuming teacher login on the big screen machine.
-  
-  const projects = db.all('SELECT id, title, team_members, updated_at FROM projects');
-  
-  const stats = projects.map(p => {
-    const tasks = db.all('SELECT status FROM project_milestones WHERE project_id = ?', [p.id]);
-    const total = tasks.length;
-    const done = tasks.filter(t => t.status === 'done' || t.status === 'completed').length; // Check status values
-    const progress = total > 0 ? Math.round((done / total) * 100) : 0;
-    
-    // Get last activity
-    const lastLog = db.get('SELECT created_at FROM dev_logs WHERE project_id = ? ORDER BY created_at DESC LIMIT 1', [p.id]);
-    const lastActive = lastLog ? lastLog.created_at : p.updated_at;
-
-    return {
-      id: p.id,
-      name: p.title,
-      members: p.team_members,
-      lastActive,
-      taskStats: { total, done, progress }
-    };
-  });
-  
-  // Sort by activity
-  stats.sort((a, b) => new Date(b.lastActive) - new Date(a.lastActive));
-  
-  return { projects: stats };
+registerPortalRoutes(fastify, {
+  API_PREFIX,
+  db: routeDb,
+  now,
+  requireRole,
+  parseProjectId,
+  logAudit,
+  COMPETITION_REGISTRATION_STATUSES,
+  loadPortalBanners,
+  savePortalBanners,
+  normalizeBannerPayload,
+  loadPortalStories,
+  savePortalStories,
+  normalizeStoryPayload,
+  buildStoryResponse,
+  buildCoursePreviewMap,
+  listPublishedCompetitions,
+  enrichCompetition,
+  loadPortalCompetitionDetail,
+  loadPortalCompetitions,
+  savePortalCompetition,
+  normalizeCompetitionPayload,
+  getCompetitionRegistrationStats,
+  mapCompetitionRegistration,
+  mapCompetitionReminder,
+  mapProjectTopic,
+  normalizeProjectTopicPayload,
+  logMatchEvent,
+  recomputeCompetitionMatches,
+  recomputeProjectTopicMatches
+});
+
+registerMatchingRoutes(fastify, {
+  API_PREFIX,
+  db: routeDb,
+  now,
+  requireAuth,
+  requireRole,
+  parseProjectId,
+  requestAiChat,
+  logAudit,
+  listPublishedCompetitions,
+  loadPortalCompetitions,
+  enrichCompetition,
+  buildCoursePreviewMap,
+  loadCourseCatalog,
+  seedStudentProfile,
+  getStudentProfile,
+  upsertStudentProfile,
+  recomputeCompetitionMatches,
+  recomputeProjectTopicMatches,
+  recomputeCourseMatches,
+  recomputeTeamCandidateMatches,
+  getCompetitionMatchDetail,
+  getProjectTopicMatchDetail,
+  getCourseMatchDetail,
+  getTeamCandidateMatchDetail,
+  listCompetitionCandidates,
+  listProjectTopicCandidates,
+  listCourseCandidates,
+  listTeamCandidateCandidates,
+  listAdminMatchCandidates,
+  getUserMatchOverview,
+  getAdminUserMatchDashboard,
+  getMatchAnalytics,
+  createMatchReminders,
+  listMatchReminders,
+  listUserMatchReminders,
+  markMatchReminderRead,
+  mapMatchReminder,
+  formatMatchCandidateBucketLabel,
+  resolveMatchCandidateBucket,
+  saveMatchOverride,
+  logMatchInteraction,
+  logMatchEvent,
+  mapStudentProfile,
+  normalizeStudentProfilePayload,
+  listTaxonomyTerms,
+  mapTaxonomyTerm,
+  normalizeTaxonomyTermPayload,
+  upsertTaxonomyTerm
+});
+
+registerAssignmentRoutes(fastify, {
+  API_PREFIX,
+  db: routeDb,
+  now,
+  requireRole,
+  parseProjectId,
+  normalizeAssignmentPayload,
+  mapAssignment,
+  mapAssignmentSubmission,
+  loadCourseDetail,
+  listCourseLessons,
+  requestAiChat,
+  logAudit,
+  ASSIGNMENT_SUBMISSION_STATUSES
+});
+
+registerSystemRoutes(fastify, {
+  API_PREFIX,
+  getDb: () => db,
+  now,
+  crypto,
+  normalizeEmail,
+  hashPassword,
+  verifyPassword,
+  createToken,
+  requireAuth,
+  requireRole,
+  parseProjectId,
+  canRegisterTeacher,
+  canRegisterJudge,
+  validateGiteaRepo,
+  ensureGiteaUser,
+  slugifyGiteaUsername,
+  requestAiChat,
+  logAudit,
+  seedStudentProfile,
+  logMatchEvent,
+  recomputeCompetitionMatches,
+  recomputeProjectTopicMatches,
+  recomputeCourseMatches,
+  recomputeTeamCandidateMatches
+});
+
+registerAssetRoutes(fastify, {
+  API_PREFIX,
+  db: routeDb,
+  MATERIALS_DIR,
+  EXTENSION_MIME_MAP,
+  requireRole,
+  buildProjectFilters,
+  logAudit
+});
+
+registerReviewRoutes(fastify, {
+  API_PREFIX,
+  db: routeDb,
+  path,
+  UPLOAD_DIR,
+  requireRole,
+  parseProjectId,
+  buildProjectFilters,
+  buildProjectReviewDossier,
+  projectReviewRepository: createProjectReviewRepository({
+    db: routeDb,
+    buildProjectFilters,
+    getProjectDetail,
+    getProjectMilestones,
+    getProjectResources,
+    getProjectDevLogs,
+    buildProjectReviewMeta
+  }),
+  showcaseRepository: createShowcaseRepository({
+    db: routeDb,
+    buildProjectFilters,
+    safeParseJson,
+    getSubmissionAttachments
+  }),
+  toCsvLine,
+  sanitizeName,
+  appendFileSafe,
+  streamZip,
+  logAudit
+});
+
+registerProjectRoutes(fastify, {
+  API_PREFIX,
+  requireRole,
+  requireProjectAccess,
+  parseProjectId,
+  getProject,
+  getProjectDetail,
+  validateGiteaRepo,
+  normalizeMemberIds,
+  getProjectRepository: () => projectRepository,
+  logAudit
+});
+
+registerProjectOpsRoutes(fastify, {
+  API_PREFIX,
+  db: routeDb,
+  path,
+  UPLOAD_DIR,
+  requireAuth,
+  requireRole,
+  requireProjectAccess,
+  parseProjectId,
+  normalizeToolKey,
+  now,
+  PROJECT_STATUSES,
+  safeParseJson,
+  buildMilestoneSourceKey,
+  getProject,
+  getProjectDetail,
+  getProjectMilestones,
+  getProjectComments,
+  getProjectScores,
+  loadProjectToolData: (...args) => projectRepository.listToolData(...args),
+  getProjectToolData: (...args) => projectRepository.getToolData(...args),
+  upsertProjectToolData: (projectId, toolKey, data, userId) => projectRepository.upsertToolData(projectId, normalizeToolKey(toolKey), data, userId),
+  updateProjectStatus,
+  validateStatusTransition,
+  getSubmissionAttachments,
+  getProjectResources,
+  getProjectDevLogs,
+  ensureGiteaRepo,
+  logAudit,
+  sanitizeName,
+  appendFileSafe,
+  streamZip,
+  fastifyLog: fastify.log
+});
+
+registerCollaborationRoutes(fastify, {
+  API_PREFIX,
+  db: routeDb,
+  fs,
+  path,
+  ASSESSMENT_DIR,
+  EXTENSION_MIME_MAP,
+  now,
+  SUBMISSION_TYPES,
+  SUBMISSION_STATUSES,
+  requireRole,
+  requireProjectAccess,
+  parseProjectId,
+  getProject,
+  validateGiteaRepo,
+  validateSubmissionDetails,
+  validateStatusTransition,
+  safeParseJson,
+  normalizeScoreTemplateCriteria,
+  logAudit,
+  collectMultipart,
+  cleanupTempFiles,
+  moveTempFiles
+});
+
+registerKnowledgeRoutes(fastify, {
+  API_PREFIX,
+  db: routeDb,
+  now,
+  requireAuth,
+  findKnowledgeDetail,
+  loadKnowledgeDisciplinesFromDb,
+  loadKnowledgeLearningUnitsFromDb,
+  loadAllKnowledgeSeriesFromDb,
+  createLearnerToken,
+  createViewerToken,
+  normalizeKnowledgeAnswers,
+  resolveKnowledgeEpisode,
+  getKnowledgeIdentityCondition,
+  getKnowledgeEpisodeProgress,
+  buildKnowledgeOpenPrompts,
+  validateKnowledgeAnswersForPrompts,
+  scoreKnowledgeResponse,
+  mapKnowledgeResponseRow,
+  logMatchEvent,
+  recomputeCompetitionMatches,
+  recomputeProjectTopicMatches,
+  recomputeCourseMatches,
+  recomputeTeamCandidateMatches
 });
 
 async function initDatabase(dbPath = DB_PATH) {
   db = await createDatabase(dbPath);
+  projectRepository = createProjectRepository({
+    db: routeDb,
+    now,
+    safeParseJson,
+    parseAttachmentList,
+    toUrlPath,
+    buildProjectFilters
+  });
+  seedKnowledgeContent();
   syncLegacyAttachments();
   return db;
 }

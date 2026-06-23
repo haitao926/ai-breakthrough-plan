@@ -1,26 +1,20 @@
 const path = require('path');
 const fs = require('fs');
-const initSqlJs = require('sql.js');
+const Database = require('better-sqlite3');
 
 const DEFAULT_DB_PATH = path.join(__dirname, '../../storage/db/db.sqlite');
+const MIGRATIONS_DIR = path.join(__dirname, 'migrations');
 
 function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
 }
 
 function queryAll(db, sql, params = []) {
-  const stmt = db.prepare(sql);
-  stmt.bind(params);
-  const rows = [];
-  while (stmt.step()) {
-    rows.push(stmt.getAsObject());
-  }
-  stmt.free();
-  return rows;
+  return db.prepare(sql).all(...params);
 }
 
 function queryGet(db, sql, params = []) {
-  return queryAll(db, sql, params)[0];
+  return db.prepare(sql).get(...params);
 }
 
 function ensureColumn(db, tableName, columnName, columnDef) {
@@ -39,14 +33,79 @@ function ensureIndex(db, indexName, tableName, columns, where = '') {
   db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS ${safeIndex} ON ${safeTable} (${safeColumns}) ${where}`);
 }
 
+function ensureLookupIndex(db, indexName, tableName, columns, where = '') {
+  const safeIndex = String(indexName || '').replace(/[^a-zA-Z0-9_]/g, '');
+  const safeTable = String(tableName || '').replace(/[^a-zA-Z0-9_]/g, '');
+  const safeColumns = String(columns || '');
+  if (!safeIndex || !safeTable || !safeColumns) return;
+  db.exec(`CREATE INDEX IF NOT EXISTS ${safeIndex} ON ${safeTable} (${safeColumns}) ${where}`);
+}
+
+function applyMigrations(db) {
+  if (!fs.existsSync(MIGRATIONS_DIR)) return;
+  const files = fs.readdirSync(MIGRATIONS_DIR)
+    .filter(file => file.endsWith('.sql') || file.endsWith('.js'))
+    .sort((a, b) => a.localeCompare(b));
+  if (!files.length) return;
+
+  const bootstrapPath = path.join(MIGRATIONS_DIR, '001_create_migrations_table.sql');
+  if (fs.existsSync(bootstrapPath)) {
+    db.exec(fs.readFileSync(bootstrapPath, 'utf8'));
+  }
+
+  const table = queryGet(
+    db,
+    "SELECT name FROM sqlite_master WHERE type = 'table' AND name = '_migrations'"
+  );
+  if (!table) return;
+
+  const applied = new Set(
+    queryAll(db, 'SELECT name FROM _migrations ORDER BY id ASC').map(row => row.name)
+  );
+
+  const applyOne = db.transaction((name, migration) => {
+    if (typeof migration === 'string') {
+      db.exec(migration);
+    } else {
+      migration(db, {
+        queryAll,
+        queryGet,
+        ensureColumn,
+        ensureIndex,
+        ensureLookupIndex
+      });
+    }
+    db.prepare('INSERT INTO _migrations (name, applied_at) VALUES (?, ?)').run(name, new Date().toISOString());
+  });
+
+  files.forEach((file) => {
+    if (applied.has(file)) return;
+    const filePath = path.join(MIGRATIONS_DIR, file);
+    if (file.endsWith('.sql')) {
+      applyOne(file, fs.readFileSync(filePath, 'utf8'));
+      return;
+    }
+    delete require.cache[require.resolve(filePath)];
+    const migrationModule = require(filePath);
+    const migration = typeof migrationModule === 'function' ? migrationModule : migrationModule?.up;
+    if (typeof migration !== 'function') {
+      throw new Error(`Migration ${file} must export a function or { up() }`);
+    }
+    applyOne(file, migration);
+  });
+}
+
 function initSchema(db) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT,
+      username TEXT UNIQUE,
       email TEXT NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
       role TEXT NOT NULL,
+      gitea_username TEXT,
+      gitea_synced_at TEXT,
       created_at TEXT NOT NULL
     );
 
@@ -330,6 +389,135 @@ function initSchema(db) {
       FOREIGN KEY(student_id) REFERENCES users(id)
     );
 
+    CREATE TABLE IF NOT EXISTS competition_reminders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      competition_slug TEXT NOT NULL,
+      student_id INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      body TEXT,
+      target_group TEXT,
+      created_by INTEGER,
+      created_at TEXT NOT NULL,
+      read_at TEXT,
+      FOREIGN KEY(student_id) REFERENCES users(id),
+      FOREIGN KEY(created_by) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS student_profiles (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL UNIQUE,
+      school_stage TEXT,
+      grade_level TEXT,
+      class_name TEXT,
+      interest_tags TEXT,
+      skill_tags TEXT,
+      target_tags TEXT,
+      weekly_hours INTEGER,
+      experience_level TEXT,
+      preferred_team_size TEXT,
+      device_access TEXT,
+      notes TEXT,
+      profile_version INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS teacher_student_links (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      teacher_id INTEGER NOT NULL,
+      student_id INTEGER NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE(teacher_id, student_id),
+      FOREIGN KEY(teacher_id) REFERENCES users(id),
+      FOREIGN KEY(student_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS match_taxonomy_terms (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      term_type TEXT NOT NULL,
+      term_key TEXT NOT NULL,
+      label TEXT NOT NULL,
+      aliases TEXT,
+      status TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS match_results (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      target_type TEXT NOT NULL,
+      target_key TEXT NOT NULL,
+      score REAL NOT NULL DEFAULT 0,
+      eligibility_status TEXT NOT NULL,
+      rule_breakdown TEXT,
+      reasons TEXT,
+      gaps TEXT,
+      ai_summary TEXT,
+      ai_advice TEXT,
+      rule_version TEXT,
+      ai_version TEXT,
+      source_snapshot TEXT,
+      computed_at TEXT NOT NULL,
+      expires_at TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS match_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      target_type TEXT,
+      target_key TEXT,
+      event_type TEXT NOT NULL,
+      payload TEXT,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS match_interactions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      target_type TEXT NOT NULL,
+      target_key TEXT NOT NULL,
+      interaction_type TEXT NOT NULL,
+      metadata TEXT,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS match_overrides (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      target_type TEXT NOT NULL,
+      target_key TEXT NOT NULL,
+      override_type TEXT NOT NULL,
+      note TEXT,
+      created_by INTEGER NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY(user_id) REFERENCES users(id),
+      FOREIGN KEY(created_by) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS match_reminders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      target_type TEXT NOT NULL,
+      target_key TEXT NOT NULL,
+      title TEXT NOT NULL,
+      body TEXT,
+      candidate_bucket TEXT,
+      created_by INTEGER NOT NULL,
+      created_at TEXT NOT NULL,
+      read_at TEXT,
+      FOREIGN KEY(user_id) REFERENCES users(id),
+      FOREIGN KEY(created_by) REFERENCES users(id)
+    );
+
     CREATE TABLE IF NOT EXISTS project_topics (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
@@ -337,6 +525,9 @@ function initSchema(db) {
       background TEXT,
       goals TEXT,
       difficulty TEXT,
+      tags TEXT,
+      required_skills TEXT,
+      estimated_hours INTEGER,
       suggested_team_size TEXT,
       deliverables TEXT,
       related_course_id TEXT,
@@ -347,69 +538,113 @@ function initSchema(db) {
       updated_at TEXT NOT NULL,
       FOREIGN KEY(created_by) REFERENCES users(id)
     );
+
+    CREATE TABLE IF NOT EXISTS knowledge_disciplines (
+      id TEXT PRIMARY KEY,
+      data TEXT NOT NULL,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'published',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS knowledge_learning_units (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      discipline_id TEXT NOT NULL UNIQUE,
+      data TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'published',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY(discipline_id) REFERENCES knowledge_disciplines(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS knowledge_series (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      source_url TEXT,
+      data TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'published',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS knowledge_series_videos (
+      id TEXT PRIMARY KEY,
+      series_id TEXT NOT NULL,
+      episode TEXT,
+      title TEXT NOT NULL,
+      bvid TEXT,
+      duration_minutes REAL,
+      url TEXT,
+      embed_url TEXT,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      data TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'published',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY(series_id) REFERENCES knowledge_series(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS knowledge_open_prompts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      discipline_id TEXT NOT NULL,
+      episode_key TEXT NOT NULL,
+      prompt_id TEXT NOT NULL,
+      prompt_type TEXT,
+      prompt TEXT NOT NULL,
+      options_json TEXT,
+      correct_answer TEXT,
+      expectation TEXT,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'published',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY(discipline_id) REFERENCES knowledge_disciplines(id),
+      UNIQUE(discipline_id, episode_key, prompt_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS knowledge_responses (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      discipline_id TEXT NOT NULL,
+      episode_key TEXT,
+      episode_index INTEGER,
+      user_id INTEGER,
+      display_name TEXT NOT NULL,
+      focus TEXT,
+      answers TEXT NOT NULL,
+      summary TEXT,
+      ai_score REAL,
+      ai_feedback TEXT,
+      ai_rubric TEXT,
+      score_provider TEXT,
+      learner_token TEXT,
+      viewer_token TEXT NOT NULL,
+      passed INTEGER NOT NULL DEFAULT 0,
+      share_publicly INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    );
   `);
 
-  ensureColumn(db, 'users', 'avatar_url', 'avatar_url TEXT');
-  ensureColumn(db, 'projects', 'team_id', 'team_id INTEGER');
-  ensureColumn(db, 'projects', 'created_by', 'created_by INTEGER');
-  ensureColumn(db, 'projects', 'legacy_key', 'legacy_key TEXT');
-  ensureColumn(db, 'projects', 'gitea_repo_url', 'gitea_repo_url TEXT');
-
-  ensureColumn(db, 'submissions', 'submitted_by', 'submitted_by INTEGER');
-  ensureColumn(db, 'submissions', 'details', 'details TEXT');
-  ensureColumn(db, 'project_milestones', 'parent_id', 'parent_id INTEGER');
-  ensureColumn(db, 'project_milestones', 'sort_order', 'sort_order INTEGER');
-  ensureColumn(db, 'project_milestones', 'assignee', 'assignee TEXT');
-  ensureColumn(db, 'project_milestones', 'start_date', 'start_date TEXT');
-  ensureColumn(db, 'project_milestones', 'end_date', 'end_date TEXT');
-  ensureColumn(db, 'project_milestones', 'source', 'source TEXT');
-  ensureColumn(db, 'project_milestones', 'source_key', 'source_key TEXT');
-  ensureColumn(db, 'assessment_files', 'title', 'title TEXT');
-  ensureColumn(db, 'assessment_files', 'uploaded_by', 'uploaded_by INTEGER');
-
-  ensureColumn(db, 'assignments', 'lesson_id', 'lesson_id TEXT');
-  ensureColumn(db, 'assignments', 'rubric', 'rubric TEXT');
-  ensureColumn(db, 'assignment_submissions', 'link', 'link TEXT');
-  ensureColumn(db, 'assignment_submissions', 'attachment_note', 'attachment_note TEXT');
-  ensureColumn(db, 'competition_registrations', 'teacher_feedback', 'teacher_feedback TEXT');
-  ensureColumn(db, 'project_topics', 'related_course_id', 'related_course_id TEXT');
-  ensureColumn(db, 'project_topics', 'related_competition_slug', 'related_competition_slug TEXT');
-
-  ensureIndex(db, 'idx_project_tool_data_unique', 'project_tool_data', 'project_id, tool_key');
-  ensureIndex(
-    db,
-    'idx_project_milestones_source_unique',
-    'project_milestones',
-    'project_id, source, source_key',
-    'WHERE source IS NOT NULL AND source_key IS NOT NULL'
-  );
+  // Legacy column backfills now live in versioned migrations so startup no longer
+  // depends on a growing list of ad hoc runtime schema patches.
 }
 
-async function createDatabase(dbPath = DEFAULT_DB_PATH) {
+function createDatabase(dbPath = DEFAULT_DB_PATH) {
   ensureDir(path.dirname(dbPath));
-
-  const SQL = await initSqlJs({
-    locateFile: (file) => path.join(__dirname, 'node_modules', 'sql.js', 'dist', file)
-  });
-
-  const fileExists = fs.existsSync(dbPath);
-  const db = new SQL.Database(fileExists ? fs.readFileSync(dbPath) : undefined);
+  const db = new Database(dbPath);
+  db.pragma('journal_mode = WAL');
+  db.pragma('foreign_keys = ON');
+  db.pragma('synchronous = NORMAL');
   initSchema(db);
-
-  const persist = () => {
-    const data = db.export();
-    fs.writeFileSync(dbPath, Buffer.from(data));
-  };
-
-  persist();
+  applyMigrations(db);
 
   const runInternal = (sql, params = []) => {
-    db.run(sql, params);
-    const last = queryGet(db, 'SELECT last_insert_rowid() AS id');
-    const changes = db.getRowsModified();
+    const info = db.prepare(sql).run(...params);
     return {
-      lastInsertRowid: last ? last.id : null,
-      changes
+      lastInsertRowid: Number.isFinite(Number(info.lastInsertRowid)) ? Number(info.lastInsertRowid) : null,
+      changes: info.changes || 0
     };
   };
 
@@ -422,53 +657,35 @@ async function createDatabase(dbPath = DEFAULT_DB_PATH) {
     },
     run(sql, params = [], options = {}) {
       let actualParams = params;
-      let actualOptions = options;
       if (!Array.isArray(params)) {
-        actualOptions = params || {};
         actualParams = [];
       }
-      const result = runInternal(sql, actualParams);
-      if (!actualOptions.skipPersist) {
-        persist();
-      }
-      return result;
+      return runInternal(sql, actualParams);
     },
-    exec(sql, options = {}) {
+    exec(sql) {
       db.exec(sql);
-      if (!options.skipPersist) {
-        persist();
-      }
     },
     transaction(fn) {
-      db.exec('BEGIN');
-      try {
-        const result = fn({
-          all(sql, params = []) {
-            return queryAll(db, sql, params);
-          },
-          get(sql, params = []) {
-            return queryGet(db, sql, params);
-          },
-          run(sql, params = []) {
-            return runInternal(sql, params);
-          },
-          exec(sql) {
-            db.exec(sql);
-          }
-        });
-        db.exec('COMMIT');
-        persist();
-        return result;
-      } catch (err) {
-        db.exec('ROLLBACK');
-        persist();
-        throw err;
-      }
+      return db.transaction(() => fn({
+        all(sql, params = []) {
+          return queryAll(db, sql, params);
+        },
+        get(sql, params = []) {
+          return queryGet(db, sql, params);
+        },
+        run(sql, params = []) {
+          return runInternal(sql, params);
+        },
+        exec(sql) {
+          db.exec(sql);
+        }
+      }))();
     }
   };
 }
 
 module.exports = {
   createDatabase,
-  DEFAULT_DB_PATH
+  DEFAULT_DB_PATH,
+  MIGRATIONS_DIR
 };

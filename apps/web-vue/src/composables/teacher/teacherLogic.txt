@@ -1,0 +1,1054 @@
+
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { storeToRefs } from 'pinia';
+import { useRoute, useRouter } from 'vue-router';
+import { apiFetch, readJsonResponse } from '@/api/client';
+import TeacherPublishPanel from '@/components/teacher/TeacherPublishPanel.vue';
+import TeacherReviewWorkbench from '@/components/teacher/TeacherReviewWorkbench.vue';
+import TeacherReviewSidebar from '@/components/teacher/TeacherReviewSidebar.vue';
+import TeacherShell from '@/components/teacher/TeacherShell.vue';
+import TeacherUploadSidebar from '@/components/teacher/TeacherUploadSidebar.vue';
+import { useFormDraft } from '@/composables/useFormDraft';
+import { brandName, schoolName } from '@/constants/brand';
+import {
+  buildDefaultReminderBody,
+  createEmptyAssignmentForm,
+  createEmptyBannerForm,
+  createEmptyCompetitionForm,
+  createEmptyCourseForm,
+  createEmptyStoryForm,
+  deriveCompetitionDraftFromText,
+  getBannerFormErrors,
+  getCompetitionReminderStatus,
+  getQueueCelebration,
+  getSelectedCompetitionDeadline,
+  getStatusLabel,
+  getSubmissionSummary,
+  getSubmissionTypeLabel,
+  getStoryFormErrors,
+  hasDraftContent,
+  isOwnedByTeacher,
+  isDeadlinePast,
+  parseChineseDate,
+  syncBannerForm as buildBannerForm,
+  syncCompetitionForm as buildCompetitionForm,
+  syncCourseForm as buildCourseForm,
+  syncStoryForm as buildStoryForm
+} from '@/modules/teacher/admin.js';
+import {
+  buildAlertProjects,
+  buildProjectQueues,
+  buildStatusActions,
+  filterReviewProjects
+} from '@/modules/teacher/review.js';
+import { useAuthStore } from '@/stores/auth';
+import { useNotificationStore } from '@/stores/notification';
+import { useProjectStore } from '@/stores/project';
+import { formatDate } from '@/utils/format';
+import { buildWorkspaceBase } from '@/utils/workspaceRoute';
+
+const props = defineProps({
+  routeModule: {
+    type: String,
+    default: ''
+  }
+});
+
+const router = useRouter();
+const route = useRoute();
+const authStore = useAuthStore();
+const notification = useNotificationStore();
+const projectStore = useProjectStore();
+authStore.hydrate();
+
+const { user: currentUser } = storeToRefs(authStore);
+const { list: projects } = storeToRefs(projectStore);
+
+const activeModule = ref('projects');
+const uploadKind = ref('course');
+const activeQueue = ref('project_review');
+const loading = ref(false);
+const courses = ref([]);
+const selectedCourseId = ref('');
+const selectedCourseLessons = ref([]);
+const assignments = ref([]);
+const selectedAssignment = ref(null);
+const submissions = ref([]);
+const competitions = ref([]);
+const selectedCompetitionSlug = ref('');
+const registrations = ref([]);
+const registrationStats = ref({});
+const competitionCandidates = ref([]);
+const reminderForm = reactive({
+  targetGroup: 'not_registered',
+  body: ''
+});
+const resources = ref([]);
+const projectTopics = ref([]);
+const banners = ref([]);
+const stories = ref([]);
+const selectedBannerIndex = ref(-1);
+const selectedStorySlug = ref('');
+const courseDraftRestored = ref(false);
+const competitionDraftRestored = ref(false);
+const bannerDraftRestored = ref(false);
+const storyDraftRestored = ref(false);
+const reviewDrafts = reactive({});
+const projectReviewDrafts = reactive({});
+const courseSaving = ref(false);
+const assignmentSaving = ref(false);
+const selectedProjectTopicId = ref('');
+const reviewQueue = ref([]);
+const reviewDossier = ref(null);
+const reviewDossierLoading = ref(false);
+const selectedReviewProjectId = ref('');
+const actionWorking = ref(false);
+const projectActionNote = ref('');
+const previousQueueTotal = ref(0);
+
+const courseForm = reactive(createEmptyCourseForm('', 'edit'));
+const assignmentForm = reactive(createEmptyAssignmentForm());
+const competitionForm = reactive(createEmptyCompetitionForm());
+const competitionRawText = ref('');
+const bannerForm = reactive(createEmptyBannerForm());
+const storyForm = reactive(createEmptyStoryForm());
+const projectTopicForm = reactive({
+  id: null,
+  title: '',
+  description: '',
+  difficulty: '',
+  suggestedTeamSize: '',
+  deliverables: '',
+  status: 'published'
+});
+
+const currentTeacherId = computed(() => Number(currentUser.value?.id || 0));
+const canManage = computed(() => currentUser.value?.role === 'teacher');
+const isOwnedByCurrentTeacher = item => isOwnedByTeacher(item, currentTeacherId.value);
+const myCourses = computed(() => courses.value.filter(isOwnedByCurrentTeacher));
+const selectedCourse = computed(() => courses.value.find(item => item.id === selectedCourseId.value) || null);
+const selectedCompetition = computed(() => competitions.value.find(item => item.slug === selectedCompetitionSlug.value) || null);
+const selectedProjectTopic = computed(() => projectTopics.value.find(item => String(item.id) === String(selectedProjectTopicId.value)) || null);
+const myProjectTopics = computed(() => projectTopics.value.filter(isOwnedByCurrentTeacher));
+const myCompetitions = computed(() => competitions.value.filter(isOwnedByCurrentTeacher));
+const pendingCourseCount = computed(() => myCourses.value.filter(item => item.status !== 'published').length);
+const pendingProjectTopicCount = computed(() => myProjectTopics.value.filter(item => item.status !== 'published').length);
+const pendingCompetitionCount = computed(() => myCompetitions.value.filter(item => item.publishStatus !== 'published').length);
+const pendingAssignmentReviewCount = computed(() => assignments.value.reduce((sum, item) => sum + (item.stats?.pendingReview || 0), 0));
+const pendingRegistrationCount = computed(() => competitions.value.reduce((sum, item) => sum + (item.registrationStats?.pending || 0), 0));
+const pendingResourceCount = computed(() => resources.value.length);
+const reviewProjects = computed(() => reviewQueue.value);
+const projectReviewCount = computed(() => reviewProjects.value.filter(item => item.reviewBucket === 'project_review').length);
+const stageReviewCount = computed(() => reviewProjects.value.filter(item => item.reviewBucket === 'stage_review').length);
+const resourceQueueCount = computed(() => reviewProjects.value.filter(item => item.reviewBucket === 'resource_pending').length);
+const attentionCount = computed(() => reviewProjects.value.filter(item => item.reviewBucket === 'attention').length);
+const interventionCount = computed(() => projectReviewCount.value + stageReviewCount.value + attentionCount.value);
+const queueTotal = computed(() => projectReviewCount.value + stageReviewCount.value + resourceQueueCount.value + attentionCount.value);
+const showQueueCelebration = computed(() => getQueueCelebration(previousQueueTotal.value, queueTotal.value));
+let queueRefreshTimer = null;
+
+const alertProjects = computed(() => buildAlertProjects(reviewQueue.value));
+const activeStudentProjectCount = computed(() => projects.value.filter(item => item.status === 'in_progress').length);
+const rejectedStudentProjectCount = computed(() => projects.value.filter(item => item.status === 'rejected').length);
+const projectQueues = computed(() => buildProjectQueues(reviewProjects.value));
+const filteredReviewProjects = computed(() => filterReviewProjects(reviewProjects.value, activeQueue.value));
+const statusActions = computed(() => buildStatusActions(reviewDossier.value?.project?.status || ''));
+const selectedCompetitionDeadline = computed(() => getSelectedCompetitionDeadline(selectedCompetition.value));
+const selectedCompetitionDeadlineDate = computed(() => parseChineseDate(selectedCompetitionDeadline.value));
+const isSelectedCompetitionDeadlinePast = computed(() => isDeadlinePast(selectedCompetitionDeadlineDate.value));
+const selectedCompetitionReminderStatus = computed(() => getCompetitionReminderStatus({
+  competition: selectedCompetition.value,
+  deadlineText: selectedCompetitionDeadline.value,
+  deadlinePast: isSelectedCompetitionDeadlinePast.value
+}));
+const bannerFormErrors = computed(() => getBannerFormErrors(bannerForm));
+const storyFormErrors = computed(() => getStoryFormErrors({
+  storyForm,
+  selectedStorySlug: selectedStorySlug.value
+}));
+
+const { restoreDraft: restoreCourseDraft, clearDraft: clearCourseDraft } = useFormDraft('teacher:course:create', courseForm, {
+  shouldSave(value) {
+    return uploadKind.value === 'course' && !selectedCourseId.value && hasDraftContent(value);
+  }
+});
+
+const { restoreDraft: restoreCompetitionDraft, clearDraft: clearCompetitionDraft } = useFormDraft('teacher:competition:create', competitionForm, {
+  shouldSave(value) {
+    return uploadKind.value === 'competition' && !selectedCompetitionSlug.value && hasDraftContent(value);
+  }
+});
+
+const { restoreDraft: restoreBannerDraft, clearDraft: clearBannerDraft } = useFormDraft('teacher:banner:create', bannerForm, {
+  shouldSave(value) {
+    return selectedBannerIndex.value < 0 && hasDraftContent(value);
+  }
+});
+
+const { restoreDraft: restoreStoryDraft, clearDraft: clearStoryDraft } = useFormDraft('teacher:story:create', storyForm, {
+  shouldSave(value) {
+    return !selectedStorySlug.value && hasDraftContent(value);
+  }
+});
+
+function resetAssignmentForm() {
+  Object.assign(assignmentForm, createEmptyAssignmentForm(selectedCourseLessons.value[0]?.id || ''));
+}
+
+function syncCourseForm(course) {
+  courseDraftRestored.value = false;
+  Object.assign(courseForm, buildCourseForm(course));
+}
+
+function startCourseCreate() {
+  goModule('uploads', { kind: 'course' });
+  selectedCourseId.value = '';
+  selectedCourseLessons.value = [];
+  assignments.value = [];
+  selectedAssignment.value = null;
+  submissions.value = [];
+  Object.assign(courseForm, createEmptyCourseForm(currentUser.value?.name || '', 'create'));
+  courseDraftRestored.value = restoreCourseDraft();
+  resetAssignmentForm();
+}
+
+function lessonName(lessonId) {
+  if (!lessonId) return '未绑定课时';
+  return selectedCourseLessons.value.find(item => item.id === lessonId)?.title || lessonId;
+}
+
+function defaultReminderBody(competition = selectedCompetition.value) {
+  return buildDefaultReminderBody({
+    competition,
+    deadlineText: selectedCompetitionDeadline.value,
+    deadlinePast: isSelectedCompetitionDeadlinePast.value
+  });
+}
+
+function statusLabel(status) {
+  return getStatusLabel(status);
+}
+
+function submissionTypeLabel(type) {
+  return getSubmissionTypeLabel(type);
+}
+
+function submissionSummary(submission) {
+  return getSubmissionSummary(submission);
+}
+
+async function loadCourses() {
+  const res = await apiFetch('/courses');
+  const data = await readJsonResponse(res, 'courses');
+  if (!res.ok) throw new Error(data?.error || '课程加载失败');
+  courses.value = data.courses || [];
+  const ownedCourses = myCourses.value;
+  const selectedIsOwned = ownedCourses.some(item => item.id === selectedCourseId.value);
+  if ((!selectedCourseId.value || !selectedIsOwned) && ownedCourses.length) {
+    await selectCourse(ownedCourses[0]);
+  } else if (selectedCourse.value) {
+    syncCourseForm(selectedCourse.value);
+    await loadAssignments();
+  } else {
+    selectedCourseId.value = '';
+    selectedCourseLessons.value = [];
+    assignments.value = [];
+  }
+}
+
+async function selectCourse(course) {
+  if (!course?.id) return;
+  selectedCourseId.value = course.id;
+  syncCourseForm(course);
+  const lessonsRes = await apiFetch(`/courses/${course.id}/lessons`);
+  const lessonsData = await readJsonResponse(lessonsRes, 'course_lessons');
+  selectedCourseLessons.value = lessonsData.lessons || [];
+  resetAssignmentForm();
+  await loadAssignments();
+}
+
+async function saveCourse() {
+  if (courseForm.mode !== 'create' && !selectedCourse.value) return;
+  courseSaving.value = true;
+  try {
+    const payload = {
+      ...(selectedCourse.value || {}),
+      id: courseForm.id,
+      title: courseForm.title,
+      teacherName: courseForm.teacherName,
+      summary: courseForm.summary,
+      description: courseForm.summary,
+      audience: courseForm.audience,
+      pace: courseForm.pace,
+      learningObjectives: courseForm.learningObjectivesText.split('\n').map(item => item.trim()).filter(Boolean),
+      status: courseForm.status,
+      direction: selectedCourse.value?.direction || 'foundation',
+      materialsRoot: courseForm.id,
+      relatedProjects: selectedCourse.value?.relatedProjects || [],
+      materials: selectedCourse.value?.materials || []
+    };
+    const res = await apiFetch(courseForm.mode === 'create' ? '/courses' : `/courses/${selectedCourse.value.id}`, {
+      method: courseForm.mode === 'create' ? 'POST' : 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await readJsonResponse(res, 'course_save');
+    if (!res.ok) throw new Error(data?.error || '课程保存失败');
+    if (courseForm.mode === 'create') {
+      courses.value = [data.course, ...courses.value.filter(item => item.id !== data.course.id)];
+      clearCourseDraft();
+      courseDraftRestored.value = false;
+      notification.success('课程已上传到平台');
+    } else {
+      courses.value = courses.value.map(item => item.id === data.course.id ? data.course : item);
+      notification.success('课程信息已保存');
+    }
+    await selectCourse(data.course);
+  } catch (err) {
+    notification.error(err.message || '课程保存失败');
+  } finally {
+    courseSaving.value = false;
+  }
+}
+
+async function saveCourseAs(status) {
+  courseForm.status = status;
+  await saveCourse();
+}
+
+async function loadAssignments() {
+  if (!selectedCourseId.value) return;
+  const res = await apiFetch(`/assignments?courseId=${encodeURIComponent(selectedCourseId.value)}`);
+  const data = await readJsonResponse(res, 'assignments');
+  if (!res.ok) throw new Error(data?.error || '作业加载失败');
+  assignments.value = data.assignments || [];
+}
+
+function startAssignmentCreate() {
+  resetAssignmentForm();
+}
+
+function editAssignment(assignment) {
+  Object.assign(assignmentForm, {
+    id: assignment.id,
+    title: assignment.title,
+    lessonId: assignment.lessonId || '',
+    dueAt: assignment.dueAt ? assignment.dueAt.slice(0, 16) : '',
+    submitType: assignment.submitType || 'mixed',
+    requirements: assignment.requirements || '',
+    status: assignment.status || 'published'
+  });
+}
+
+async function saveAssignment() {
+  if (!selectedCourseId.value) return;
+  assignmentSaving.value = true;
+  try {
+    const payload = {
+      courseId: selectedCourseId.value,
+      lessonId: assignmentForm.lessonId,
+      title: assignmentForm.title,
+      dueAt: assignmentForm.dueAt ? new Date(assignmentForm.dueAt).toISOString() : '',
+      submitType: assignmentForm.submitType,
+      requirements: assignmentForm.requirements,
+      status: assignmentForm.status
+    };
+    const endpoint = assignmentForm.id ? `/assignments/${assignmentForm.id}` : '/assignments';
+    const res = await apiFetch(endpoint, {
+      method: assignmentForm.id ? 'PATCH' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await readJsonResponse(res, 'assignment_save');
+    if (!res.ok) throw new Error(data?.error || '作业保存失败');
+    notification.success('作业已保存');
+    resetAssignmentForm();
+    await loadAssignments();
+  } catch (err) {
+    notification.error(err.message || '作业保存失败');
+  } finally {
+    assignmentSaving.value = false;
+  }
+}
+
+async function loadAssignmentSubmissions(assignment) {
+  selectedAssignment.value = assignment;
+  const res = await apiFetch(`/assignments/${assignment.id}/submissions`);
+  const data = await readJsonResponse(res, 'assignment_submissions');
+  if (!res.ok) throw new Error(data?.error || '提交加载失败');
+  submissions.value = data.submissions || [];
+  submissions.value.forEach(item => {
+    reviewDrafts[item.id] = {
+      status: item.status === 'needs_changes' ? 'needs_changes' : 'reviewed',
+      score: item.score ?? '',
+      feedback: item.feedback || ''
+    };
+  });
+}
+
+async function reviewAssignmentSubmission(submission) {
+  const draft = reviewDrafts[submission.id];
+  const res = await apiFetch(`/assignments/${selectedAssignment.value.id}/submissions/${submission.id}/review`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(draft)
+  });
+  const data = await readJsonResponse(res, 'assignment_review');
+  if (!res.ok) {
+    notification.error(data?.error || '批改失败');
+    return;
+  }
+  notification.success('批改已提交');
+  await loadAssignmentSubmissions(selectedAssignment.value);
+  await loadAssignments();
+}
+
+async function loadCompetitions() {
+  const res = await apiFetch('/admin/competitions');
+  const data = await readJsonResponse(res, 'admin_competitions');
+  if (!res.ok) throw new Error(data?.error || '赛事加载失败');
+  competitions.value = data.competitions || [];
+  const ownedCompetitions = myCompetitions.value;
+  const selectedIsOwned = ownedCompetitions.some(item => item.slug === selectedCompetitionSlug.value);
+  if ((!selectedCompetitionSlug.value || !selectedIsOwned) && ownedCompetitions.length) {
+    await selectCompetition(ownedCompetitions[0]);
+  } else if (!ownedCompetitions.length) {
+    selectedCompetitionSlug.value = '';
+    registrations.value = [];
+    registrationStats.value = {};
+  }
+}
+
+function syncCompetitionForm(item) {
+  competitionDraftRestored.value = false;
+  Object.assign(competitionForm, buildCompetitionForm(item));
+}
+
+async function selectCompetition(competition) {
+  selectedCompetitionSlug.value = competition.slug;
+  syncCompetitionForm(competition);
+  await loadRegistrations();
+  await loadCompetitionCandidates();
+  reminderForm.targetGroup = 'not_registered';
+  reminderForm.body = defaultReminderBody(competition);
+}
+
+function startCompetitionCreate() {
+  goModule('uploads', { kind: 'competition' });
+  selectedCompetitionSlug.value = '';
+  registrations.value = [];
+  registrationStats.value = {};
+  competitionRawText.value = '';
+  Object.assign(competitionForm, createEmptyCompetitionForm());
+  competitionDraftRestored.value = restoreCompetitionDraft();
+}
+
+function draftCompetitionFromText() {
+  const draft = deriveCompetitionDraftFromText(competitionRawText.value, competitionForm.slug);
+  if (!draft) {
+    notification.warning('先粘贴赛事通知或章程内容');
+    return;
+  }
+  Object.assign(competitionForm, { ...competitionForm, ...draft });
+  notification.success('已整理为赛事草稿，请检查后上传');
+}
+
+async function saveCompetition() {
+  const payload = {
+    title: competitionForm.title,
+    slug: competitionForm.slug,
+    status: competitionForm.status,
+    publishStatus: competitionForm.publishStatus,
+    dateRange: competitionForm.dateRange,
+    host: competitionForm.host,
+    location: competitionForm.location,
+    fitSummary: competitionForm.fitSummary,
+    schoolStage: competitionForm.schoolStageText.split(',').map(item => item.trim()).filter(Boolean),
+    tags: competitionForm.tagsText.split(',').map(item => item.trim()).filter(Boolean),
+    requiredSkills: competitionForm.requiredSkillsText.split(',').map(item => item.trim()).filter(Boolean),
+    recommendedSkills: competitionForm.recommendedSkillsText.split(',').map(item => item.trim()).filter(Boolean),
+    difficulty: competitionForm.difficulty,
+    estimatedHours: competitionForm.estimatedHours ? Number(competitionForm.estimatedHours) : null,
+    registrationDeadline: competitionForm.registrationDeadline,
+    eligibilityNotes: competitionForm.eligibilityNotes,
+    relatedCourseIds: competitionForm.relatedCourseIdsText.split(',').map(item => item.trim()).filter(Boolean)
+  };
+  const endpoint = competitionForm.editing ? `/admin/competitions/${competitionForm.slug}` : '/admin/competitions';
+  const res = await apiFetch(endpoint, {
+    method: competitionForm.editing ? 'PATCH' : 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await readJsonResponse(res, 'competition_save');
+  if (!res.ok) {
+    notification.error(data?.error || '赛事保存失败');
+    return;
+  }
+  if (!competitionForm.editing) {
+    clearCompetitionDraft();
+    competitionDraftRestored.value = false;
+  }
+  notification.success('赛事已保存');
+  await loadCompetitions();
+  await selectCompetition(data.competition);
+}
+
+async function saveCompetitionAs(status) {
+  competitionForm.publishStatus = status;
+  await saveCompetition();
+}
+
+async function loadBanners() {
+  const res = await apiFetch('/admin/banners');
+  const data = await readJsonResponse(res, 'admin_banners');
+  if (!res.ok) throw new Error(data?.error || 'Banner 加载失败');
+  banners.value = data.banners || [];
+  if (selectedBannerIndex.value >= banners.value.length) selectedBannerIndex.value = -1;
+}
+
+function syncBannerForm(item) {
+  Object.assign(bannerForm, buildBannerForm(item));
+}
+
+function selectBanner(index) {
+  selectedBannerIndex.value = index;
+  bannerDraftRestored.value = false;
+  syncBannerForm(banners.value[index]);
+}
+
+function startBannerCreate() {
+  goModule('uploads', { kind: 'banner' });
+  selectedBannerIndex.value = -1;
+  syncBannerForm(null);
+  bannerDraftRestored.value = restoreBannerDraft();
+}
+
+async function saveBanner() {
+  if (Object.keys(bannerFormErrors.value).length) {
+    notification.error('请先补齐 Banner 必填信息。');
+    return;
+  }
+  const payload = { ...bannerForm };
+  const editing = selectedBannerIndex.value >= 0;
+  const endpoint = editing ? `/admin/banners/${selectedBannerIndex.value}` : '/admin/banners';
+  const res = await apiFetch(endpoint, {
+    method: editing ? 'PATCH' : 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await readJsonResponse(res, 'banner_save');
+  if (!res.ok) {
+    notification.error(data?.error || 'Banner 保存失败');
+    return;
+  }
+  notification.success('Banner 已保存');
+  if (!editing) {
+    clearBannerDraft();
+    bannerDraftRestored.value = false;
+  }
+  await loadBanners();
+  if (!editing) selectedBannerIndex.value = 0;
+}
+
+async function deleteBanner() {
+  if (selectedBannerIndex.value < 0) return;
+  const res = await apiFetch(`/admin/banners/${selectedBannerIndex.value}`, { method: 'DELETE' });
+  const data = await readJsonResponse(res, 'banner_delete');
+  if (!res.ok) {
+    notification.error(data?.error || 'Banner 删除失败');
+    return;
+  }
+  notification.success('Banner 已删除');
+  selectedBannerIndex.value = -1;
+  syncBannerForm(null);
+  await loadBanners();
+}
+
+async function loadStories() {
+  const res = await apiFetch('/admin/stories');
+  const data = await readJsonResponse(res, 'admin_stories');
+  if (!res.ok) throw new Error(data?.error || '成果故事加载失败');
+  stories.value = data.stories || [];
+}
+
+function syncStoryForm(item) {
+  Object.assign(storyForm, buildStoryForm(item));
+}
+
+function selectStory(story) {
+  selectedStorySlug.value = story.slug;
+  storyDraftRestored.value = false;
+  syncStoryForm(story);
+}
+
+function startStoryCreate() {
+  goModule('uploads', { kind: 'story' });
+  selectedStorySlug.value = '';
+  syncStoryForm(null);
+  storyDraftRestored.value = restoreStoryDraft();
+}
+
+async function saveStory() {
+  if (Object.keys(storyFormErrors.value).length) {
+    notification.error('请先补齐成果故事必填信息。');
+    return;
+  }
+  const payload = {
+    ...storyForm,
+    relatedCourseIds: storyForm.relatedCourseIdsText.split(',').map(item => item.trim()).filter(Boolean)
+  };
+  const editing = Boolean(selectedStorySlug.value);
+  const endpoint = editing ? `/admin/stories/${selectedStorySlug.value}` : '/admin/stories';
+  const res = await apiFetch(endpoint, {
+    method: editing ? 'PATCH' : 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await readJsonResponse(res, 'story_save');
+  if (!res.ok) {
+    notification.error(data?.error || '成果故事保存失败');
+    return;
+  }
+  notification.success('成果故事已保存');
+  if (!editing) {
+    clearStoryDraft();
+    storyDraftRestored.value = false;
+  }
+  await loadStories();
+  selectStory(data.story);
+}
+
+async function deleteStory() {
+  if (!selectedStorySlug.value) return;
+  const res = await apiFetch(`/admin/stories/${selectedStorySlug.value}`, { method: 'DELETE' });
+  const data = await readJsonResponse(res, 'story_delete');
+  if (!res.ok) {
+    notification.error(data?.error || '成果故事删除失败');
+    return;
+  }
+  notification.success('成果故事已删除');
+  selectedStorySlug.value = '';
+  syncStoryForm(null);
+  await loadStories();
+}
+
+async function loadRegistrations() {
+  if (!selectedCompetitionSlug.value) return;
+  const res = await apiFetch(`/competitions/${selectedCompetitionSlug.value}/registrations`);
+  const data = await readJsonResponse(res, 'competition_registrations');
+  if (!res.ok) throw new Error(data?.error || '报名加载失败');
+  registrations.value = data.registrations || [];
+  registrationStats.value = data.stats || {};
+}
+
+async function loadCompetitionCandidates() {
+  if (!selectedCompetitionSlug.value) {
+    competitionCandidates.value = [];
+    return;
+  }
+  const res = await apiFetch(`/admin/competitions/${selectedCompetitionSlug.value}/match-candidates`);
+  const data = await readJsonResponse(res, 'competition_match_candidates');
+  if (!res.ok) throw new Error(data?.error || '候选学生加载失败');
+  competitionCandidates.value = Array.isArray(data.items) ? data.items : [];
+}
+
+async function reviewRegistration(registration, status) {
+  const res = await apiFetch(`/competitions/${selectedCompetitionSlug.value}/registrations/${registration.id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status })
+  });
+  const data = await readJsonResponse(res, 'registration_review');
+  if (!res.ok) {
+    notification.error(data?.error || '报名处理失败');
+    return;
+  }
+  notification.success('报名状态已更新');
+  await loadRegistrations();
+  await loadCompetitions();
+}
+
+async function sendCompetitionReminder() {
+  if (!selectedCompetitionSlug.value) return;
+  const body = reminderForm.body.trim();
+  if (!body) {
+    notification.warning('先填写提醒内容');
+    return;
+  }
+  const res = await apiFetch(`/competitions/${selectedCompetitionSlug.value}/reminders`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      targetGroup: reminderForm.targetGroup,
+      body
+    })
+  });
+  const data = await readJsonResponse(res, 'competition_reminder');
+  if (!res.ok) {
+    notification.error(data?.error || '提醒发送失败');
+    return;
+  }
+  notification.success(`已发送给 ${data.count || 0} 名学生`);
+}
+
+async function sendMatchReminder(candidate) {
+  const body = `${candidate.aiAdvice || candidate.aiSummary || '你和这项赛事有较高匹配度，请尽快确认报名。'}\n赛事：${selectedCompetition.value?.title || selectedCompetitionSlug.value}`;
+  const res = await apiFetch(`/admin/competitions/${selectedCompetitionSlug.value}/match-reminders`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title: '竞赛匹配提醒',
+      body,
+      studentIds: [candidate.userId]
+    })
+  });
+  const data = await readJsonResponse(res, 'competition_match_reminder');
+  if (!res.ok) {
+    notification.error(data?.error || '定向提醒发送失败');
+    return;
+  }
+  notification.success('已发送定向提醒');
+}
+
+async function applyMatchOverride(candidate, overrideType) {
+  const res = await apiFetch(`/admin/matches/${candidate.id}/override`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      overrideType,
+      note: overrideType === 'boost' ? '教师重点鼓励' : '教师暂时屏蔽'
+    })
+  });
+  const data = await readJsonResponse(res, 'match_override');
+  if (!res.ok) {
+    notification.error(data?.error || '教师干预失败');
+    return;
+  }
+  notification.success('匹配结果已更新');
+  await loadCompetitionCandidates();
+}
+
+async function loadResources() {
+  const res = await apiFetch('/admin/resources?status=pending');
+  const data = await readJsonResponse(res, 'resources');
+  resources.value = res.ok ? (data.requests || []) : [];
+}
+
+async function auditResource(id, status) {
+  actionWorking.value = true;
+  const res = await apiFetch(`/resources/${id}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status })
+  });
+  const data = await readJsonResponse(res, 'resource_audit');
+  actionWorking.value = false;
+  if (!res.ok) {
+    notification.error(data?.error || '资源审批失败');
+    return;
+  }
+  notification.success('资源审批已更新');
+  await loadResources();
+  await loadProjectReviewQueue();
+  if (selectedReviewProjectId.value) await loadReviewDossier(selectedReviewProjectId.value);
+}
+
+async function loadProjectReviewQueue() {
+  const res = await apiFetch('/admin/project-review-queue');
+  const data = await readJsonResponse(res, 'project_review_queue');
+  if (!res.ok) throw new Error(data?.error || '项目审核队列加载失败');
+  reviewQueue.value = data.projects || [];
+  if (!reviewQueue.value.length) {
+    selectedReviewProjectId.value = '';
+    reviewDossier.value = null;
+    return;
+  }
+  const stillSelected = reviewQueue.value.some(item => String(item.id) === String(selectedReviewProjectId.value));
+  const preferredQueueItem = filteredReviewProjects.value[0] || reviewQueue.value[0];
+  if (!selectedReviewProjectId.value || !stillSelected) {
+    await selectReviewProject(preferredQueueItem.id);
+  }
+}
+
+async function selectReviewProject(projectId) {
+  selectedReviewProjectId.value = projectId;
+  await loadReviewDossier(projectId);
+}
+
+async function loadReviewDossier(projectId) {
+  if (!projectId) return;
+  reviewDossierLoading.value = true;
+  try {
+    const res = await apiFetch(`/admin/projects/${projectId}/review-dossier`);
+    const data = await readJsonResponse(res, 'project_review_dossier');
+    if (!res.ok) throw new Error(data?.error || '审核包加载失败');
+    reviewDossier.value = data;
+    projectActionNote.value = '';
+    (data.submissions || []).forEach((submission) => {
+      projectReviewDrafts[submission.id] = {
+        status: submission.status === 'needs_changes' ? 'needs_changes' : 'reviewed',
+        feedback: submission.feedback || ''
+      };
+    });
+  } catch (err) {
+    notification.error(err.message || '审核包加载失败');
+  } finally {
+    reviewDossierLoading.value = false;
+  }
+}
+
+async function advanceProjectStatus(status, defaultNote) {
+  if (!reviewDossier.value?.project?.id) return;
+  actionWorking.value = true;
+  try {
+    const res = await apiFetch(`/projects/${reviewDossier.value.project.id}/status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status, note: projectActionNote.value || defaultNote || '' })
+    });
+    const data = await readJsonResponse(res, 'project_status_update');
+    if (!res.ok) throw new Error(data?.error || '项目状态推进失败');
+    notification.success('项目状态已更新');
+    await loadProjectReviewQueue();
+    await loadReviewDossier(reviewDossier.value.project.id);
+  } catch (err) {
+    notification.error(err.message || '项目状态推进失败');
+  } finally {
+    actionWorking.value = false;
+  }
+}
+
+async function reviewProjectSubmission(submission) {
+  const draft = projectReviewDrafts[submission.id];
+  if (draft?.status === 'needs_changes' && !String(draft.feedback || '').trim()) {
+    notification.warning('退回提交必须填写反馈');
+    return;
+  }
+  actionWorking.value = true;
+  try {
+    const res = await apiFetch(`/submissions/${submission.id}/feedback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(draft)
+    });
+    const data = await readJsonResponse(res, 'submission_feedback');
+    if (!res.ok) throw new Error(data?.error || '提交审核失败');
+    notification.success('阶段提交审核已回流学生端');
+    await loadProjectReviewQueue();
+    await loadReviewDossier(reviewDossier.value.project.id);
+  } catch (err) {
+    notification.error(err.message || '提交审核失败');
+  } finally {
+    actionWorking.value = false;
+  }
+}
+
+async function reviewMilestone(milestone, status) {
+  actionWorking.value = true;
+  try {
+    const res = await apiFetch(`/milestones/${milestone.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    });
+    const data = await readJsonResponse(res, 'milestone_review');
+    if (!res.ok) throw new Error(data?.error || '里程碑处理失败');
+    notification.success(status === 'approved' ? '里程碑已验收' : '里程碑已退回');
+    await loadProjectReviewQueue();
+    await loadReviewDossier(reviewDossier.value.project.id);
+  } catch (err) {
+    notification.error(err.message || '里程碑处理失败');
+  } finally {
+    actionWorking.value = false;
+  }
+}
+
+async function loadProjectTopics() {
+  const res = await apiFetch('/admin/project-topics');
+  const data = await readJsonResponse(res, 'project_topics');
+  projectTopics.value = res.ok ? (data.topics || []) : [];
+  const ownedTopics = myProjectTopics.value;
+  const selectedIsOwned = ownedTopics.some(item => String(item.id) === String(selectedProjectTopicId.value));
+  if ((!selectedProjectTopicId.value || !selectedIsOwned) && ownedTopics.length) {
+    selectedProjectTopicId.value = String(myProjectTopics.value[0].id);
+  } else if (!ownedTopics.length) {
+    selectedProjectTopicId.value = '';
+  }
+}
+
+function startProjectTopicCreate() {
+  goModule('uploads', { kind: 'project' });
+  selectedProjectTopicId.value = '';
+}
+
+function teacherRouteForModule(module, options = {}) {
+  if (module === 'uploads') {
+    return {
+      path: '/admin/publish',
+      query: {
+        ...route.query,
+        kind: options.kind || uploadKind.value || 'course'
+      }
+    };
+  }
+  return {
+    path: options.queue ? '/admin/review' : '/admin',
+    query: {
+      ...route.query,
+      queue: options.queue || activeQueue.value || 'project_review'
+    }
+  };
+}
+
+function goModule(module, options = {}) {
+  const target = teacherRouteForModule(module, options);
+  activeModule.value = module;
+  if (module === 'uploads') {
+    uploadKind.value = options.kind || uploadKind.value || 'course';
+  } else {
+    activeQueue.value = options.queue || activeQueue.value || 'project_review';
+  }
+  router.replace(target).catch(() => {});
+}
+
+function applyRouteState() {
+  if (props.routeModule === 'uploads') {
+    activeModule.value = 'uploads';
+    uploadKind.value = String(route.query.kind || uploadKind.value || 'course');
+    return;
+  }
+  if (props.routeModule === 'projects') {
+    activeModule.value = 'projects';
+    activeQueue.value = String(route.query.queue || activeQueue.value || 'project_review');
+    return;
+  }
+
+  if (route.path === '/admin/publish') {
+    activeModule.value = 'uploads';
+    uploadKind.value = String(route.query.kind || uploadKind.value || 'course');
+    return;
+  }
+
+  activeModule.value = 'projects';
+  activeQueue.value = String(route.query.queue || activeQueue.value || 'project_review');
+}
+
+function editProjectTopic(topic) {
+  selectedProjectTopicId.value = String(topic.id);
+}
+
+async function saveProjectTopic() {
+  const topic = selectedProjectTopic.value;
+  if (!topic) return;
+  const endpoint = `/admin/project-topics/${topic.id}`;
+  const res = await apiFetch(endpoint, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...topic, status: topic.status })
+  });
+  const data = await readJsonResponse(res, 'project_topic_save');
+  if (!res.ok) {
+    notification.error(data?.error || '项目题目保存失败');
+    return;
+  }
+  notification.success('项目题目已保存');
+  await loadProjectTopics();
+}
+
+async function saveProjectTopicAs(status) {
+  if (!selectedProjectTopic.value) return;
+  selectedProjectTopic.value.status = status;
+  await saveProjectTopic();
+}
+
+function openProject(project) {
+  router.push(buildWorkspaceBase(project.id).path);
+}
+
+async function refreshAll() {
+  loading.value = true;
+  try {
+    await Promise.all([
+      loadCourses(),
+      loadCompetitions(),
+      loadBanners(),
+      loadStories(),
+      loadResources(),
+      loadProjectTopics(),
+      loadProjectReviewQueue(),
+      projectStore.fetchList()
+    ]);
+  } catch (err) {
+    notification.error(err.message || '数据刷新失败');
+  } finally {
+    loading.value = false;
+  }
+}
+
+function startQueuePolling() {
+  stopQueuePolling();
+  queueRefreshTimer = window.setInterval(() => {
+    if (document.hidden || loading.value) return;
+    refreshAll().catch(() => {});
+  }, 30000);
+}
+
+function stopQueuePolling() {
+  if (queueRefreshTimer) {
+    window.clearInterval(queueRefreshTimer);
+    queueRefreshTimer = null;
+  }
+}
+
+function logout() {
+  authStore.logout();
+  router.replace('/login');
+}
+
+watch(activeModule, value => {
+  if (value === 'projects') {
+    loadProjectReviewQueue();
+    loadResources();
+  }
+});
+
+watch(() => route.fullPath, () => {
+  applyRouteState();
+});
+
+watch(activeQueue, async () => {
+  const first = filteredReviewProjects.value[0];
+  if (first) {
+    await selectReviewProject(first.id);
+  } else {
+    reviewDossier.value = null;
+    selectedReviewProjectId.value = '';
+  }
+});
+
+watch(queueTotal, (value, oldValue) => {
+  previousQueueTotal.value = Math.max(Number(oldValue || 0), previousQueueTotal.value);
+  if (value > 0) {
+    previousQueueTotal.value = value;
+  }
+});
+
+onMounted(async () => {
+  const user = authStore.user;
+  if (!user) {
+    authStore.setRedirect('/admin');
+    router.replace('/login');
+    return;
+  }
+  if (!['teacher', 'judge'].includes(user.role)) {
+    router.replace('/my');
+    return;
+  }
+  applyRouteState();
+  await refreshAll();
+  startQueuePolling();
+});
+
+onBeforeUnmount(() => {
+  stopQueuePolling();
+});

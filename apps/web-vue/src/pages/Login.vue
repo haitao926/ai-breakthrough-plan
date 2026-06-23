@@ -1,26 +1,26 @@
 <template>
-  <section class="login-page selection:bg-indigo-100 selection:text-indigo-900">
-    <div class="ambient ambient-one"></div>
-    <div class="ambient ambient-two"></div>
-    <div class="orbit-field" aria-hidden="true">
-      <span class="orbit orbit-a"></span>
-      <span class="orbit orbit-b"></span>
-      <span class="orbit orbit-c"></span>
-    </div>
+  <section class="login-page selection:bg-teal-100 selection:text-teal-900">
 
-    <RouterLink to="/" class="login-brand" aria-label="返回门户首页">
-      <span class="brand-mark"><i class="fas fa-cube"></i></span>
-      <span>
-        <strong>{{ brandName }}</strong>
-        <small>{{ schoolName }}</small>
-      </span>
-    </RouterLink>
+    <div class="login-header-wrapper">
+      <div class="login-header-inner">
+        <RouterLink to="/" class="login-brand group" aria-label="返回门户首页">
+          <span class="w-10 h-10 rounded-full flex items-center justify-center bg-white overflow-hidden shadow-sm transition-all duration-200 group-hover:-translate-y-[1px] group-hover:shadow-md border border-slate-100">
+            <img src="/assets/branding/site-logo.png" alt="Logo" class="w-full h-full object-contain block" />
+          </span>
+          <span>
+            <strong>{{ brandName }}</strong>
+            <small>{{ schoolName }}</small>
+          </span>
+        </RouterLink>
+      </div>
+    </div>
 
     <main class="login-shell">
       <section class="login-intro">
-        <p class="login-eyebrow">SASU AI Lab</p>
+        <p class="login-eyebrow">{{ brandName }}</p>
         <h1>进入你的 AI 创新工作台</h1>
-        <p class="login-lead">面向学生项目实践与教师评审管理的统一入口。选择身份后继续课程、课题与协作流程。</p>
+        <p class="login-lead">登录后回到当前页面，继续项目、提交或评审。</p>
+        <p class="login-sublead">还没决定下一步时，先去项目库或课程库看看。</p>
 
         <div class="role-preview" aria-label="登录身份入口">
           <button
@@ -38,16 +38,6 @@
             </span>
           </button>
         </div>
-
-        <div class="login-rhythm">
-          <span v-for="item in activeRoleSteps" :key="item">{{ item }}</span>
-        </div>
-
-        <div class="signal-panel" aria-hidden="true">
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
       </section>
 
       <section class="login-panel" aria-label="账号登录">
@@ -55,27 +45,35 @@
           <div>
             <p class="panel-kicker">{{ activeRole.title }}</p>
             <h2>账号登录</h2>
+            <p class="panel-note">{{ activeRole.description }}</p>
           </div>
           <span class="role-badge">{{ activeRole.badge }}</span>
         </div>
 
         <p v-if="redirectHint" class="redirect-hint">
           <i class="fas fa-location-arrow"></i>
-          登录后返回 {{ redirectHint }}
+          登录后回到 {{ redirectHint }}
         </p>
 
-        <form class="login-form" @submit.prevent="handleSubmit">
-          <label>
+        <form class="login-form" autocomplete="on" @submit.prevent="handleSubmit">
+          <label for="login-identifier">
             <span>账号</span>
             <input
+              id="login-identifier"
               v-model.trim="form.email"
+              type="text"
+              name="username"
               autocomplete="username"
+              autocapitalize="none"
+              spellcheck="false"
               placeholder="邮箱或用户名"
               :disabled="loading"
+              @blur="touch('email')"
             />
+            <small v-if="visibleErrors.email" class="field-error">{{ visibleErrors.email }}</small>
           </label>
 
-          <label>
+          <label for="login-password">
             <span class="field-row">
               <span>密码</span>
               <button type="button" class="forgot-link" @click="showResetHelp = !showResetHelp">
@@ -84,16 +82,22 @@
             </span>
             <div class="password-field">
               <input
+                id="login-password"
                 v-model="form.password"
                 :type="showPassword ? 'text' : 'password'"
+                name="password"
                 autocomplete="current-password"
+                autocapitalize="none"
+                spellcheck="false"
                 placeholder="请输入密码"
                 :disabled="loading"
+                @blur="touch('password')"
               />
               <button type="button" :aria-label="showPassword ? '隐藏密码' : '显示密码'" @click="showPassword = !showPassword">
                 <i class="fas" :class="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
               </button>
             </div>
+            <small v-if="visibleErrors.password" class="field-error">{{ visibleErrors.password }}</small>
           </label>
 
           <p v-if="showResetHelp" class="reset-help">
@@ -101,38 +105,23 @@
             请联系课程教师或平台管理员重置密码；校内账号可先确认邮箱/用户名是否输入正确。
           </p>
 
-          <div class="test-account-panel" aria-label="测试账号快捷填充">
-            <div class="test-account-head">
-              <span>测试账号</span>
-              <small>一键填充，不会自动登录</small>
-            </div>
-            <div class="test-account-grid">
-              <button
-                v-for="account in testAccounts"
-                :key="account.role"
-                type="button"
-                class="test-account-btn"
-                :disabled="loading"
-                @click="fillTestAccount(account)"
-              >
-                <i class="fas" :class="account.icon"></i>
-                <span>
-                  <strong>{{ account.label }}</strong>
-                  <small>{{ account.email }}</small>
-                </span>
-              </button>
-            </div>
-          </div>
+          <p v-if="draftRestored" class="draft-note">
+            <i class="fas fa-clock-rotate-left"></i>
+            已恢复上次未完成的登录账号草稿（不含密码）。
+          </p>
 
           <button class="login-submit" type="submit" :disabled="loading || !canSubmit">
-            <i class="fas" :class="loading ? 'fa-circle-notch fa-spin' : activeRole.submitIcon"></i>
+            <i class="fas" :class="loading ? 'fa-circle-notch' : activeRole.submitIcon"></i>
             <span>{{ loading ? '正在验证账号' : activeRole.submitLabel }}</span>
           </button>
 
-          <p v-if="status" class="login-status" :class="statusTone">
-            <i class="fas" :class="statusTone === 'success' ? 'fa-check-circle' : 'fa-triangle-exclamation'"></i>
-            {{ status }}
+          <p v-if="submitState.message" class="login-status" :class="submitState.type === 'success' ? 'success' : 'error'">
+            <i class="fas" :class="submitState.type === 'success' ? 'fa-check-circle' : 'fa-triangle-exclamation'"></i>
+            {{ submitState.message }}
           </p>
+          <button v-if="canRetry" class="retry-link" type="button" :disabled="loading" @click="handleSubmit">
+            重试登录
+          </button>
         </form>
 
         <div class="panel-footer">
@@ -145,12 +134,14 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
 import { loginUser } from '@/api/authApi';
 import { useAuthStore } from '@/stores/auth';
 import { brandName, schoolName } from '@/constants/brand';
-import { getPrimaryWorkspaceTarget, isTeacherLike } from '@/utils/userRole';
+import { useFormDraft } from '@/composables/useFormDraft';
+import { useSubmitState } from '@/composables/useSubmitState';
+import { getPrimaryWorkspaceTarget, isAdminRole, isTeacherLike } from '@/utils/userRole';
 
 const AUTH_REDIRECT_KEY = 'auth_redirect';
 
@@ -160,67 +151,96 @@ authStore.hydrate();
 
 const form = reactive({ email: '', password: '' });
 const selectedRole = ref('student');
-const status = ref('');
-const statusTone = ref('error');
 const loading = ref(false);
 const showPassword = ref(false);
 const showResetHelp = ref(false);
 const redirectPath = ref('');
-
-const testAccounts = [
-  {
-    role: 'student',
-    label: '学生测试号',
-    email: 'test01@school.local',
-    password: 'hvb9v7',
-    icon: 'fa-user-graduate'
-  },
-  {
-    role: 'teacher',
-    label: '教师测试号',
-    email: 'teacher01@school.local',
-    password: 'mncxsj',
-    icon: 'fa-chalkboard-teacher'
-  }
-];
+const draftRestored = ref(false);
+const submittedOnce = ref(false);
+const touched = reactive({
+  email: false,
+  password: false
+});
+const draftFields = reactive({
+  email: '',
+  role: 'student'
+});
 
 const roleOptions = [
   {
     id: 'student',
     title: '学生入口',
     badge: 'Student',
-    description: '课题、日志、提交与协作',
+    description: '继续项目与阶段提交',
     submitLabel: '进入学生工作台',
     submitIcon: 'fa-rocket',
-    icon: 'fa-user-graduate',
-    steps: ['项目广场', '立项导航', '阶段提交']
+    icon: 'fa-user-graduate'
   },
   {
     id: 'teacher',
     title: '教师入口',
     badge: 'Faculty',
-    description: '评审、审批、课程维护',
-    submitLabel: '进入教师后台',
+    description: '进入评审与课程维护',
+    submitLabel: '进入教师工作台',
     submitIcon: 'fa-chalkboard-teacher',
-    icon: 'fa-chalkboard-teacher',
-    steps: ['待评审项目', '物资审批', '课程维护']
+    icon: 'fa-chalkboard-teacher'
+  },
+  {
+    id: 'admin',
+    title: '管理入口',
+    badge: 'Admin',
+    description: '进入平台总览与账号管理',
+    submitLabel: '进入管理后台',
+    submitIcon: 'fa-shield-halved',
+    icon: 'fa-shield-halved'
   }
 ];
 
 const activeRole = computed(() => roleOptions.find(item => item.id === selectedRole.value) || roleOptions[0]);
-const activeRoleSteps = computed(() => activeRole.value.steps);
-const canSubmit = computed(() => form.email.trim() && form.password);
+const validationErrors = computed(() => {
+  const errors = {};
+  if (!String(form.email || '').trim()) errors.email = '请输入邮箱或用户名。';
+  if (!String(form.password || '')) errors.password = '请输入密码。';
+  return errors;
+});
+const visibleErrors = computed(() => {
+  const errors = {};
+  Object.entries(validationErrors.value).forEach(([key, value]) => {
+    if (submittedOnce.value || touched[key]) errors[key] = value;
+  });
+  return errors;
+});
+const canSubmit = computed(() => Object.keys(validationErrors.value).length === 0);
+const { submitState, canRetry, start, succeed, fail } = useSubmitState({
+  getBusy: () => loading.value,
+  getCanSubmit: () => canSubmit.value
+});
 const redirectHint = computed(() => {
   if (!redirectPath.value) return '';
   const routeLabels = {
-    '/teacher': '教师后台',
-    '/workspace': '学生工作台',
+    '/admin': '管理后台',
+    '/teacher': '教师工作台',
+    '/my': '我的空间',
     '/account': '个人中心',
     '/tools': '工具中心',
-    '/mission-control': 'Mission Control'
+    '/teacher/monitor': '运营总览'
   };
   return routeLabels[redirectPath.value] || redirectPath.value;
 });
+
+const { restoreDraft, clearDraft } = useFormDraft('auth:login', draftFields, {
+  shouldSave: value => Boolean(String(value.email || '').trim())
+});
+
+function touch(field) {
+  touched[field] = true;
+}
+
+function touchAll() {
+  Object.keys(touched).forEach((key) => {
+    touched[key] = true;
+  });
+}
 
 function getStoredRedirect() {
   if (typeof window === 'undefined') return '';
@@ -228,6 +248,10 @@ function getStoredRedirect() {
 }
 
 function syncRoleFromRedirect(path) {
+  if (path.startsWith('/admin')) {
+    selectedRole.value = 'admin';
+    return;
+  }
   if (path.startsWith('/teacher') || path.startsWith('/mission-control')) {
     selectedRole.value = 'teacher';
   }
@@ -249,30 +273,27 @@ function redirectAfterLogin(user) {
   router.replace(getPrimaryWorkspaceTarget(user));
 }
 
-function fillTestAccount(account) {
-  form.email = account.email;
-  form.password = account.password;
-  selectedRole.value = account.role;
-  showPassword.value = true;
-  statusTone.value = 'success';
-  status.value = `已填充${account.label}，点击登录即可进入。`;
-}
-
 async function handleSubmit() {
+  submittedOnce.value = true;
+  touchAll();
   if (!canSubmit.value || loading.value) return;
-  status.value = '';
-  statusTone.value = 'error';
+  start();
   loading.value = true;
   try {
     const user = await loginUser(form.email, form.password);
+    clearDraft();
     authStore.hydrate();
-    selectedRole.value = isTeacherLike(user.role) ? 'teacher' : 'student';
-    statusTone.value = 'success';
-    status.value = isTeacherLike(user.role) ? '教师账号验证通过，正在进入后台。' : '学生账号验证通过，正在进入工作台。';
+    selectedRole.value = isAdminRole(user.role) ? 'admin' : isTeacherLike(user.role) ? 'teacher' : 'student';
+    succeed(
+      isAdminRole(user.role)
+        ? '管理员账号验证通过，正在进入管理后台。'
+        : isTeacherLike(user.role)
+        ? '教师账号验证通过，正在进入教师工作台。'
+        : '学生账号验证通过，正在进入工作台。'
+    );
     redirectAfterLogin(user);
   } catch (err) {
-    statusTone.value = 'error';
-    status.value = `登录失败：${err.message}`;
+    fail(`登录失败：${err.message}`);
   } finally {
     loading.value = false;
   }
@@ -280,129 +301,58 @@ async function handleSubmit() {
 
 onMounted(() => {
   redirectPath.value = getStoredRedirect();
+  draftRestored.value = restoreDraft();
+  if (draftRestored.value) {
+    form.email = draftFields.email;
+    selectedRole.value = draftFields.role || 'student';
+  }
   syncRoleFromRedirect(redirectPath.value);
   if (authStore.isAuthenticated && authStore.user) {
     redirectAfterLogin(authStore.user);
   }
 });
+
+watchEffect(() => {
+  draftFields.email = form.email;
+  draftFields.role = selectedRole.value;
+});
 </script>
 
 <style scoped>
 .login-page {
-  min-height: 100vh;
+  min-height: 100dvh;
   position: relative;
   display: grid;
   align-items: center;
   overflow: hidden;
-  background:
-    linear-gradient(135deg, rgba(248, 250, 252, 0.98), rgba(241, 245, 249, 0.96) 48%, rgba(238, 242, 255, 0.94)),
-    radial-gradient(circle at 18% 18%, rgba(14, 165, 233, 0.16), transparent 28%),
-    radial-gradient(circle at 82% 20%, rgba(99, 102, 241, 0.18), transparent 32%);
+  background: #f8fafc;
   padding: 88px 24px 40px;
 }
 
 .login-page::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.58;
-  background-image:
-    linear-gradient(rgba(148, 163, 184, 0.12) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(148, 163, 184, 0.12) 1px, transparent 1px);
-  background-size: 44px 44px;
-  mask-image: linear-gradient(180deg, #000, transparent 82%);
+  content: none;
 }
 
 .login-page::after {
-  content: '';
+  content: none;
+}
+
+.login-header-wrapper {
   position: absolute;
-  inset: auto -8% -28% -8%;
-  height: 48vh;
-  pointer-events: none;
-  background:
-    linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.2), transparent),
-    linear-gradient(115deg, transparent 18%, rgba(14, 165, 233, 0.14) 42%, transparent 68%);
-  filter: blur(24px);
-  transform: skewY(-8deg);
-  animation: lightSweep 9s ease-in-out infinite alternate;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 0 24px;
+  z-index: 2;
 }
 
-.ambient {
-  position: absolute;
-  width: 34rem;
-  height: 34rem;
-  border-radius: 999px;
-  pointer-events: none;
-  filter: blur(34px);
-  opacity: 0.42;
-  mix-blend-mode: multiply;
-}
-
-.ambient-one {
-  top: -10rem;
-  right: 6%;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.34), transparent 66%);
-  animation: driftOne 12s ease-in-out infinite alternate;
-}
-
-.ambient-two {
-  left: -12rem;
-  bottom: -10rem;
-  background: radial-gradient(circle, rgba(20, 184, 166, 0.24), transparent 66%);
-  animation: driftTwo 14s ease-in-out infinite alternate;
-}
-
-.orbit-field {
-  position: absolute;
-  inset: 12% 8% auto auto;
-  width: 28rem;
-  height: 28rem;
-  pointer-events: none;
-  opacity: 0.75;
-}
-
-.orbit {
-  position: absolute;
-  inset: 0;
-  border: 1px solid rgba(99, 102, 241, 0.18);
-  border-radius: 999px;
-  transform: rotateX(66deg) rotateZ(18deg);
-}
-
-.orbit::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: -4px;
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: #2563eb;
-  box-shadow: 0 0 22px rgba(37, 99, 235, 0.78);
-}
-
-.orbit-a {
-  animation: orbitSpin 11s linear infinite;
-}
-
-.orbit-b {
-  inset: 48px;
-  border-color: rgba(14, 165, 233, 0.2);
-  animation: orbitSpin 15s linear infinite reverse;
-}
-
-.orbit-c {
-  inset: 96px;
-  border-color: rgba(15, 23, 42, 0.11);
-  animation: orbitSpin 18s linear infinite;
+.login-header-inner {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  padding-top: 22px;
 }
 
 .login-brand {
-  position: absolute;
-  top: 22px;
-  left: 24px;
-  z-index: 2;
   display: inline-flex;
   align-items: center;
   gap: 12px;
@@ -410,17 +360,7 @@ onMounted(() => {
   text-decoration: none;
 }
 
-.brand-mark {
-  width: 42px;
-  height: 42px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12px;
-  background: #111827;
-  color: #fff;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.18);
-}
+
 
 .login-brand strong,
 .login-brand small {
@@ -438,7 +378,6 @@ onMounted(() => {
   color: #64748b;
   font-size: 0.68rem;
   font-weight: 800;
-  letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
@@ -455,16 +394,14 @@ onMounted(() => {
 
 .login-intro {
   max-width: 660px;
-  animation: introRise 0.72s ease-out both;
 }
 
 .login-eyebrow,
 .panel-kicker {
   margin: 0;
-  color: #2563eb;
+  color: var(--color-brand-accent);
   font-size: 0.72rem;
   font-weight: 900;
-  letter-spacing: 0.22em;
   text-transform: uppercase;
 }
 
@@ -472,10 +409,9 @@ onMounted(() => {
   margin: 18px 0 0;
   color: #0f172a;
   font-family: inherit;
-  font-size: clamp(2.8rem, 6.2vw, 6.4rem);
+  font-size: 3.5rem;
   font-weight: 800;
   line-height: 0.98;
-  letter-spacing: 0;
   text-wrap: balance;
 }
 
@@ -483,16 +419,25 @@ onMounted(() => {
   margin: 22px 0 0;
   max-width: 560px;
   color: #475569;
-  font-size: 1.05rem;
+  font-size: 1.08rem;
   font-weight: 600;
-  line-height: 1.85;
+  line-height: 1.7;
+}
+
+.login-sublead {
+  margin: 10px 0 0;
+  max-width: 520px;
+  color: #64748b;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.65;
 }
 
 .role-preview {
   display: grid;
   gap: 12px;
-  margin-top: 34px;
-  max-width: 540px;
+  margin-top: 28px;
+  max-width: 460px;
 }
 
 .role-option {
@@ -500,14 +445,13 @@ onMounted(() => {
   grid-template-columns: 46px 1fr;
   gap: 14px;
   align-items: center;
-  min-height: 76px;
+  min-height: 70px;
   border: 1px solid rgba(203, 213, 225, 0.72);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.62);
-  padding: 14px;
+  padding: 12px 14px;
   color: #334155;
   text-align: left;
-  backdrop-filter: blur(14px);
   transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
@@ -536,77 +480,22 @@ onMounted(() => {
 .role-option small {
   margin-top: 4px;
   color: #64748b;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 700;
 }
 
 .role-option:hover,
 .role-option.active {
-  border-color: #6366f1;
+  border-color: var(--color-brand-accent);
   background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 24px 54px -36px rgba(79, 70, 229, 0.68);
+  box-shadow: 0 24px 54px -36px rgba(15, 118, 110, 0.25);
   transform: translateY(-2px);
 }
 
 .role-option.active i {
-  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  background: var(--color-brand-accent);
   color: #fff;
-  box-shadow: 0 14px 28px -18px rgba(37, 99, 235, 0.95);
-}
-
-.login-rhythm {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 22px;
-}
-
-.login-rhythm span {
-  display: inline-flex;
-  align-items: center;
-  min-height: 32px;
-  padding: 0 12px;
-  border: 1px solid #dbeafe;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.7);
-  color: #334155;
-  font-size: 0.76rem;
-  font-weight: 800;
-}
-
-.signal-panel {
-  position: relative;
-  display: grid;
-  grid-template-columns: 1.4fr 0.8fr 1fr;
-  gap: 10px;
-  width: min(420px, 100%);
-  height: 54px;
-  margin-top: 30px;
-}
-
-.signal-panel span {
-  position: relative;
-  overflow: hidden;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.56);
-  border: 1px solid rgba(203, 213, 225, 0.58);
-}
-
-.signal-panel span::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  transform: translateX(-100%);
-  background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.32), transparent);
-  animation: signalRun 2.8s ease-in-out infinite;
-}
-
-.signal-panel span:nth-child(2)::after {
-  animation-delay: 0.45s;
-}
-
-.signal-panel span:nth-child(3)::after {
-  animation-delay: 0.85s;
+  box-shadow: 0 14px 28px -18px rgba(15, 118, 110, 0.35);
 }
 
 .login-panel {
@@ -614,11 +503,9 @@ onMounted(() => {
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.8);
   border-radius: 8px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(248, 250, 252, 0.82));
+  background: #fff;
   padding: 30px;
-  box-shadow: 0 34px 82px -46px rgba(15, 23, 42, 0.48);
-  backdrop-filter: blur(22px);
-  animation: panelRise 0.7s 0.08s ease-out both;
+  box-shadow: var(--shadow-card);
 }
 
 .login-panel::before {
@@ -626,21 +513,11 @@ onMounted(() => {
   position: absolute;
   inset: 0 0 auto;
   height: 2px;
-  background: linear-gradient(90deg, transparent, #2563eb, #14b8a6, transparent);
-  animation: borderPulse 4s ease-in-out infinite;
+  background: var(--color-brand-accent);
 }
 
 .login-panel::after {
-  content: '';
-  position: absolute;
-  top: -42%;
-  left: -40%;
-  width: 70%;
-  height: 180%;
-  pointer-events: none;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.54), transparent);
-  transform: rotate(16deg);
-  animation: glassGlide 8s ease-in-out infinite;
+  content: none;
 }
 
 .panel-head {
@@ -658,17 +535,23 @@ onMounted(() => {
   font-weight: 800;
 }
 
+.panel-note {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
 .role-badge {
   display: inline-flex;
   align-items: center;
   min-height: 32px;
   padding: 0 11px;
   border-radius: 999px;
-  background: #eef2ff;
-  color: #4338ca;
+  background: var(--color-brand-accent-light);
+  color: var(--color-brand-accent);
   font-size: 0.72rem;
   font-weight: 900;
-  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -676,14 +559,14 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 20px 0 0;
-  border: 1px solid #bae6fd;
+  margin: 16px 0 0;
+  border: 1px solid rgba(203, 213, 225, 0.72);
   border-radius: 8px;
-  background: #f0f9ff;
+  background: #f8fafc;
   padding: 11px 12px;
-  color: #0369a1;
-  font-size: 0.82rem;
-  font-weight: 800;
+  color: #475569;
+  font-size: 0.79rem;
+  font-weight: 700;
 }
 
 .login-form {
@@ -713,15 +596,16 @@ onMounted(() => {
 .forgot-link {
   border: 0;
   background: transparent;
-  color: #2563eb;
-  padding: 0;
+  color: var(--color-brand-accent);
+  min-height: 44px;
+  padding: 0 4px;
   font-size: 0.78rem;
   font-weight: 900;
   cursor: pointer;
 }
 
 .forgot-link:hover {
-  color: #1d4ed8;
+  color: var(--color-brand-accent-hover);
   text-decoration: underline;
 }
 
@@ -740,9 +624,9 @@ onMounted(() => {
 }
 
 .login-form input:focus {
-  border-color: #2563eb;
+  border-color: var(--color-brand-accent);
   background: #fff;
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.25);
 }
 
 .password-field {
@@ -758,8 +642,8 @@ onMounted(() => {
   top: 50%;
   right: 7px;
   transform: translateY(-50%);
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -770,8 +654,8 @@ onMounted(() => {
 }
 
 .password-field button:hover {
-  background: #eff6ff;
-  color: #2563eb;
+  background: var(--color-brand-accent-light);
+  color: var(--color-brand-accent);
 }
 
 .reset-help {
@@ -780,106 +664,36 @@ onMounted(() => {
   gap: 8px;
   align-items: start;
   margin: -2px 0 0;
-  border: 1px solid #bfdbfe;
+  border: 1px solid var(--color-brand-accent-light);
   border-radius: 8px;
-  background: rgba(239, 246, 255, 0.82);
+  background: var(--color-brand-accent-light);
   padding: 10px 12px;
-  color: #1e40af;
+  color: var(--color-brand-accent-hover);
   font-size: 0.78rem;
   font-weight: 800;
   line-height: 1.55;
-  animation: helpIn 0.22s ease-out both;
 }
 
-.test-account-panel {
+.field-error {
+  color: #be123c;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.draft-note {
   display: grid;
-  gap: 12px;
-  padding: 14px;
-  border: 1px solid rgba(203, 213, 225, 0.8);
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+  align-items: start;
+  margin: -2px 0 0;
+  border: 1px solid #ccfbf1;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.72);
-}
-
-.test-account-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: baseline;
-}
-
-.test-account-head span {
-  color: #0f172a;
+  background: #f0fdfa;
+  padding: 10px 12px;
+  color: #0f766e;
   font-size: 0.78rem;
-  font-weight: 900;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-
-.test-account-head small {
-  color: #64748b;
-  font-size: 0.72rem;
-  font-weight: 700;
-}
-
-.test-account-grid {
-  display: grid;
-  gap: 10px;
-}
-
-.test-account-btn {
-  display: grid;
-  grid-template-columns: 42px 1fr;
-  gap: 12px;
-  align-items: center;
-  width: 100%;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background: #fff;
-  padding: 12px;
-  color: #334155;
-  text-align: left;
-  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.test-account-btn:hover:not(:disabled) {
-  border-color: #c7d2fe;
-  background: #eef2ff;
-  transform: translateY(-1px);
-  box-shadow: 0 14px 28px -22px rgba(99, 102, 241, 0.35);
-}
-
-.test-account-btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.test-account-btn i {
-  width: 42px;
-  height: 42px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  background: #f8fafc;
-  color: #6366f1;
-}
-
-.test-account-btn strong,
-.test-account-btn small {
-  display: block;
-}
-
-.test-account-btn strong {
-  color: #0f172a;
-  font-size: 0.92rem;
-  font-weight: 900;
-}
-
-.test-account-btn small {
-  margin-top: 4px;
-  color: #64748b;
-  font-size: 0.76rem;
-  font-weight: 700;
+  font-weight: 800;
+  line-height: 1.55;
 }
 
 .login-submit {
@@ -891,7 +705,7 @@ onMounted(() => {
   margin-top: 4px;
   border: 0;
   border-radius: 8px;
-  background: linear-gradient(135deg, #0f172a, #1e293b 52%, #2563eb);
+  background: #1e293b;
   color: #fff;
   font-size: 0.94rem;
   font-weight: 900;
@@ -901,8 +715,8 @@ onMounted(() => {
 
 .login-submit:hover:not(:disabled) {
   transform: translateY(-1px);
-  filter: saturate(1.08);
-  box-shadow: 0 18px 34px -24px rgba(37, 99, 235, 0.88);
+  background: #0f172a;
+  box-shadow: 0 18px 34px -24px rgba(15, 118, 110, 0.88);
 }
 
 .login-submit:disabled {
@@ -932,9 +746,24 @@ onMounted(() => {
   color: #047857;
 }
 
+.retry-link {
+  justify-self: center;
+  border: 0;
+  background: transparent;
+  color: var(--color-brand-accent);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.retry-link:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
 .panel-footer {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   justify-content: center;
   gap: 6px;
   margin-top: 20px;
@@ -944,7 +773,10 @@ onMounted(() => {
 }
 
 .panel-footer a {
-  color: #2563eb;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--color-brand-accent);
   font-weight: 900;
   text-decoration: none;
 }
@@ -966,10 +798,7 @@ onMounted(() => {
     max-width: none;
   }
 
-  .orbit-field {
-    opacity: 0.32;
-    right: -8rem;
-  }
+  
 }
 
 @media (max-width: 560px) {
@@ -1002,130 +831,7 @@ onMounted(() => {
     justify-self: start;
   }
 
-  .signal-panel {
-    display: none;
-  }
+  
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .ambient,
-  .orbit,
-  .signal-panel span::after,
-  .login-page::after,
-  .login-panel,
-  .login-panel::before,
-  .login-panel::after,
-  .login-intro,
-  .reset-help {
-    animation: none;
-  }
-}
-
-@keyframes introRise {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes panelRise {
-  from {
-    opacity: 0;
-    transform: translateY(18px) scale(0.985);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes driftOne {
-  from {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  to {
-    transform: translate3d(-56px, 42px, 0) scale(1.08);
-  }
-}
-
-@keyframes driftTwo {
-  from {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  to {
-    transform: translate3d(68px, -42px, 0) scale(1.06);
-  }
-}
-
-@keyframes orbitSpin {
-  from {
-    transform: rotateX(66deg) rotateZ(0deg);
-  }
-  to {
-    transform: rotateX(66deg) rotateZ(360deg);
-  }
-}
-
-@keyframes signalRun {
-  0%,
-  18% {
-    transform: translateX(-100%);
-  }
-  52%,
-  100% {
-    transform: translateX(100%);
-  }
-}
-
-@keyframes lightSweep {
-  from {
-    transform: translateX(-4%) skewY(-8deg);
-    opacity: 0.35;
-  }
-  to {
-    transform: translateX(5%) skewY(-8deg);
-    opacity: 0.72;
-  }
-}
-
-@keyframes borderPulse {
-  0%,
-  100% {
-    opacity: 0.38;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-@keyframes glassGlide {
-  0%,
-  38% {
-    transform: translateX(-30%) rotate(16deg);
-    opacity: 0;
-  }
-  52% {
-    opacity: 0.68;
-  }
-  78%,
-  100% {
-    transform: translateX(240%) rotate(16deg);
-    opacity: 0;
-  }
-}
-
-@keyframes helpIn {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 </style>

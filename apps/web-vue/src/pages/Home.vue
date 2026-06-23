@@ -46,24 +46,13 @@
               </div>
             </div>
 
-            <!-- Active Step Detail Card -->
-            <transition name="fade-slide" mode="out-in">
-              <div :key="activeStepIndex" class="mt-2 p-3 rounded-2xl bg-indigo-50/30 border border-indigo-100/30 flex items-center gap-3">
-                <div class="w-14 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-slate-100 shadow-sm border border-slate-200/50">
-                  <img :src="routeSteps[activeStepIndex].image" class="w-full h-full object-cover" />
-                </div>
-                <div>
-                  <h4 class="text-[10px] font-black text-indigo-600 uppercase tracking-widest">{{ routeSteps[activeStepIndex].title }} · {{ routeSteps[activeStepIndex].desc }}</h4>
-                  <p class="text-[11px] text-slate-500 font-bold mt-0.5 leading-relaxed">{{ routeSteps[activeStepIndex].details }}</p>
-                </div>
-              </div>
-            </transition>
+            
           </div>
 
           <div class="home-summary-actions">
             <template v-if="isAuthenticated && user">
               <RouterLink :to="workspaceTarget" class="hero-primary-action">
-                <i class="fas" :class="isTeacher ? 'fa-chalkboard-teacher' : 'fa-rocket'"></i>
+                <i class="fas" :class="workspaceIcon"></i>
                 <span>{{ workspaceLabel }}</span>
               </RouterLink>
               <RouterLink to="/projects" class="hero-secondary-action">
@@ -114,9 +103,7 @@
             <img :src="item.image" :alt="item.title" class="quick-link-image" />
             <div class="quick-link-overlay"></div>
             <div class="quick-link-copy">
-              <span>{{ item.kicker }}</span>
               <h3>{{ item.title }}</h3>
-              <p>{{ item.desc }}</p>
             </div>
           </RouterLink>
         </div>
@@ -194,14 +181,21 @@ import RollingBanner from '@/components/portal/RollingBanner.vue';
 import { fetchCompetitions } from '@/api/portal';
 import { useAuthStore } from '@/stores/auth';
 import { getPageBannerItems } from '@/utils/publicBanners';
-import { getPrimaryWorkspaceLabel, getPrimaryWorkspaceTarget, isTeacherLike } from '@/utils/userRole';
+import {
+  getPrimaryWorkspaceIcon,
+  getPrimaryWorkspaceLabel,
+  getPrimaryWorkspaceTarget,
+  isAdminRole,
+  isTeacherRole
+} from '@/utils/userRole';
 
 const authStore = useAuthStore();
 authStore.hydrate();
 
 const { user, isAuthenticated } = storeToRefs(authStore);
 const competitions = ref([]);
-const isTeacher = computed(() => isTeacherLike(user.value?.role));
+const isAdmin = computed(() => isAdminRole(user.value?.role));
+const isTeacher = computed(() => isTeacherRole(user.value?.role));
 
 const homeBannerItems = getPageBannerItems('home');
 
@@ -209,64 +203,51 @@ const activeStepIndex = ref(0);
 const routeSteps = [
   {
     title: '项目',
-    desc: '先看方向',
-    details: '自主立项与团队组建：探索机器人、数字创意与可持续创新主题，确立研究方向。',
-    image: '/assets/banners/banner-projects.png'
+    desc: '先看方向'
   },
   {
     title: '知识',
-    desc: '补研究线索',
-    details: '跨学科知识自主探究：学习 AI 大语言模型、控制算法与工程设计，为项目推进扫清知识障碍。',
-    image: '/assets/banners/banner-knowledge.png'
+    desc: '补研究线索'
   },
   {
     title: '课程',
-    desc: '进课堂任务',
-    details: '实施与里程碑成果交付：动手调试软硬件、编写代码、制作演示材料，完成客观验证。',
-    image: '/assets/banners/banner-courses.png'
+    desc: '进课堂任务'
   },
   {
     title: '竞赛',
-    desc: '去真实展示',
-    details: '成果路演与赛事衔接：在成果陈列墙上展示创意，对接市级、国家级青少年科创与创客竞赛。',
-    image: '/assets/banners/banner-competitions.png'
+    desc: '去真实展示'
   }
 ];
 
 const quickLinks = computed(() => {
   const items = [
     {
-      kicker: 'Auth',
-      title: '登录 / 注册',
-      desc: '先进入账号入口，再进入对应工作区。',
-      to: '/login',
+      kicker: isAuthenticated.value ? (isAdmin.value ? 'Admin' : isTeacher.value ? 'Teacher' : 'Workspace') : 'Auth',
+      title: isAuthenticated.value ? getPrimaryWorkspaceLabel(user.value) : '登录 / 注册',
+      to: isAuthenticated.value ? getPrimaryWorkspaceTarget(user.value) : '/login',
       image: '/assets/banners/banner-courses-practice.png'
     },
     {
       kicker: 'Projects',
       title: '项目库',
-      desc: '先看作品与课题。',
       to: '/projects',
       image: '/assets/banners/banner-projects.png'
     },
     {
       kicker: 'Knowledge',
       title: '创新知识库',
-      desc: '只看问题与研究线索。',
       to: '/knowledge',
       image: '/assets/banners/banner-knowledge.png'
     },
     {
       kicker: 'Course Library',
       title: '课程库',
-      desc: '进入课程、讲义与代码。',
       to: '/downloads',
       image: '/assets/banners/banner-courses.png'
     },
     {
       kicker: 'Competitions',
       title: '竞赛活动',
-      desc: '看展示机会与匹配度。',
       to: '/competitions',
       image: '/assets/banners/banner-competitions.png'
     }
@@ -307,6 +288,7 @@ const workspaceTarget = computed(() => (
   getPrimaryWorkspaceTarget(user.value)
 ));
 const workspaceLabel = computed(() => getPrimaryWorkspaceLabel(user.value));
+const workspaceIcon = computed(() => getPrimaryWorkspaceIcon(user.value));
 
 const featuredCompetitions = computed(() => {
   const featured = competitions.value.filter(item => item.featuredFlags?.includes('home'));
@@ -324,9 +306,7 @@ fetchCompetitions().then(items => {
 <style scoped>
 .home-page {
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top left, rgba(99, 102, 241, 0.12), transparent 26%),
-    linear-gradient(180deg, #f8fbff 0%, #f8fafc 42%, #eef4ff 100%);
+  background: #f8fafc;
   color: #0f172a;
 }
 
@@ -336,7 +316,7 @@ fetchCompetitions().then(items => {
 }
 
 .hero-stage {
-  padding: 118px 0 16px;
+  padding: calc(var(--header-h) + 24px) 0 16px;
 }
 
 .home-summary-panel,
@@ -345,14 +325,11 @@ fetchCompetitions().then(items => {
 .course-list-item,
 .activity-item,
 .quick-link-card {
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03), 
-              inset 0 1px 0 rgba(255, 255, 255, 0.6);
-  border-radius: 28px;
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  transition: all 0.3s ease;
 }
 
 .home-summary-panel {
@@ -372,7 +349,11 @@ fetchCompetitions().then(items => {
 .overview-header h2,
 .compact-panel-head h2,
 .quick-link-copy h3 {
-  font-family: inherit;
+  margin: 0;
+  color: #fff;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .section-kicker {
@@ -409,25 +390,25 @@ fetchCompetitions().then(items => {
 }
 
 .hero-primary-action {
-  min-height: 46px;
-  padding: 0 18px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: 12px;
+  background: #0f172a;
   color: #fff;
-  font-size: 0.92rem;
-  font-weight: 800;
-  box-shadow: 0 8px 20px rgba(79, 70, 229, 0.2);
+  font-size: 0.95rem;
+  font-weight: 600;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .hero-secondary-action {
-  min-height: 46px;
-  padding: 0 18px;
-  border-radius: 16px;
-  border: 1px solid rgba(79, 70, 229, 0.2);
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
   background: #fff;
-  color: #4338ca;
-  font-size: 0.92rem;
-  font-weight: 800;
+  color: #0f172a;
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
 .hero-primary-action:hover,
@@ -436,7 +417,8 @@ fetchCompetitions().then(items => {
 .course-list-item:hover,
 .activity-item:hover,
 .quick-link-card:hover {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 
 .course-list-copy span,
@@ -573,11 +555,11 @@ fetchCompetitions().then(items => {
 }
 
 .quick-link-copy h3 {
-  margin: 10px 0 0;
+  margin: 0;
   color: #fff;
-  font-size: 1.34rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .quick-link-copy p {
@@ -636,10 +618,9 @@ fetchCompetitions().then(items => {
 .course-list-copy strong,
 .activity-copy strong {
   display: block;
-  margin-top: 6px;
   color: #0f172a;
-  font-size: 0.96rem;
-  line-height: 1.45;
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
 .course-list-item i {
@@ -692,7 +673,7 @@ fetchCompetitions().then(items => {
 
 @media (max-width: 860px) {
   .hero-stage {
-    padding-top: 108px;
+    padding-top: calc(var(--header-h) + 16px);
   }
 
   .home-summary-panel {
@@ -731,9 +712,15 @@ fetchCompetitions().then(items => {
 
   .hero-primary-action,
   .hero-secondary-action {
-    width: 100%;
-    justify-content: center;
-  }
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #0f172a;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
 
   .course-list-item {
     grid-template-columns: 72px minmax(0, 1fr) 16px;
