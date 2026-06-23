@@ -9,18 +9,18 @@
           </div>
           <div>
             <div class="text-sm font-black text-slate-900 leading-none">{{ brandName }}</div>
-            <div class="mt-1 text-[10px] font-bold uppercase tracking-wider text-teal-700">{{ schoolName }} · 教师台</div>
+            <div class="mt-1 text-[10px] font-bold uppercase tracking-wider text-teal-700">{{ schoolName }} · 教师工作台</div>
           </div>
         </div>
         
         <div class="flex flex-1 items-center justify-center gap-1 sm:gap-2">
-          <RouterLink to="/" class="nav-link">门户</RouterLink>
-          <RouterLink to="/teacher/monitor" class="nav-link">大屏</RouterLink>
-          <RouterLink v-if="currentUser?.role === 'teacher'" to="/teacher/students" class="nav-link">学生</RouterLink>
-          <RouterLink to="/teacher/assessment" class="nav-link">考评</RouterLink>
+          <RouterLink to="/" :class="navClass('/')">门户</RouterLink>
+          <RouterLink to="/teacher/monitor" :class="navClass('/teacher/monitor')">大屏</RouterLink>
+          <RouterLink v-if="currentUser?.role === 'teacher'" to="/teacher/students" :class="navClass('/teacher/students')">学生</RouterLink>
+          <RouterLink to="/teacher/assessment" :class="navClass('/teacher/assessment')">考评</RouterLink>
           <div class="mx-2 h-4 w-px bg-slate-200"></div>
-          <button class="nav-link font-bold" :class="{ 'text-teal-700 bg-teal-50': activeModule === 'projects' }" @click="$emit('set-module', 'projects')">项目干预</button>
-          <button class="nav-link font-bold" :class="{ 'text-teal-700 bg-teal-50': activeModule === 'uploads' }" @click="$emit('set-module', 'uploads')">资源发布</button>
+          <RouterLink :to="reviewLink" :class="navClass('/teacher/review', activeModule === 'projects')">项目干预</RouterLink>
+          <RouterLink :to="publishLink" :class="navClass('/teacher/publish', activeModule === 'uploads')">资源发布</RouterLink>
         </div>
 
         <div class="flex items-center gap-3">
@@ -76,7 +76,10 @@
 </template>
 
 <script setup>
-import { RouterLink } from 'vue-router';
+import { computed } from 'vue';
+import { RouterLink, useRoute } from 'vue-router';
+
+const route = useRoute();
 
 defineProps({
   brandName: { type: String, default: '' },
@@ -94,6 +97,24 @@ defineProps({
 });
 
 defineEmits(['refresh', 'set-module', 'logout']);
+
+const reviewLink = computed(() => ({
+  path: '/teacher/review',
+  query: {
+    queue: typeof route.query.queue === 'string' ? route.query.queue : 'project_review'
+  }
+}));
+
+const publishLink = computed(() => ({
+  path: '/teacher/publish',
+  query: {
+    kind: typeof route.query.kind === 'string' ? route.query.kind : 'course'
+  }
+}));
+
+function navClass(path, active = route.path === path) {
+  return ['nav-link', { 'nav-link--active': active }];
+}
 </script>
 
 <style scoped>
@@ -109,6 +130,11 @@ defineEmits(['refresh', 'set-module', 'logout']);
 .nav-link:hover {
   background: #f1f5f9;
   color: #0f172a;
+}
+
+.nav-link--active {
+  background: #ecfeff;
+  color: #0f766e;
 }
 
 .icon-btn {
@@ -163,4 +189,3 @@ defineEmits(['refresh', 'set-module', 'logout']);
   transition: all 0.2s ease;
 }
 </style>
-

@@ -1,127 +1,129 @@
 <template>
-  <div class="mission bg-[#0b0f19] text-[#f1f5f9] min-h-screen flex flex-col font-sans">
-    <header class="mission-header border-b border-indigo-950 bg-slate-950/80 backdrop-blur-xl px-8 py-5 flex items-center justify-between sticky top-0 z-50">
-      <div class="title flex items-center gap-4">
-        <RouterLink to="/teacher" class="back border border-indigo-900 bg-indigo-950/20 text-indigo-400 hover:text-white hover:bg-indigo-900/50 hover:border-indigo-600 transition-all px-4 py-2 rounded-xl text-xs font-black tracking-wider uppercase">返回后台</RouterLink>
-        <div class="flex items-center gap-3">
-          <div class="w-2.5 h-2.5 bg-cyan-400 rounded-full animate-ping"></div>
-          <h1 class="text-lg font-black uppercase tracking-wider text-cyan-400 font-mono">HAI Cyber Control Center</h1>
+  <div class="mission bg-[#0b0f19] text-[#f1f5f9] min-h-dvh flex flex-col font-sans">
+    <header class="mission-header border-b border-slate-800 bg-slate-950 sticky top-0 z-50">
+      <div class="app-page-shell app-page-shell--wide mission-header__inner">
+        <div class="title flex items-center gap-4">
+          <RouterLink to="/teacher/review" class="back border border-slate-800 bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-800 hover:border-slate-600 transition-colors px-4 py-2 rounded-xl text-xs font-black uppercase">返回项目干预</RouterLink>
+          <div class="flex items-center gap-3">
+            <div class="w-2.5 h-2.5 bg-teal-400 rounded-full"></div>
+            <h1 class="text-lg font-black uppercase text-teal-300 font-mono">项目监测大屏</h1>
+          </div>
         </div>
-      </div>
-      <div class="meta flex items-center gap-6">
-        <span class="text-xs font-mono font-bold text-slate-400">MONITOR QUEUE: <strong class="text-cyan-400 font-black">{{ projects.length }} PROJECTS</strong></span>
-        <button class="ghost border border-slate-800 bg-slate-900/60 hover:bg-white hover:text-slate-950 hover:border-white transition-all text-xs font-extrabold px-4 py-2 rounded-xl" @click="loadProjects">REFRESH DATA</button>
+        <div class="meta flex items-center gap-6">
+          <span class="text-xs font-mono font-bold text-slate-400">监控队列：<strong class="text-teal-300 font-black">{{ projects.length }} 个项目</strong></span>
+          <button class="ghost border border-slate-800 bg-slate-900/60 hover:bg-white hover:text-slate-950 hover:border-white transition-colors text-xs font-extrabold px-4 py-2 rounded-xl" @click="loadProjects">刷新数据</button>
+        </div>
       </div>
     </header>
 
-    <main class="mission-body flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-[calc(100vh-73px)]">
-      <!-- Sidebar List -->
-      <aside class="list lg:col-span-3 border-r border-indigo-950 bg-slate-950/30 p-6 overflow-y-auto custom-scrollbar flex flex-col gap-4">
-        <div v-if="!projects.length" class="text-center py-20 text-xs font-mono font-bold text-slate-600">SYSTEM: NO INCEPTION TARGETS DETECTED.</div>
-        <div
-          v-for="project in projects"
-          :key="project.id"
-          class="list-item bg-slate-900/40 border border-slate-900 hover:border-cyan-500/30 hover:bg-slate-900/80 p-5 rounded-2xl cursor-pointer transition-all duration-300 relative overflow-hidden group"
-          :class="{ active: project.id === selectedId }"
-          @click="selectProject(project.id)"
-        >
-          <!-- Pulsing dot for activity indication -->
-          <div class="flex items-center justify-between gap-3 mb-2">
-            <h4 class="font-extrabold text-sm text-slate-200 group-hover:text-white transition-colors truncate flex-1 flex items-center gap-2">
-              <span v-if="project.taskStats.progress > 0" class="relative flex h-2 w-2">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
-              </span>
-              {{ project.name }}
-            </h4>
-            <span class="text-[10px] font-mono text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20 font-bold shrink-0">
-              {{ project.taskStats.progress }}%
-            </span>
-          </div>
+    <main class="mission-body flex-1">
+      <div class="app-page-shell app-page-shell--wide mission-body__shell">
+        <div class="mission-grid grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
+          <!-- Sidebar List -->
+          <aside class="list lg:col-span-3 border-r border-slate-800 bg-slate-950/30 p-6 overflow-y-auto custom-scrollbar flex flex-col gap-4">
+            <div v-if="!projects.length" class="text-center py-20 text-xs font-mono font-bold text-slate-600">当前没有需要监控的项目。</div>
+            <div
+              v-for="project in projects"
+              :key="project.id"
+              class="list-item bg-slate-900/40 border border-slate-900 hover:border-teal-500/30 hover:bg-slate-900/80 p-5 rounded-2xl cursor-pointer transition-colors duration-150 relative overflow-hidden group"
+              :class="{ active: project.id === selectedId }"
+              @click="selectProject(project.id)"
+            >
+              <div class="flex items-center justify-between gap-3 mb-2">
+                <h4 class="font-extrabold text-sm text-slate-200 group-hover:text-white transition-colors truncate flex-1 flex items-center gap-2">
+                  <span v-if="project.taskStats.progress > 0" class="relative flex h-2 w-2">
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-teal-400"></span>
+                  </span>
+                  {{ project.name }}
+                </h4>
+                <span class="text-[10px] font-mono text-teal-300 bg-teal-500/10 px-2 py-0.5 rounded border border-teal-500/20 font-bold shrink-0">
+                  {{ project.taskStats.progress }}%
+                </span>
+              </div>
 
-          <div class="flex justify-between items-center text-[10px] font-mono font-bold text-slate-500">
-            <span>MILESTONES DEPLOYED</span>
-            <span>{{ project.taskStats.done }}/{{ project.taskStats.total }}</span>
-          </div>
+              <div class="flex justify-between items-center text-[10px] font-mono font-bold text-slate-500">
+                <span>MILESTONES DEPLOYED</span>
+                <span>{{ project.taskStats.done }}/{{ project.taskStats.total }}</span>
+              </div>
 
-          <div class="progress h-1 bg-slate-950 rounded-full overflow-hidden mt-3">
-            <div class="progress-bar h-full bg-gradient-to-r from-indigo-500 to-cyan-400 transition-all duration-500" :style="{ width: `${project.taskStats.progress}%` }"></div>
-          </div>
+              <div class="progress h-1 bg-slate-950 rounded-full overflow-hidden mt-3">
+                <div class="progress-bar h-full bg-teal-500" :style="{ width: `${project.taskStats.progress}%` }"></div>
+              </div>
+            </div>
+          </aside>
+
+          <section class="detail lg:col-span-9 p-8 overflow-y-auto custom-scrollbar flex flex-col justify-between">
+            <div v-if="!detail" class="empty border border-dashed border-slate-800 rounded-3xl bg-slate-950/20 flex flex-col items-center justify-center py-40 text-slate-500 space-y-4">
+              <i class="fas fa-radar text-4xl text-slate-700"></i>
+              <span class="text-xs font-mono font-bold uppercase text-slate-600">Select target node to establish telemetry connection</span>
+            </div>
+            <div v-else class="space-y-6">
+              <div class="detail-header flex flex-col md:flex-row md:items-start justify-between gap-6 border-b border-slate-800 pb-6">
+                <div class="space-y-1">
+                  <div class="flex items-center gap-3">
+                    <span class="px-2.5 py-0.5 rounded text-[9px] font-mono font-black uppercase bg-teal-500/10 text-teal-300 border border-teal-500/30">ONLINE TELEMETRY</span>
+                    <span class="text-xs font-mono font-bold text-slate-500">ID: {{ selectedId.slice(0, 8) }}</span>
+                  </div>
+                  <h2 class="text-2xl font-black text-white">{{ detail.project.title }}</h2>
+                  <p class="text-xs font-bold text-teal-300 flex items-center gap-1.5">
+                    <i class="fas fa-users text-slate-500"></i> {{ detail.project.team_members || '未知成员' }}
+                  </p>
+                </div>
+                <div class="text-xs font-mono text-slate-500 font-bold bg-slate-950/40 border border-slate-900 px-4 py-2 rounded-xl">
+                  LAST UPDATE: <span class="text-slate-300">{{ formatDate(detail.project.updated_at) }}</span>
+                </div>
+              </div>
+
+              <div class="progress-wrap bg-slate-950/30 border border-slate-800 p-6 rounded-2xl space-y-3">
+                <div class="progress-label flex justify-between items-center text-xs font-mono font-bold text-teal-300">
+                  <span>PROJECT OVERALL PERFORMANCE TELEMETRY</span>
+                  <span class="text-teal-300 font-black">{{ progress }}%</span>
+                </div>
+                <div class="progress-track h-2.5 bg-slate-950 rounded-full overflow-hidden border border-slate-900">
+                  <div class="progress-bar h-full bg-teal-500" :style="{ width: `${progress}%` }"></div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div v-for="phase in ['m1','m2','m3']" :key="phase" class="column bg-slate-950/20 border border-slate-800 p-6 rounded-2xl min-h-[220px]">
+                  <h4 class="text-[10px] font-mono font-black uppercase text-teal-300 border-b border-slate-800 pb-3 mb-4 flex items-center justify-between">
+                    <span>{{ phaseLabel(phase) }}</span>
+                    <span class="size-1.5 rounded-full bg-teal-400"></span>
+                  </h4>
+                  <div v-if="!wbs[phase].length" class="text-xs font-mono italic text-slate-600 py-6 text-center">NO DEPLOYED TASKS</div>
+                  <div v-for="task in wbs[phase]" :key="task.id" class="task bg-[#111422] hover:bg-[#161a2e] border border-slate-800 rounded-xl px-4 py-3 text-xs font-bold text-slate-300 hover:text-white transition-colors cursor-default mb-2 flex items-center justify-between">
+                    <span>{{ task.title }}</span>
+                    <span class="w-1.5 h-1.5 rounded-full" :class="task.status === 'done' || task.status === 'completed' ? 'bg-emerald-500' : 'bg-amber-500'"></span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="logs-console bg-slate-950 border border-teal-500/20 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
+                <div class="console-header bg-slate-900/60 px-6 py-3 border-b border-slate-800 flex items-center">
+                  <div class="flex gap-1.5">
+                    <div class="w-2.5 h-2.5 rounded-full bg-rose-500/80"></div>
+                    <div class="w-2.5 h-2.5 rounded-full bg-amber-500/80"></div>
+                    <div class="w-2.5 h-2.5 rounded-full bg-emerald-500/80"></div>
+                  </div>
+                  <span class="text-[10px] font-mono font-black uppercase text-slate-500 ml-4">DEVLOGS TELEMETRY STREAM</span>
+                </div>
+                <div class="console-body p-6 max-h-60 overflow-y-auto space-y-2.5 flex-1 custom-scrollbar">
+                  <div v-if="!detail.logs?.length" class="console-line font-mono text-xs text-slate-500">SYSTEM: NO DEPLOYMENT LOGS DETECTED ON TARGET TELEMETRY.</div>
+                  <div v-for="log in (detail.logs || [])" :key="log.id" class="console-line font-mono text-xs flex gap-3 items-start">
+                    <span class="text-teal-300 font-bold shrink-0">[{{ formatDate(log.created_at) }}]</span>
+                    <span class="text-teal-300 font-bold shrink-0">$</span>
+                    <span class="text-emerald-400 leading-relaxed">{{ log.content }}</span>
+                  </div>
+                  <div class="console-line font-mono text-xs text-emerald-400/50 flex gap-2 items-center">
+                    <span>> TELEMETRY LOG WATCHER ACTIVE [WAITING FOR STACK PULSE]</span>
+                    <span class="w-1.5 h-4 bg-emerald-400 shrink-0"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
         </div>
-      </aside>
-
-      <!-- Details Area -->
-      <section class="detail lg:col-span-9 p-8 overflow-y-auto custom-scrollbar flex flex-col justify-between">
-        <div v-if="!detail" class="empty border border-dashed border-slate-800 rounded-3xl bg-slate-950/20 flex flex-col items-center justify-center py-40 text-slate-500 space-y-4">
-          <i class="fas fa-radar text-4xl text-slate-700 animate-pulse"></i>
-          <span class="text-xs font-mono font-bold uppercase tracking-widest text-slate-600">Select target node to establish telemetry connection</span>
-        </div>
-        <div v-else class="space-y-6">
-          <div class="detail-header flex flex-col md:flex-row md:items-start justify-between gap-6 border-b border-indigo-950 pb-6">
-            <div class="space-y-1">
-              <div class="flex items-center gap-3">
-                <span class="px-2.5 py-0.5 rounded text-[9px] font-mono font-black uppercase tracking-wider bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">ONLINE TELEMETRY</span>
-                <span class="text-xs font-mono font-bold text-slate-500">ID: {{ selectedId.slice(0, 8) }}</span>
-              </div>
-              <h2 class="text-2xl font-black text-white tracking-tight">{{ detail.project.title }}</h2>
-              <p class="text-xs font-bold text-indigo-400 flex items-center gap-1.5">
-                <i class="fas fa-users text-slate-500"></i> {{ detail.project.team_members || '未知成员' }}
-              </p>
-            </div>
-            <div class="text-xs font-mono text-slate-500 font-bold bg-slate-950/40 border border-slate-900 px-4 py-2 rounded-xl">
-              LAST UPDATE: <span class="text-slate-300">{{ formatDate(detail.project.updated_at) }}</span>
-            </div>
-          </div>
-
-          <div class="progress-wrap bg-slate-950/30 border border-indigo-950/50 p-6 rounded-2xl space-y-3">
-            <div class="progress-label flex justify-between items-center text-xs font-mono font-bold text-indigo-300">
-              <span>PROJECT OVERALL PERFORMANCE TELEMETRY</span>
-              <span class="text-cyan-400 font-black">{{ progress }}%</span>
-            </div>
-            <div class="progress-track h-2.5 bg-slate-950 rounded-full overflow-hidden border border-slate-900">
-              <div class="progress-bar h-full bg-gradient-to-r from-indigo-500 via-cyan-400 to-purple-500 transition-all duration-500" :style="{ width: `${progress}%` }"></div>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div v-for="phase in ['m1','m2','m3']" :key="phase" class="column bg-slate-950/20 border border-indigo-950/50 p-6 rounded-2xl min-h-[220px]">
-              <h4 class="text-[10px] font-mono font-black uppercase tracking-wider text-indigo-400 border-b border-indigo-950 pb-3 mb-4 flex items-center justify-between">
-                <span>{{ phaseLabel(phase) }}</span>
-                <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-              </h4>
-              <div v-if="!wbs[phase].length" class="text-xs font-mono italic text-slate-600 py-6 text-center">NO DEPLOYED TASKS</div>
-              <div v-for="task in wbs[phase]" :key="task.id" class="task bg-[#111422] hover:bg-[#161a2e] border border-indigo-950/50 rounded-xl px-4 py-3 text-xs font-bold text-slate-300 hover:text-white transition-all cursor-default mb-2 flex items-center justify-between">
-                <span>{{ task.title }}</span>
-                <span class="w-1.5 h-1.5 rounded-full" :class="task.status === 'done' || task.status === 'completed' ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-amber-500 animate-pulse'"></span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Auto-scrolling Terminal Console -->
-          <div class="logs-console bg-slate-950 border border-cyan-500/20 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
-            <div class="console-header bg-slate-900/60 px-6 py-3 border-b border-indigo-950 flex items-center">
-              <div class="flex gap-1.5">
-                <div class="w-2.5 h-2.5 rounded-full bg-rose-500/80"></div>
-                <div class="w-2.5 h-2.5 rounded-full bg-amber-500/80"></div>
-                <div class="w-2.5 h-2.5 rounded-full bg-emerald-500/80"></div>
-              </div>
-              <span class="text-[10px] font-mono font-black uppercase tracking-widest text-slate-500 ml-4">DEVLOGS TELEMETRY STREAM</span>
-            </div>
-            <div class="console-body p-6 max-h-60 overflow-y-auto space-y-2.5 flex-1 custom-scrollbar">
-              <div v-if="!detail.logs?.length" class="console-line font-mono text-xs text-slate-500">SYSTEM: NO DEPLOYMENT LOGS DETECTED ON TARGET TELEMETRY.</div>
-              <div v-for="log in (detail.logs || [])" :key="log.id" class="console-line font-mono text-xs flex gap-3 items-start">
-                <span class="text-indigo-400 font-bold shrink-0">[{{ formatDate(log.created_at) }}]</span>
-                <span class="text-cyan-400 font-bold shrink-0">$</span>
-                <span class="text-emerald-400 leading-relaxed">{{ log.content }}</span>
-              </div>
-              <div class="console-line font-mono text-xs text-emerald-400/50 flex gap-2 items-center">
-                <span>> TELEMETRY LOG WATCHER ACTIVE [WAITING FOR STACK PULSE]</span>
-                <span class="w-1.5 h-4 bg-emerald-400 animate-blink shrink-0"></span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      </div>
     </main>
   </div>
 </template>
@@ -137,7 +139,7 @@ const wbs = ref({ m1: [], m2: [], m3: [] });
 const progress = ref(0);
 
 function phaseLabel(phase) {
-  const map = { m1: 'Phase 1', m2: 'Phase 2', m3: 'Phase 3' };
+  const map = { m1: '阶段 1', m2: '阶段 2', m3: '阶段 3' };
   return map[phase] || phase;
 }
 
@@ -194,26 +196,25 @@ onMounted(async () => {
 
 <style scoped>
 .mission {
-  min-height: 100vh;
-  background: radial-gradient(circle at 50% 0%, #17153b, #0c0a1c);
+  min-height: 100dvh;
+  background: #090d16;
   color: #f1f5f9;
   display: flex;
   flex-direction: column;
   font-family: inherit;
-  background-image: 
-    linear-gradient(rgba(99, 102, 241, 0.02) 1px, transparent 1px), 
-    linear-gradient(90deg, rgba(99, 102, 241, 0.02) 1px, transparent 1px);
-  background-size: 32px 32px;
 }
 
 .mission-header {
-  padding: 24px 32px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: #020617;
+}
+
+.mission-header__inner {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  background: rgba(12, 10, 28, 0.4);
-  backdrop-filter: blur(12px);
+  gap: 16px;
+  padding: 24px clamp(16px, 2vw, 24px);
 }
 
 .title {
@@ -226,10 +227,7 @@ onMounted(async () => {
   margin: 0;
   font-size: 1.5rem;
   font-weight: 900;
-  letter-spacing: -0.02em;
-  background: linear-gradient(135deg, #a5b4fc, #6366f1);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #5eead4;
   text-transform: uppercase;
 }
 
@@ -242,14 +240,13 @@ onMounted(async () => {
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.06);
   background: rgba(255, 255, 255, 0.02);
-  transition: all 0.25s ease;
+  transition: color 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
 }
 
 .back:hover {
   color: #fff;
-  border-color: rgba(99, 102, 241, 0.3);
-  background: rgba(99, 102, 241, 0.1);
-  box-shadow: 0 0 15px rgba(99, 102, 241, 0.15);
+  border-color: rgba(45, 212, 191, 0.3);
+  background: rgba(20, 184, 166, 0.1);
 }
 
 .meta {
@@ -261,7 +258,7 @@ onMounted(async () => {
 .meta span {
   font-size: 0.85rem;
   font-weight: 800;
-  color: #818cf8;
+  color: #5eead4;
 }
 
 .ghost {
@@ -273,25 +270,34 @@ onMounted(async () => {
   cursor: pointer;
   font-size: 0.82rem;
   font-weight: 800;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: color 150ms ease-out, border-color 150ms ease-out, background-color 150ms ease-out;
 }
 
 .ghost:hover {
   background: #fff;
   color: #0c0a1c;
   border-color: #fff;
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
 }
 
 .mission-body {
   flex: 1;
-  display: grid;
-  grid-template-columns: 320px 1fr;
+  padding: 24px clamp(16px, 2vw, 24px) 32px;
+}
+
+.mission-body__shell {
+  flex: 1;
+}
+
+.mission-grid {
+  min-height: calc(100dvh - 150px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 32px;
+  background: rgba(2, 6, 23, 0.45);
 }
 
 .list {
   border-right: 1px solid rgba(255, 255, 255, 0.05);
-  padding: 24px;
+  padding: 16px;
   display: grid;
   gap: 14px;
   align-content: start;
@@ -301,22 +307,21 @@ onMounted(async () => {
 .list-item {
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 20px;
-  padding: 20px;
+  border-radius: 10px;
+  padding: 16px;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: border-color 150ms ease-out, background-color 150ms ease-out;
 }
 
 .list-item:hover {
-  transform: translateY(-2px);
-  background: rgba(99, 102, 241, 0.04);
-  border-color: rgba(99, 102, 241, 0.2);
+  background: rgba(20, 184, 166, 0.06);
+  border-color: rgba(20, 184, 166, 0.18);
 }
 
 .list-item.active {
-  background: rgba(99, 102, 241, 0.08);
-  border-color: #6366f1;
-  box-shadow: 0 8px 30px rgba(99, 102, 241, 0.15);
+  background: rgba(15, 118, 110, 0.08);
+  border-color: #0f766e;
+  box-shadow: 0 8px 30px rgba(15, 118, 110, 0.08);
 }
 
 .list-title {
@@ -342,13 +347,13 @@ onMounted(async () => {
 
 .progress-bar {
   height: 100%;
-  background: linear-gradient(90deg, #6366f1, #06b6d4);
-  box-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
-  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  background: #0f766e;
+  box-shadow: none;
+  transition: none;
 }
 
 .detail {
-  padding: 32px;
+  padding: 16px;
 }
 
 .empty {
@@ -360,7 +365,7 @@ onMounted(async () => {
   font-size: 0.95rem;
   font-weight: 800;
   border: 1px dashed rgba(255, 255, 255, 0.08);
-  border-radius: 28px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.01);
 }
 
@@ -382,7 +387,7 @@ onMounted(async () => {
   margin-bottom: 28px;
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.04);
-  border-radius: 24px;
+  border-radius: 12px;
   padding: 20px 24px;
 }
 
@@ -392,7 +397,7 @@ onMounted(async () => {
   margin-bottom: 8px;
   font-size: 0.85rem;
   font-weight: 800;
-  color: #a5b4fc;
+  color: #5eead4;
 }
 
 .progress-track {
@@ -411,8 +416,8 @@ onMounted(async () => {
 
 .column {
   background: rgba(255, 255, 255, 0.02);
-  border-radius: 20px;
-  padding: 20px;
+  border-radius: 10px;
+  padding: 16px;
   border: 1px solid rgba(255, 255, 255, 0.04);
   min-height: 200px;
 }
@@ -422,8 +427,7 @@ onMounted(async () => {
   font-size: 0.8rem;
   font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: #818cf8;
+  color: #5eead4;
 }
 
 .task {
@@ -435,12 +439,12 @@ onMounted(async () => {
   border-radius: 12px;
   margin-top: 8px;
   color: #e2e8f0;
-  transition: all 0.2s ease;
+  transition: background-color 150ms ease-out, border-color 150ms ease-out;
 }
 
 .task:hover {
   background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(99, 102, 241, 0.2);
+  border-color: rgba(20, 184, 166, 0.18);
 }
 
 .logs-console {
@@ -451,28 +455,14 @@ onMounted(async () => {
 
 .console-body {
   font-family: 'Outfit', monospace;
-  background-image: linear-gradient(rgba(16, 185, 129, 0.015) 50%, transparent 50%);
-  background-size: 100% 4px;
+  background-image: none;
 }
 
-.console-line {
-  letter-spacing: 0.05em;
-  text-shadow: 0 0 4px rgba(16, 185, 129, 0.3);
-}
-
-.animate-blink {
-  animation: blink-cursor 1s step-end infinite;
-}
-
-@keyframes blink-cursor {
-  from, to { background-color: transparent; }
-  50% { background-color: currentColor; }
-}
 
 .list-item.active {
-  border-color: #06b6d4;
-  background: rgba(6, 182, 212, 0.08);
-  box-shadow: 0 0 20px rgba(6, 182, 212, 0.15);
+  border-color: #0f766e;
+  background: rgba(15, 118, 110, 0.08);
+  box-shadow: 0 8px 30px rgba(15, 118, 110, 0.08);
 }
 
 .muted {
@@ -482,9 +472,15 @@ onMounted(async () => {
 }
 
 @media (max-width: 980px) {
-  .mission-body {
-    grid-template-columns: 1fr;
+  .mission-header__inner {
+    flex-direction: column;
+    align-items: flex-start;
   }
+
+  .mission-grid {
+    min-height: auto;
+  }
+
   .list {
     border-right: none;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
