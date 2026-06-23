@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "test": "node --test src/api/client.test.js src/api/portal.test.js src/composables/useSubmitState.test.js src/modules/inception/proposal.test.js src/modules/knowledge/detail.test.js src/modules/study/lesson.test.js src/modules/workspace/stages.test.js src/modules/workspace/submission.test.js src/modules/workspace/view.test.js src/modules/teacher/admin.test.js src/modules/teacher/review.test.js src/pages/Login.test.js src/utils/userRole.test.js",
     "build": "vite build",
     "preview": "vite preview"
   },

@@ -141,7 +141,7 @@ import { useAuthStore } from '@/stores/auth';
 import { brandName, schoolName } from '@/constants/brand';
 import { useFormDraft } from '@/composables/useFormDraft';
 import { useSubmitState } from '@/composables/useSubmitState';
-import { getPrimaryWorkspaceTarget, isAdminRole, isTeacherLike } from '@/utils/userRole';
+import { getPrimaryWorkspaceTarget, isAdminRole, isTeacherLike, resolveAuthRedirectForUser } from '@/utils/userRole';
 
 const AUTH_REDIRECT_KEY = 'auth_redirect';
 
@@ -267,7 +267,7 @@ function consumeRedirect() {
 function redirectAfterLogin(user) {
   const redirect = consumeRedirect();
   if (redirect) {
-    router.replace(redirect);
+    router.replace(resolveAuthRedirectForUser(user, redirect));
     return;
   }
   router.replace(getPrimaryWorkspaceTarget(user));
