@@ -9,6 +9,13 @@ storage/uploads/
 storage/logs/
 storage/assessments/
 storage/backups/
+storage/
+
+# Local audit screenshots, generated exports and temporary workspaces.
+tmp/
+output/
+outputs/
+ui-template/
 
 apps/web-vue/dist/
 **/.vite/

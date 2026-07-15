@@ -162,13 +162,25 @@ async function backupDatabase(dbPath, backupDir) {
 }
 
 async function smokeTest(baseUrl) {
-  const url = new URL('/api/v1/health', baseUrl).toString();
-  const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
-  const body = await response.text();
-  if (!response.ok || !body.includes('"ok":true')) {
-    throw new Error(`HTTP smoke test failed (${response.status}): ${body.slice(0, 200)}`);
+  async function request(pathname, expectedStatus, description) {
+    const url = new URL(pathname, baseUrl).toString();
+    const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    const body = await response.text();
+    if (response.status !== expectedStatus) {
+      throw new Error(`HTTP smoke ${description} expected ${expectedStatus}, got ${response.status}: ${body.slice(0, 200)}`);
+    }
+    console.log(`[preflight] HTTP smoke: ${description} -> ${response.status}`);
+    return { response, body };
   }
-  console.log(`[preflight] HTTP smoke: ${url} -> ${response.status}`);
+
+  const health = await request('/api/v1/health', 200, 'health');
+  if (!health.body.includes('"ok":true')) {
+    throw new Error(`HTTP smoke health payload is invalid: ${health.body.slice(0, 200)}`);
+  }
+  await request('/uploads/release-preflight-probe.txt', 404, 'legacy uploads closed');
+  await request('/api/v1/courses/not.valid.json', 400, 'invalid course id rejected');
+  await request('/api/v1/files/demo-project?path=../storage', 400, 'path traversal rejected');
+  await request('/api/v1/projects', 401, 'anonymous project API rejected');
 }
 
 async function main() {

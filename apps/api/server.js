@@ -4356,7 +4356,8 @@ registerCourseRoutes(fastify, {
   db: routeDb,
   now,
   canReadCourse,
-  canEditCourse
+  canEditCourse,
+  resolveUnder
 });
 
 function canAccessProject(user, project) {
@@ -4727,6 +4728,7 @@ registerAssetRoutes(fastify, {
   API_PREFIX,
   db: routeDb,
   MATERIALS_DIR,
+  UPLOAD_DIR,
   EXTENSION_MIME_MAP,
   requireRole,
   buildProjectFilters,

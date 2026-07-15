@@ -21,6 +21,8 @@
    脚本会执行 `PRAGMA integrity_check`、`foreign_key_check`，使用 SQLite backup API 生成数据库副本，并为 uploads、courses、materials、portal 写入带 SHA-256 的清单。
 4. 在生产副本上先演练迁移，检查 `storage/backups/preflight/database-*.json` 中的迁移记录、旧 JSON 附件回填计数和坏数据计数。
 
+前端验证会同时运行常规 Vue 类型检查和受控 `checkJs` 范围；后者必须报告非零文件数，不能通过空范围制造假绿结果。
+
 ## 部署与重启
 
 ```bash

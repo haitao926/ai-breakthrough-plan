@@ -334,7 +334,13 @@ function registerAssignmentRoutes(fastify, deps) {
     const attachment = typeof getAttachmentById === 'function'
       ? getAttachmentById(parseProjectId(request.params.id))
       : null;
-    if (!attachment || typeof canReadAssignmentSubmission !== 'function' || !canReadAssignmentSubmission(request.user, attachment)) {
+    const course = attachment && typeof loadCourseDetail === 'function'
+      ? loadCourseDetail(attachment.course_id)
+      : null;
+    if (!attachment
+      || (typeof canReadCourse === 'function' && (!course || !canReadCourse(request.user, course)))
+      || typeof canReadAssignmentSubmission !== 'function'
+      || !canReadAssignmentSubmission(request.user, attachment)) {
       reply.code(404);
       return { error: '文件不存在' };
     }

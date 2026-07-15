@@ -104,7 +104,8 @@ function registerCourseRoutes(fastify, deps) {
     now,
     requireAuth,
     canReadCourse,
-    canEditCourse
+    canEditCourse,
+    resolveUnder
   } = deps;
 
   function loadAccessibleCourse(courseId, user) {
@@ -252,18 +253,26 @@ function registerCourseRoutes(fastify, deps) {
       return { error: '课时ID格式无效' };
     }
     const lessonId = rawLessonId || `lesson${listCourseLessons(course).length + 1}`;
-    const materialsRoot = path.resolve(MATERIALS_DIR, course.materialsRoot);
-    const materialsRelative = path.relative(path.resolve(MATERIALS_DIR), materialsRoot);
-    if (!materialsRelative || materialsRelative.startsWith('..') || path.isAbsolute(materialsRelative)) {
+    const materialsRoot = typeof resolveUnder === 'function'
+      ? resolveUnder(MATERIALS_DIR, course.materialsRoot)
+      : path.resolve(MATERIALS_DIR, course.materialsRoot);
+    if (!materialsRoot) {
       reply.code(400);
       return { error: '课程资料路径无效' };
     }
-    const lessonsDir = path.resolve(materialsRoot, 'lessons');
+    const lessonsDir = typeof resolveUnder === 'function'
+      ? resolveUnder(materialsRoot, 'lessons')
+      : path.resolve(materialsRoot, 'lessons');
+    if (!lessonsDir) {
+      reply.code(400);
+      return { error: '课程课时路径无效' };
+    }
     ensureDir(lessonsDir);
     const fileName = `${lessonId.replace(/\.json$/i, '')}.json`;
-    const targetPath = path.resolve(lessonsDir, fileName);
-    const relativeTarget = path.relative(path.resolve(lessonsDir), targetPath);
-    if (!relativeTarget || relativeTarget.startsWith('..') || path.isAbsolute(relativeTarget)) {
+    const targetPath = typeof resolveUnder === 'function'
+      ? resolveUnder(lessonsDir, fileName)
+      : path.resolve(lessonsDir, fileName);
+    if (!targetPath) {
       reply.code(400);
       return { error: '课时路径无效' };
     }
@@ -295,10 +304,16 @@ function registerCourseRoutes(fastify, deps) {
       reply.code(400);
       return { error: '课时ID格式无效' };
     }
-    const lessonsDir = path.resolve(MATERIALS_DIR, course.materialsRoot, 'lessons');
-    const targetPath = path.resolve(lessonsDir, `${lessonId}.json`);
-    const relativeTarget = path.relative(lessonsDir, targetPath);
-    if (!relativeTarget || relativeTarget.startsWith('..') || path.isAbsolute(relativeTarget)) {
+    const materialsRoot = typeof resolveUnder === 'function'
+      ? resolveUnder(MATERIALS_DIR, course.materialsRoot)
+      : path.resolve(MATERIALS_DIR, course.materialsRoot);
+    const lessonsDir = materialsRoot && (typeof resolveUnder === 'function'
+      ? resolveUnder(materialsRoot, 'lessons')
+      : path.resolve(materialsRoot, 'lessons'));
+    const targetPath = lessonsDir && (typeof resolveUnder === 'function'
+      ? resolveUnder(lessonsDir, `${lessonId}.json`)
+      : path.resolve(lessonsDir, `${lessonId}.json`));
+    if (!targetPath) {
       reply.code(400);
       return { error: '课时路径无效' };
     }

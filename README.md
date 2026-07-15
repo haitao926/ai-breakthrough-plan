@@ -117,6 +117,8 @@ npm ci
 npm run verify
 ```
 
+`npm run verify` 还会执行 `typecheck:js`，目前对 5 个稳定 JS 模块启用 `allowJs + checkJs`；迁移范围会随着 legacy 模块修复逐步扩大。
+
 发布前 SQLite 完整性、备份、内容哈希清单和健康检查：
 
 ```bash

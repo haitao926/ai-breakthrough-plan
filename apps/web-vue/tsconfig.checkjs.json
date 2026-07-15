@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "esModuleInterop": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"]
+  },
+  "include": [
+    "src/api/client.js",
+    "src/api/portal.js",
+    "src/utils/courseMeta.js",
+    "src/utils/safeHtml.js",
+    "src/utils/userRole.js"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

@@ -581,11 +581,18 @@ test('proposal submission and teacher feedback form a review loop', async () => 
     plan: '先做 MVP',
     teamMembers: 'owner'
   };
-  const form = multipartPayload({
-    type: 'proposal',
-    title: '开题报告',
-    details: JSON.stringify(details)
-  });
+  const form = multipartFilePayload(
+    {
+      type: 'proposal',
+      title: '开题报告',
+      details: JSON.stringify(details)
+    },
+    {
+      filename: 'proposal-notes.txt',
+      contentType: 'text/plain',
+      content: 'proposal attachment'
+    }
+  );
   const submit = await fastify.inject({
     method: 'POST',
     url: `/api/v1/projects/${projectId}/submissions`,
@@ -593,6 +600,21 @@ test('proposal submission and teacher feedback form a review loop', async () => 
     payload: form.body
   });
   assert.equal(submit.statusCode, 200, submit.body);
+
+  const projectAttachment = dbHandle.get(
+    'SELECT id FROM attachments WHERE submission_id = ? ORDER BY id DESC LIMIT 1',
+    [submit.json().submissionId]
+  );
+  assert.ok(projectAttachment?.id);
+  assert.equal((await fastify.inject(`/api/v1/project-attachments/${projectAttachment.id}/download`)).statusCode, 404);
+  const ownerAttachment = await fastify.inject({
+    method: 'GET',
+    url: `/api/v1/project-attachments/${projectAttachment.id}/download`,
+    headers: { authorization: `Bearer ${ownerToken}` }
+  });
+  assert.equal(ownerAttachment.statusCode, 200, ownerAttachment.body);
+  assert.equal(ownerAttachment.body, 'proposal attachment');
+  assert.equal(ownerAttachment.headers['x-content-type-options'], 'nosniff');
 
   const feedback = await injectJson('POST', `/api/v1/submissions/${submit.json().submissionId}/feedback`, teacherToken, {
     status: 'needs_changes',
@@ -895,6 +917,21 @@ test('assignment routes validate payloads and preserve teacher review flow', asy
   assert.equal(listSubmissions.json().submissions.length, 1);
   assert.equal(listSubmissions.json().submissions[0].status, 'reviewed');
   assert.equal(listSubmissions.json().submissions[0].attachments.length, 1);
+
+  const unrelatedTeacher = createManualUserToken(`unrelated-${Date.now()}@example.com`, 'teacher');
+  const forgedReview = await injectJson(
+    'POST',
+    `/api/v1/assignments/${assignmentId}/submissions/${createSubmission.json().submission.id}/review`,
+    unrelatedTeacher.token,
+    { status: 'reviewed', score: 1, feedback: '越权批改不应生效' }
+  );
+  assert.equal(forgedReview.statusCode, 404, forgedReview.body);
+  const unchanged = dbHandle.get(
+    'SELECT score, feedback FROM assignment_submissions WHERE id = ?',
+    [createSubmission.json().submission.id]
+  );
+  assert.equal(unchanged.score, 95);
+  assert.equal(unchanged.feedback, '结构清楚，可以继续完善展示部分。');
 });
 
 test('assignment list creates published lesson assignment from course homework', async () => {
@@ -1541,6 +1578,45 @@ test('restricted projects are removed from unassigned teacher project and review
 
   const adminDetail = await injectJson('GET', `/api/v1/projects/${restrictedProjectId}`, adminToken);
   assert.equal(adminDetail.statusCode, 200, adminDetail.body);
+});
+
+test('project permission matrix separates collaboration, supervision, and administration', async () => {
+  const privateProjectResponse = await injectJson('POST', '/api/v1/projects', ownerToken, {
+    title: `矩阵私有项目 ${Date.now()}`,
+    visibility: 'private'
+  });
+  assert.equal(privateProjectResponse.statusCode, 200, privateProjectResponse.body);
+  const privateProjectId = privateProjectResponse.json().project.id;
+
+  assert.equal((await injectJson('POST', `/api/v1/projects/${privateProjectId}/members`, ownerToken, { memberIds: [2] })).statusCode, 200);
+  assert.equal((await injectJson('GET', `/api/v1/projects/${privateProjectId}`, memberToken)).statusCode, 200);
+  assert.equal((await injectJson('POST', `/api/v1/projects/${privateProjectId}/logs`, memberToken, { content: '成员协作记录' })).statusCode, 200);
+  assert.equal((await injectJson('GET', `/api/v1/projects/${privateProjectId}`, teacherToken)).statusCode, 404);
+  assert.equal((await injectJson('GET', `/api/v1/projects/${privateProjectId}`, judgeToken)).statusCode, 404);
+  assert.equal((await injectJson('GET', `/api/v1/projects/${privateProjectId}`, adminToken)).statusCode, 200);
+  assert.equal((await injectJson('DELETE', `/api/v1/projects/${privateProjectId}`, memberToken, {})).statusCode, 403);
+
+  const publicProjectResponse = await injectJson('POST', '/api/v1/projects', ownerToken, {
+    title: `矩阵公开项目 ${Date.now()}`,
+    visibility: 'public'
+  });
+  assert.equal(publicProjectResponse.statusCode, 200, publicProjectResponse.body);
+  const publicProjectId = publicProjectResponse.json().project.id;
+  const teacherSupervision = await injectJson('POST', `/api/v1/projects/${publicProjectId}/status`, teacherToken, {
+    status: 'reviewing',
+    note: '公开项目监督'
+  });
+  assert.equal(teacherSupervision.statusCode, 200, teacherSupervision.body);
+
+  const judgeAssignedResponse = await injectJson('POST', '/api/v1/projects', ownerToken, {
+    title: `矩阵评审项目 ${Date.now()}`,
+    visibility: 'assigned',
+    visibleToRoles: ['judge']
+  });
+  assert.equal(judgeAssignedResponse.statusCode, 200, judgeAssignedResponse.body);
+  const judgeAssignedId = judgeAssignedResponse.json().project.id;
+  assert.equal((await injectJson('GET', `/api/v1/projects/${judgeAssignedId}`, judgeToken)).statusCode, 200);
+  assert.equal((await injectJson('POST', `/api/v1/projects/${judgeAssignedId}/status`, judgeToken, { status: 'reviewing' })).statusCode, 403);
 });
 
 test('match reminder inbox and admin match dashboard aggregate cross-target data', async () => {
