@@ -5,12 +5,19 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "lint": "eslint . --max-warnings=0",
+    "security-check": "node scripts/check-html-safety.mjs",
     "test": "node --test src/api/client.test.js src/api/portal.test.js src/composables/useSubmitState.test.js src/modules/inception/proposal.test.js src/modules/knowledge/detail.test.js src/modules/study/lesson.test.js src/modules/workspace/stages.test.js src/modules/workspace/submission.test.js src/modules/workspace/view.test.js src/modules/teacher/admin.test.js src/modules/teacher/review.test.js src/pages/Login.test.js src/utils/userRole.test.js",
+    "typecheck": "vue-tsc --noEmit --project tsconfig.json",
+    "verify": "npm run security-check && npm run lint && npm run typecheck && npm test && npm run build",
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@wangeditor/editor": "^5.1.23",
+    "@wangeditor/editor-for-vue": "^5.1.12",
     "dayjs": "^1.11.19",
+    "dompurify": "^3.4.12",
     "pinia": "^2.1.7",
     "pinia-plugin-persistedstate": "^3.2.0",
     "vue": "^3.4.0",
@@ -20,8 +27,13 @@
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.0",
     "autoprefixer": "^10.4.24",
+    "eslint": "^10.7.0",
+    "eslint-plugin-vue": "^10.9.2",
+    "globals": "^17.7.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
-    "vite": "^5.0.0"
+    "typescript": "^5.9.3",
+    "vite": "^5.0.0",
+    "vue-tsc": "^3.3.7"
   }
 }
