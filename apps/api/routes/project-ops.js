@@ -310,7 +310,7 @@ function registerProjectOpsRoutes(fastify, deps) {
   });
 
   fastify.get(`${API_PREFIX}/projects/:id/attachments.zip`, async (request, reply) => {
-    if (!requireRole(request, reply, ['teacher'])) return;
+    if (!requireRole(request, reply, ['teacher', 'judge', 'admin'])) return;
     const projectId = parseProjectId(request.params.id);
     if (!projectId) {
       reply.code(400);
@@ -355,7 +355,7 @@ function registerProjectOpsRoutes(fastify, deps) {
   });
 
   fastify.get(`${API_PREFIX}/projects/:id/archive.zip`, async (request, reply) => {
-    if (!requireRole(request, reply, ['teacher'])) return;
+    if (!requireRole(request, reply, ['teacher', 'judge', 'admin'])) return;
     const projectId = parseProjectId(request.params.id);
     if (!projectId) {
       reply.code(400);

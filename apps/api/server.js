@@ -41,20 +41,17 @@ const { sanitizeLessonContent } = require('./src/utils/html-sanitizer');
 
 const PORT = Number.parseInt(process.env.PORT || '8090', 10);
 const HOST = process.env.HOST || '0.0.0.0';
-const DB_PATH = process.env.DB_PATH || DEFAULT_DB_PATH;
-const UPLOAD_DIR = process.env.UPLOAD_DIR
-  ? path.resolve(process.env.UPLOAD_DIR)
-  : path.join(__dirname, '../../storage/uploads');
-const LOG_DIR = process.env.LOG_DIR
-  ? path.resolve(process.env.LOG_DIR)
-  : path.join(__dirname, '../../storage/logs');
-const ASSESSMENT_DIR = process.env.ASSESSMENT_DIR
-  ? path.resolve(process.env.ASSESSMENT_DIR)
-  : path.join(__dirname, '../../storage/assessments');
+const PROJECT_ROOT = path.resolve(__dirname, '../..');
+function resolveConfiguredPath(value, fallback) {
+  const raw = String(value || '').trim();
+  return raw ? (path.isAbsolute(raw) ? raw : path.resolve(PROJECT_ROOT, raw)) : fallback;
+}
+const DB_PATH = resolveConfiguredPath(process.env.DB_PATH, DEFAULT_DB_PATH);
+const UPLOAD_DIR = resolveConfiguredPath(process.env.UPLOAD_DIR, path.join(__dirname, '../../storage/uploads'));
+const LOG_DIR = resolveConfiguredPath(process.env.LOG_DIR, path.join(__dirname, '../../storage/logs'));
+const ASSESSMENT_DIR = resolveConfiguredPath(process.env.ASSESSMENT_DIR, path.join(__dirname, '../../storage/assessments'));
 const DEFAULT_WEB_ROOT = path.join(__dirname, '../web-vue/dist');
-const WEB_ROOT = process.env.WEB_ROOT
-  ? path.resolve(process.env.WEB_ROOT)
-  : DEFAULT_WEB_ROOT;
+const WEB_ROOT = resolveConfiguredPath(process.env.WEB_ROOT, DEFAULT_WEB_ROOT);
 const WEB_SPA_ENV = String(process.env.WEB_SPA || '').trim().toLowerCase();
 const WEB_SPA = WEB_SPA_ENV
   ? WEB_SPA_ENV === 'true'
@@ -84,21 +81,15 @@ const GITEA_PRIVATE_REPO = String(process.env.GITEA_PRIVATE_REPO || 'true').trim
 const AI_API_BASE = String(process.env.AI_API_BASE || '').trim();
 const AI_MODEL = String(process.env.AI_MODEL || '').trim();
 const AI_TIMEOUT_MS = Number.parseInt(process.env.AI_TIMEOUT_MS || '20000', 10);
-const COURSES_DIR = process.env.COURSES_DIR
-  ? path.resolve(process.env.COURSES_DIR)
-  : path.join(__dirname, '../../content/courses');
+const COURSES_DIR = resolveConfiguredPath(process.env.COURSES_DIR, path.join(__dirname, '../../content/courses'));
 const COURSE_CATALOG_PATH = path.join(COURSES_DIR, 'catalog.json');
 const DISCIPLINE_DATA_PATH = path.join(COURSES_DIR, 'disciplines/index.json');
 const DISCIPLINE_LEARNING_UNITS_PATH = path.join(COURSES_DIR, 'disciplines/learning-units.json');
 const CRASH_COURSE_SERIES_PATH = path.join(COURSES_DIR, 'disciplines/crash-course-series.json');
 const CRASH_COURSE_VIDEOS_PATH = path.join(COURSES_DIR, 'disciplines/crash-course-videos.json');
-const BILIBILI_SERIES_VIDEOS_PATH = path.join(__dirname, '../web-vue/src/data/bilibiliSeriesVideos.json');
-const MATERIALS_DIR = process.env.MATERIALS_DIR
-  ? path.resolve(process.env.MATERIALS_DIR)
-  : path.join(__dirname, '../../content/materials');
-const PORTAL_DIR = process.env.PORTAL_DIR
-  ? path.resolve(process.env.PORTAL_DIR)
-  : path.join(__dirname, '../../content/portal');
+const BILIBILI_SERIES_VIDEOS_PATH = resolveConfiguredPath(process.env.BILIBILI_SERIES_VIDEOS_PATH, path.join(__dirname, '../web-vue/src/data/bilibiliSeriesVideos.json'));
+const MATERIALS_DIR = resolveConfiguredPath(process.env.MATERIALS_DIR, path.join(__dirname, '../../content/materials'));
+const PORTAL_DIR = resolveConfiguredPath(process.env.PORTAL_DIR, path.join(__dirname, '../../content/portal'));
 const PORTAL_COMPETITIONS_PATH = path.join(PORTAL_DIR, 'competitions.json');
 const PORTAL_COMPETITION_DETAILS_DIR = path.join(PORTAL_DIR, 'competition-details');
 const PORTAL_STORIES_PATH = path.join(PORTAL_DIR, 'stories.json');
@@ -559,7 +550,10 @@ function canReadProject(user, project) {
   if (role === 'admin') return true;
   if (isProjectMemberOrOwner(user, project)) return true;
   if (config.visibility === 'public') {
-    return role === 'teacher' || role === 'judge';
+    if (role === 'teacher') return true;
+    // Judges may only see projects explicitly assigned to them. Public
+    // visibility is not an implicit judge assignment.
+    return role === 'judge' && accessGrantMatchesUser(user, config);
   }
   if (accessGrantMatchesUser(user, config)) return true;
   if (config.visibility === 'assigned' && (role === 'teacher' || role === 'judge')) {
@@ -583,8 +577,10 @@ function canSuperviseProject(user, project) {
   if (role === 'admin' || isProjectMemberOrOwner(user, project)) return true;
   if (role !== 'teacher' && role !== 'judge') return false;
   if (!canReadProject(user, project)) return false;
-  return accessGrantMatchesUser(user, readAccessConfig(project))
-    || hasTeacherLinkToStudents(Number(user.id || 0), getProjectParticipantIds(project));
+  const config = readAccessConfig(project);
+  if (role === 'teacher' && config.visibility === 'public') return true;
+  return accessGrantMatchesUser(user, config)
+    || (role === 'teacher' && hasTeacherLinkToStudents(Number(user.id || 0), getProjectParticipantIds(project)));
 }
 
 function requireProjectAccess(request, reply, project, mode = 'read') {
@@ -594,8 +590,10 @@ function requireProjectAccess(request, reply, project, mode = 'read') {
       ? canSuperviseProject(request.user, project)
       : canReadProject(request.user, project);
   if (!allowed) {
-    reply.code(403);
-    reply.send({ error: mode === 'write' ? '无权限操作该项目' : '无权限访问该项目' });
+    // Hide the existence of resources the caller cannot see. This applies to
+    // details, attachments and all project child resources.
+    reply.code(404);
+    reply.send({ error: '项目不存在' });
     return false;
   }
   return true;
@@ -4913,6 +4911,9 @@ module.exports = {
   initDatabase,
   start,
   _internals: {
+    assertRuntimeConfig,
+    canRegisterTeacher,
+    canRegisterJudge,
     parseGiteaRepoUrl,
     validateSubmissionDetails
   }

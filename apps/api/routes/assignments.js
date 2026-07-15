@@ -204,8 +204,8 @@ function registerAssignmentRoutes(fastify, deps) {
     const course = loadCourseDetail(courseId);
     if (!course) return true;
     if (canReadCourse(request.user, course)) return true;
-    reply.code(request.user ? 403 : 401);
-    reply.send({ error: request.user ? '无权限访问该课程作业' : '请登录后访问该课程作业' });
+    reply.code(404);
+    reply.send({ error: '作业不存在' });
     return false;
   }
 
@@ -278,6 +278,7 @@ function registerAssignmentRoutes(fastify, deps) {
       reply.code(404);
       return { error: '作业不存在' };
     }
+    if (!requireCourseEdit(request, reply, existing.course_id)) return;
     const payload = normalizeAssignmentPayload(request.body || {}, existing);
     if (!payload.courseId || !payload.title) {
       reply.code(400);
@@ -290,7 +291,7 @@ function registerAssignmentRoutes(fastify, deps) {
   });
 
   fastify.get(`${API_PREFIX}/assignments/:id/submissions`, async (request, reply) => {
-    if (!requireRole(request, reply, ['student', 'teacher', 'judge'])) return;
+    if (!requireRole(request, reply, ['student', 'teacher'])) return;
     const assignmentId = parseProjectId(request.params.id);
     if (!assignmentId) {
       reply.code(400);
@@ -324,7 +325,12 @@ function registerAssignmentRoutes(fastify, deps) {
       }
     }
   }, async (request, reply) => {
-    if (!requireRole(request, reply, ['student', 'teacher'])) return;
+    // Do not reveal whether an attachment exists to anonymous callers or
+    // users outside the student/teacher resource boundary.
+    if (!request.user || !['student', 'teacher', 'admin'].includes(String(request.user.role || '').toLowerCase())) {
+      reply.code(404);
+      return { error: '文件不存在' };
+    }
     const attachment = typeof getAttachmentById === 'function'
       ? getAttachmentById(parseProjectId(request.params.id))
       : null;

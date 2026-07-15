@@ -56,8 +56,8 @@ function registerAssetRoutes(fastify, deps) {
     const course = findCourseByMaterialsRoot(materialsRoot);
     if (!course) return true;
     if (canReadCourse(request.user || null, course)) return true;
-    reply.code(request.user ? 403 : 401);
-    reply.send({ error: request.user ? '无权限访问该课程资料' : '请登录后访问该课程资料' });
+    reply.code(404);
+    reply.send({ error: '资料不存在' });
     return false;
   }
 
@@ -228,7 +228,7 @@ function registerAssetRoutes(fastify, deps) {
     const absolutePath = typeof resolveUnder === 'function'
       ? resolveUnder(uploadRoot, relativePath)
       : path.resolve(uploadRoot, relativePath);
-    const relative = path.relative(uploadRoot, absolutePath);
+    const relative = absolutePath ? path.relative(uploadRoot, absolutePath) : '';
     if (!absolutePath || !relative || relative.startsWith('..') || path.isAbsolute(relative)) {
       reply.code(404);
       return { error: '文件不存在' };
@@ -272,7 +272,9 @@ function registerAssetRoutes(fastify, deps) {
     const absolutePath = typeof resolveUnder === 'function'
       ? resolveUnder(uploadRoot, relativePath)
       : path.resolve(uploadRoot, relativePath);
-    if (!absolutePath || !fs.existsSync(absolutePath) || path.extname(row.file_name || relativePath).toLowerCase() === '.svg') {
+    const relative = absolutePath ? path.relative(uploadRoot, absolutePath) : '';
+    if (!absolutePath || !relative || relative.startsWith('..') || path.isAbsolute(relative)
+      || !fs.existsSync(absolutePath) || path.extname(row.file_name || relativePath).toLowerCase() === '.svg') {
       reply.code(404);
       return { error: '文件不存在' };
     }

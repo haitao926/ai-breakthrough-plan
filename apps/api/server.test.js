@@ -4,6 +4,7 @@ const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
 const crypto = require('node:crypto');
+const { execFileSync } = require('node:child_process');
 
 const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'innovation-api-'));
 const repoRoot = path.join(__dirname, '../..');
@@ -19,11 +20,29 @@ process.env.PORTAL_DIR = path.join(tmpRoot, 'portal');
 process.env.UPLOAD_DIR = path.join(tmpRoot, 'uploads');
 process.env.LOG_DIR = path.join(tmpRoot, 'logs');
 process.env.ASSESSMENT_DIR = path.join(tmpRoot, 'assessments');
+process.env.BILIBILI_SERIES_VIDEOS_PATH = path.join(tmpRoot, 'bilibili.json');
 process.env.AUTH_SECRET = 'test-secret';
 process.env.TEACHER_INVITE_CODE = 'teacher-test-invite';
 process.env.JUDGE_INVITE_CODE = 'judge-test-invite';
 process.env.GITEA_BASE_URL = '';
 process.env.GITEA_ADMIN_TOKEN = '';
+
+function repositorySnapshot() {
+  const status = execFileSync('git', ['-C', repoRoot, 'status', '--porcelain=v1'], { encoding: 'utf8' });
+  const files = execFileSync('git', ['-C', repoRoot, 'ls-files', '-z'], { encoding: 'utf8' })
+    .split('\0')
+    .filter(Boolean);
+  const hash = crypto.createHash('sha256');
+  files.forEach((file) => {
+    hash.update(file);
+    const absolute = path.join(repoRoot, file);
+    if (fs.existsSync(absolute)) hash.update(fs.readFileSync(absolute));
+    else hash.update('<missing>');
+  });
+  return { status, hash: hash.digest('hex') };
+}
+
+const initialRepositorySnapshot = repositorySnapshot();
 
 const { fastify, initDatabase } = require('./server');
 const { createAuthHelpers } = require('./src/utils/auth-helpers');
@@ -32,6 +51,7 @@ let ownerToken;
 let memberToken;
 let candidateToken;
 let teacherToken;
+let judgeToken;
 let adminToken;
 let projectId;
 let dbHandle;
@@ -167,10 +187,12 @@ test.before(async () => {
   const member = await register('member@example.com');
   const candidate = await register('candidate@example.com');
   const teacher = await register('teacher@example.com', 'teacher');
+  const judge = await register('judge@example.com', 'judge');
   ownerToken = owner.token;
   memberToken = member.token;
   candidateToken = candidate.token;
   teacherToken = teacher.token;
+  judgeToken = judge.token;
   const adminCreatedAt = new Date().toISOString();
   const adminInfo = dbHandle.run(
     'INSERT INTO users (name, username, email, password_hash, role, created_at) VALUES (?, ?, ?, ?, ?, ?)',
@@ -197,6 +219,7 @@ test.before(async () => {
 
 test.after(async () => {
   await fastify.close();
+  assert.deepEqual(repositorySnapshot(), initialRepositorySnapshot);
   fs.rmSync(tmpRoot, { recursive: true, force: true });
 });
 
@@ -209,7 +232,7 @@ test('health and auth-protected project permissions work', async () => {
   assert.equal(anonymous.statusCode, 401);
 
   const forbidden = await injectJson('GET', `/api/v1/projects/${projectId}`, memberToken);
-  assert.equal(forbidden.statusCode, 403);
+  assert.equal(forbidden.statusCode, 404);
 
   const addMember = await injectJson('POST', `/api/v1/projects/${projectId}/members`, ownerToken, {
     memberIds: [2]
@@ -218,6 +241,23 @@ test('health and auth-protected project permissions work', async () => {
 
   const allowed = await injectJson('GET', `/api/v1/projects/${projectId}`, memberToken);
   assert.equal(allowed.statusCode, 200, allowed.body);
+});
+
+test('judge access requires explicit project assignment and excludes assignments', async () => {
+  const publicProject = await injectJson('GET', `/api/v1/projects/${projectId}`, judgeToken);
+  assert.equal(publicProject.statusCode, 404, publicProject.body);
+
+  const assigned = await injectJson('POST', '/api/v1/projects', ownerToken, {
+    title: '显式分配评审项目',
+    visibility: 'assigned',
+    visibleToRoles: ['judge']
+  });
+  assert.equal(assigned.statusCode, 200, assigned.body);
+  const assignedProjectId = assigned.json().project.id;
+  const judgeProject = await injectJson('GET', `/api/v1/projects/${assignedProjectId}`, judgeToken);
+  assert.equal(judgeProject.statusCode, 200, judgeProject.body);
+  const judgeAssignments = await injectJson('GET', '/api/v1/assignments', judgeToken);
+  assert.equal(judgeAssignments.statusCode, 403, judgeAssignments.body);
 });
 
 test('project create and member endpoints reject invalid payloads', async () => {
@@ -807,6 +847,34 @@ test('assignment routes validate payloads and preserve teacher review flow', asy
   assert.equal(uploadSubmission.json().submission.attachments.length, 1);
   assert.equal(uploadSubmission.json().submission.attachments[0].name, 'solution.py');
   assert.match(uploadSubmission.json().submission.attachments[0].url, /^\/api\/v1\/assignment-attachments\/\d+\/download$/);
+  const assignmentAttachmentId = uploadSubmission.json().submission.attachments[0].id;
+  assert.equal((await fastify.inject(`/api/v1/assignment-attachments/${assignmentAttachmentId}/download`)).statusCode, 404);
+  const ownerDownload = await fastify.inject({
+    method: 'GET',
+    url: `/api/v1/assignment-attachments/${assignmentAttachmentId}/download`,
+    headers: { authorization: `Bearer ${ownerToken}` }
+  });
+  assert.equal(ownerDownload.statusCode, 200, ownerDownload.body);
+  assert.equal(ownerDownload.body, 'print("hello assignment")\n');
+  assert.match(ownerDownload.headers['content-disposition'] || '', /^attachment;/);
+  assert.equal(ownerDownload.headers['x-content-type-options'], 'nosniff');
+  assert.equal((await fastify.inject({
+    method: 'GET',
+    url: `/api/v1/assignment-attachments/${assignmentAttachmentId}/download`,
+    headers: { authorization: `Bearer ${candidateToken}` }
+  })).statusCode, 404);
+
+  const svgUpload = multipartFilePayload(
+    { content: '拒绝 SVG' },
+    { fieldName: 'files', filename: 'payload.svg', contentType: 'image/svg+xml', content: '<svg><script>alert(1)</script></svg>' }
+  );
+  const rejectedSvg = await fastify.inject({
+    method: 'POST',
+    url: `/api/v1/assignments/${assignmentId}/submissions`,
+    headers: { ...svgUpload.headers, authorization: `Bearer ${ownerToken}` },
+    payload: svgUpload.body
+  });
+  assert.equal(rejectedSvg.statusCode, 400, rejectedSvg.body);
 
   const invalidReview = await injectJson('POST', `/api/v1/assignments/${assignmentId}/submissions/${createSubmission.json().submission.id}/review`, teacherToken, {
     status: 'needs_changes',
@@ -1339,10 +1407,10 @@ test('restricted courses are visible only to allowed students and linked teacher
   assert.equal(candidateList.json().courses.some(item => item.id === courseId), false);
 
   const anonymousDetail = await fastify.inject(`/api/v1/courses/${courseId}`);
-  assert.equal(anonymousDetail.statusCode, 401, anonymousDetail.body);
+  assert.equal(anonymousDetail.statusCode, 404, anonymousDetail.body);
 
   const candidateDetail = await injectJson('GET', `/api/v1/courses/${courseId}`, candidateToken);
-  assert.equal(candidateDetail.statusCode, 403, candidateDetail.body);
+  assert.equal(candidateDetail.statusCode, 404, candidateDetail.body);
 
   dbHandle.run(
     `INSERT OR IGNORE INTO teacher_student_links (teacher_id, student_id, created_at, updated_at)
@@ -1365,7 +1433,7 @@ test('restricted courses are visible only to allowed students and linked teacher
   assert.equal(ownerAssignments.json().assignments.some(item => item.title === '受限课程作业'), true);
 
   const candidateAssignments = await injectJson('GET', `/api/v1/assignments?courseId=${courseId}`, candidateToken);
-  assert.equal(candidateAssignments.statusCode, 403, candidateAssignments.body);
+  assert.equal(candidateAssignments.statusCode, 404, candidateAssignments.body);
 });
 
 test('restricted project topics are hidden from public and unassigned teachers', async () => {
@@ -1450,10 +1518,10 @@ test('restricted projects are removed from unassigned teacher project and review
   const restrictedProjectId = created.json().project.id;
 
   const candidateDetail = await injectJson('GET', `/api/v1/projects/${restrictedProjectId}`, candidateToken);
-  assert.equal(candidateDetail.statusCode, 403, candidateDetail.body);
+  assert.equal(candidateDetail.statusCode, 404, candidateDetail.body);
 
   const otherTeacherDetail = await injectJson('GET', `/api/v1/projects/${restrictedProjectId}`, otherTeacher.token);
-  assert.equal(otherTeacherDetail.statusCode, 403, otherTeacherDetail.body);
+  assert.equal(otherTeacherDetail.statusCode, 404, otherTeacherDetail.body);
 
   const otherTeacherQueue = await injectJson('GET', '/api/v1/teacher/project-review-queue', otherTeacher.token);
   assert.equal(otherTeacherQueue.statusCode, 200, otherTeacherQueue.body);

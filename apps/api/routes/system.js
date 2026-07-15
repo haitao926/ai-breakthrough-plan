@@ -269,7 +269,7 @@ function registerSystemRoutes(fastify, deps) {
     const rows = db.all(
       `SELECT id
        FROM users
-       WHERE id IN (${placeholders}) AND role IN ('teacher', 'judge')`,
+       WHERE id IN (${placeholders}) AND role = 'teacher'`,
       ids
     );
     const validIds = rows.map((row) => Number(row.id)).filter((id) => Number.isInteger(id) && id > 0);

@@ -20,19 +20,38 @@ module.exports.up = function up(db, { queryAll }) {
     'SELECT id, attachments, submitted_at, updated_at FROM assignment_submissions WHERE attachments IS NOT NULL AND TRIM(attachments) != ?',
     ['']
   );
+  let sourceRows = 0;
+  let sourceItems = 0;
   let migrated = 0;
+  let duplicates = 0;
+  let invalidJson = 0;
+  let invalidShape = 0;
+  let invalidStorageKey = 0;
   rows.forEach((row) => {
+    sourceRows += 1;
     let parsed;
     try {
       parsed = JSON.parse(row.attachments);
     } catch (_err) {
-      parsed = [];
+      invalidJson += 1;
+      return;
     }
-    if (!Array.isArray(parsed)) return;
+    if (!Array.isArray(parsed)) {
+      invalidShape += 1;
+      return;
+    }
     parsed.forEach((item, index) => {
+      sourceItems += 1;
       const source = typeof item === 'string' ? { path: item } : item;
+      if (!source || typeof source !== 'object') {
+        invalidShape += 1;
+        return;
+      }
       const storageKey = String(source?.path || '').trim().replace(/\\/g, '/');
-      if (!storageKey) return;
+      if (!storageKey || storageKey.startsWith('/') || storageKey.split('/').some(part => part === '..' || part === '.')) {
+        invalidStorageKey += 1;
+        return;
+      }
       const originalName = String(source?.name || storageKey.split('/').pop() || '附件').trim();
       const fileSize = Number(source?.size);
       const result = db.prepare(
@@ -48,11 +67,17 @@ module.exports.up = function up(db, { queryAll }) {
         index,
         row.updated_at || row.submitted_at || new Date().toISOString()
       );
-      migrated += result.changes;
+      if (result.changes) migrated += 1;
+      else duplicates += 1;
     });
   });
 
   // Keep this value in process output only; the JSON column remains for one
-  // compatibility cycle so an older binary can still read submissions.
-  if (migrated > 0) process.stdout.write(`[migration 009] migrated ${migrated} assignment attachments\n`);
+  // compatibility cycle so an older binary can still read submissions. The
+  // reconciliation counters make malformed legacy data visible before launch.
+  process.stdout.write(
+    `[migration 009] source_rows=${sourceRows} source_items=${sourceItems} migrated=${migrated} `
+    + `duplicates=${duplicates} invalid_json=${invalidJson} invalid_shape=${invalidShape} `
+    + `invalid_storage_key=${invalidStorageKey}\n`
+  );
 };

@@ -44,7 +44,7 @@ function ensureLookupIndex(db, indexName, tableName, columns, where = '') {
 function applyMigrations(db) {
   if (!fs.existsSync(MIGRATIONS_DIR)) return;
   const files = fs.readdirSync(MIGRATIONS_DIR)
-    .filter(file => file.endsWith('.sql') || file.endsWith('.js'))
+    .filter(file => /^\d+_[A-Za-z0-9_-]+\.(?:sql|js)$/.test(file))
     .sort((a, b) => a.localeCompare(b));
   if (!files.length) return;
 

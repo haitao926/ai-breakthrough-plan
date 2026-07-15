@@ -52,3 +52,27 @@ test('file helpers sanitize names, validate types, and build csv lines', async (
 
   fs.rmSync(tmpRoot, { recursive: true, force: true });
 });
+
+test('file helpers reject SVG masquerading as a raster image and accept real PNG signatures', () => {
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'api-file-signature-'));
+  const svgPath = path.join(tmpRoot, 'fake.png');
+  const pngPath = path.join(tmpRoot, 'real.png');
+  fs.writeFileSync(svgPath, '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+  fs.writeFileSync(pngPath, Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  const helpers = createFileHelpers({
+    fs,
+    path,
+    os,
+    pump: async () => {},
+    ensureDir: (dir) => fs.mkdirSync(dir, { recursive: true }),
+    uploadDir: path.join(tmpRoot, 'uploads'),
+    uploadMaxBytes: 1024,
+    uploadMaxMb: 1,
+    allowedExtensions: new Set(['.png']),
+    allowedMimeTypes: new Set(['image/png']),
+    extensionMimeMap: { '.png': ['image/png'] }
+  });
+  assert.equal(helpers.validateFileSignature(svgPath, 'fake.png', 'image/png'), '不支持 SVG 文件');
+  assert.equal(helpers.validateFileSignature(pngPath, 'real.png', 'image/png'), null);
+  fs.rmSync(tmpRoot, { recursive: true, force: true });
+});

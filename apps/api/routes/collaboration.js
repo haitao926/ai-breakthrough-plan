@@ -377,7 +377,7 @@ function registerCollaborationRoutes(fastify, deps) {
   });
 
   fastify.get(`${API_PREFIX}/submissions/:id/scores`, async (request, reply) => {
-    if (!requireRole(request, reply, ['student', 'teacher', 'judge'])) return;
+    if (!requireRole(request, reply, ['student', 'teacher', 'judge', 'admin'])) return;
     const submissionId = parseProjectId(request.params.id);
     if (!submissionId) {
       reply.code(400);
@@ -604,7 +604,7 @@ function registerCollaborationRoutes(fastify, deps) {
       body: commentSchema
     }
   }, async (request, reply) => {
-    if (!requireRole(request, reply, ['student', 'teacher', 'judge'])) return;
+    if (!requireRole(request, reply, ['student', 'admin'])) return;
     const projectId = parseProjectId(request.params.id);
     if (!projectId) {
       reply.code(400);
@@ -615,7 +615,7 @@ function registerCollaborationRoutes(fastify, deps) {
       reply.code(404);
       return { error: '项目不存在' };
     }
-    if (!requireProjectAccess(request, reply, project, 'read')) return;
+    if (!requireProjectAccess(request, reply, project, 'write')) return;
 
     const content = String(request.body?.content || '').trim();
     if (!content) {
@@ -803,6 +803,8 @@ function registerCollaborationRoutes(fastify, deps) {
     const mimeType = (EXTENSION_MIME_MAP[ext] && EXTENSION_MIME_MAP[ext][0]) || 'text/csv';
     reply.header('Content-Type', mimeType);
     reply.header('Content-Disposition', `attachment; filename="${encodeURIComponent(row.original_name)}"`);
+    reply.header('X-Content-Type-Options', 'nosniff');
+    reply.header('Cache-Control', 'private, no-store');
     logAudit('assessment.download', request, { fileId });
     return reply.send(fs.createReadStream(absolutePath));
   });
@@ -823,9 +825,11 @@ function registerCollaborationRoutes(fastify, deps) {
       reply.code(404);
       return { error: '文件不存在' };
     }
-    const absolutePath = path.join(ASSESSMENT_DIR, row.file_path);
+    const absolutePath = typeof resolveUnder === 'function'
+      ? resolveUnder(ASSESSMENT_DIR, row.file_path)
+      : path.resolve(ASSESSMENT_DIR, row.file_path);
     try {
-      if (absolutePath.startsWith(ASSESSMENT_DIR) && fs.existsSync(absolutePath)) {
+      if (absolutePath && fs.existsSync(absolutePath)) {
         fs.unlinkSync(absolutePath);
       }
     } catch (err) {

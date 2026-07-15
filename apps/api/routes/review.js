@@ -79,8 +79,8 @@ function registerReviewRoutes(fastify, deps) {
       return { error: '项目不存在' };
     }
     if (typeof canReadProject === 'function' && !canReadProject(request.user, dossier.project)) {
-      reply.code(403);
-      return { error: '无权限访问该项目' };
+      reply.code(404);
+      return { error: '项目不存在' };
     }
     return dossier;
   });
@@ -102,8 +102,8 @@ function registerReviewRoutes(fastify, deps) {
       return { error: '项目不存在' };
     }
     if (typeof canReadProject === 'function' && !canReadProject(request.user, dossier.project)) {
-      reply.code(403);
-      return { error: '无权限访问该项目' };
+      reply.code(404);
+      return { error: '项目不存在' };
     }
     return dossier;
   });
@@ -117,7 +117,7 @@ function registerReviewRoutes(fastify, deps) {
     const { conditions, params } = buildProjectFilters(request.query);
     let sql = 'SELECT * FROM projects WHERE deleted_at IS NULL';
     if (conditions.length) {
-      sql += ` WHERE ${conditions.join(' AND ')}`;
+      sql += ` AND ${conditions.join(' AND ')}`;
     }
     sql += ' ORDER BY updated_at DESC';
 

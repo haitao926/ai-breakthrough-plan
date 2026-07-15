@@ -121,8 +121,8 @@ function registerCourseRoutes(fastify, deps) {
 
   function requireCourseRead(request, reply, course) {
     if (canReadCourse(request.user, course)) return true;
-    reply.code(request.user ? 403 : 401);
-    reply.send({ error: request.user ? '无权限访问该课程' : '请登录后访问该课程' });
+    reply.code(404);
+    reply.send({ error: '课程不存在' });
     return false;
   }
 
