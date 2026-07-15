@@ -10,11 +10,13 @@ function registerReviewRoutes(fastify, deps) {
     buildProjectReviewDossier,
     projectReviewRepository,
     showcaseRepository,
+    canReadProject,
     toCsvLine,
     sanitizeName,
     appendFileSafe,
     streamZip,
-    logAudit
+    logAudit,
+    resolveUnder
   } = deps;
 
   const projectFiltersQuerySchema = {
@@ -36,13 +38,19 @@ function registerReviewRoutes(fastify, deps) {
     }
   };
 
+  function filterReadableProjects(projects, user) {
+    return typeof canReadProject === 'function'
+      ? projects.filter(project => canReadProject(user, project))
+      : projects;
+  }
+
   fastify.get(`${API_PREFIX}/admin/project-review-queue`, {
     schema: {
       querystring: projectFiltersQuerySchema
     }
   }, async (request, reply) => {
     if (!requireRole(request, reply, ['teacher', 'judge'])) return;
-    return { projects: projectReviewRepository.listQueue(request.query || {}) };
+    return { projects: projectReviewRepository.listQueue(request.query || {}, request.user) };
   });
 
   fastify.get(`${API_PREFIX}/teacher/project-review-queue`, {
@@ -51,7 +59,7 @@ function registerReviewRoutes(fastify, deps) {
     }
   }, async (request, reply) => {
     if (!requireRole(request, reply, ['teacher', 'judge'])) return;
-    return { projects: projectReviewRepository.listQueue(request.query || {}) };
+    return { projects: projectReviewRepository.listQueue(request.query || {}, request.user) };
   });
 
   fastify.get(`${API_PREFIX}/admin/projects/:id/review-dossier`, {
@@ -69,6 +77,10 @@ function registerReviewRoutes(fastify, deps) {
     if (!dossier) {
       reply.code(404);
       return { error: '项目不存在' };
+    }
+    if (typeof canReadProject === 'function' && !canReadProject(request.user, dossier.project)) {
+      reply.code(403);
+      return { error: '无权限访问该项目' };
     }
     return dossier;
   });
@@ -89,6 +101,10 @@ function registerReviewRoutes(fastify, deps) {
       reply.code(404);
       return { error: '项目不存在' };
     }
+    if (typeof canReadProject === 'function' && !canReadProject(request.user, dossier.project)) {
+      reply.code(403);
+      return { error: '无权限访问该项目' };
+    }
     return dossier;
   });
 
@@ -99,13 +115,13 @@ function registerReviewRoutes(fastify, deps) {
   }, async (request, reply) => {
     if (!requireRole(request, reply, ['teacher'])) return;
     const { conditions, params } = buildProjectFilters(request.query);
-    let sql = 'SELECT id, title, class_name, team_members, summary, status, created_at, updated_at FROM projects';
+    let sql = 'SELECT * FROM projects WHERE deleted_at IS NULL';
     if (conditions.length) {
       sql += ` WHERE ${conditions.join(' AND ')}`;
     }
     sql += ' ORDER BY updated_at DESC';
 
-    const rows = db.all(sql, params);
+    const rows = filterReadableProjects(db.all(sql, params), request.user);
     const header = [
       '项目ID',
       '项目名称',
@@ -155,15 +171,30 @@ function registerReviewRoutes(fastify, deps) {
     }
     sql += ' ORDER BY s.project_id, s.created_at DESC';
     const rows = db.all(sql, params);
-    logAudit('export.attachments.zip', request, { total: rows.length, filters: request.query || {} });
+    const projectRows = filterReadableProjects(
+      db.all(
+        `SELECT p.* FROM projects p WHERE p.deleted_at IS NULL${conditions.length ? ` AND ${conditions.join(' AND ')}` : ''}`,
+        params
+      ),
+      request.user
+    );
+    const readableProjectIds = new Set(projectRows.map(project => Number(project.id)));
+    const readableRows = rows.filter(row => readableProjectIds.has(Number(row.project_id)));
+    logAudit('export.attachments.zip', request, { total: readableRows.length, filters: request.query || {} });
 
     streamZip(reply, 'attachments.zip', (archive) => {
       const missing = [];
-      rows.forEach(row => {
+      readableRows.forEach(row => {
         const safeType = sanitizeName(row.submission_type || 'submission');
         const safeName = sanitizeName(row.file_name || 'file');
         const archivePath = `project-${row.project_id}/${safeType}/${row.submission_id}_${safeName}`;
-        const absolutePath = path.join(UPLOAD_DIR, row.file_path);
+        const absolutePath = typeof resolveUnder === 'function'
+          ? resolveUnder(UPLOAD_DIR, row.file_path)
+          : path.resolve(UPLOAD_DIR, row.file_path);
+        if (!absolutePath) {
+          missing.push(archivePath);
+          return;
+        }
         appendFileSafe(archive, absolutePath, archivePath, missing);
       });
       if (missing.length) {
@@ -177,7 +208,7 @@ function registerReviewRoutes(fastify, deps) {
       querystring: projectFiltersQuerySchema
     }
   }, async (request) => {
-    return { items: showcaseRepository.list(request.query || {}) };
+    return { items: showcaseRepository.list(request.query || {}, request.user || null) };
   });
 }
 

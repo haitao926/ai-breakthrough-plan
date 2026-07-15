@@ -22,7 +22,11 @@ function registerProjectRoutes(fastify, deps) {
       teamMembers: { type: 'string', maxLength: 1000 },
       className: { type: 'string', maxLength: 80 },
       giteaRepoUrl: { type: 'string', maxLength: 500 },
-      memberIds: { type: 'array', items: { type: 'integer' }, maxItems: 20 }
+      memberIds: { type: 'array', items: { type: 'integer' }, maxItems: 20 },
+      visibility: { type: 'string', maxLength: 40 },
+      visibleToRoles: { type: 'array', items: { type: 'string', maxLength: 40 }, maxItems: 20 },
+      visibleToUserIds: { type: 'array', items: { type: 'integer' }, maxItems: 200 },
+      visibleToClassNames: { type: 'array', items: { type: 'string', maxLength: 120 }, maxItems: 100 }
     }
   };
 
@@ -40,6 +44,14 @@ function registerProjectRoutes(fastify, deps) {
     additionalProperties: true,
     properties: {
       memberIds: { type: 'array', items: { type: 'integer' }, minItems: 1, maxItems: 20 }
+    }
+  };
+
+  const deleteProjectSchema = {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      reason: { type: 'string', maxLength: 500 }
     }
   };
 
@@ -83,7 +95,11 @@ function registerProjectRoutes(fastify, deps) {
       className,
       giteaRepoUrl,
       memberIds,
-      createdBy
+      createdBy,
+      visibility: payload.visibility,
+      visibleToRoles: payload.visibleToRoles ?? payload.visible_to_roles,
+      visibleToUserIds: payload.visibleToUserIds ?? payload.visible_to_user_ids,
+      visibleToClassNames: payload.visibleToClassNames ?? payload.visible_to_class_names
     });
 
     const project = getProject(projectId);
@@ -146,6 +162,76 @@ function registerProjectRoutes(fastify, deps) {
     projectRepository.addMembers(projectId, memberIds, 'member');
     logAudit('project.members.add', request, { projectId, memberIds });
     return { success: true };
+  });
+
+  fastify.delete(`${API_PREFIX}/projects/:id`, {
+    schema: {
+      params: projectIdSchema,
+      body: deleteProjectSchema
+    }
+  }, async (request, reply) => {
+    if (!requireRole(request, reply, ['student', 'teacher'])) return;
+    const projectRepository = getProjectRepository();
+    const projectId = parseProjectId(request.params.id);
+    if (!projectId) {
+      reply.code(400);
+      return { error: '项目ID无效' };
+    }
+
+    const project = getProject(projectId);
+    if (!project) {
+      reply.code(404);
+      return { error: '项目不存在' };
+    }
+
+    const isAdmin = request.user?.role === 'admin';
+    const isOwner = Number(project.created_by) === Number(request.user?.id);
+    if (!isAdmin && !isOwner) {
+      reply.code(403);
+      return { error: '只有项目创建者或管理员可以删除项目' };
+    }
+    if (project.status !== 'submitted' && project.status !== 'draft') {
+      reply.code(403);
+      return { error: '只能删除初始待立项的项目' };
+    }
+
+    const deleted = projectRepository.softDeleteProject(
+      projectId,
+      request.user.id,
+      request.body?.reason || ''
+    );
+    if (!deleted) {
+      reply.code(404);
+      return { error: '项目不存在' };
+    }
+    logAudit('project.delete', request, { projectId });
+    return { success: true };
+  });
+
+  fastify.post(`${API_PREFIX}/admin/projects/:id/restore`, {
+    schema: {
+      params: projectIdSchema
+    }
+  }, async (request, reply) => {
+    if (!requireRole(request, reply, ['admin'])) return;
+    const projectRepository = getProjectRepository();
+    const projectId = parseProjectId(request.params.id);
+    if (!projectId) {
+      reply.code(400);
+      return { error: '项目ID无效' };
+    }
+    const project = projectRepository.getByIdIncludingDeleted(projectId);
+    if (!project) {
+      reply.code(404);
+      return { error: '项目不存在' };
+    }
+    if (!project.deleted_at) {
+      reply.code(409);
+      return { error: '项目未删除' };
+    }
+    projectRepository.restoreProject(projectId);
+    logAudit('project.restore', request, { projectId });
+    return { success: true, project: getProject(projectId) };
   });
 }
 

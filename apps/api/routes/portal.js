@@ -26,10 +26,18 @@ function registerPortalRoutes(fastify, deps) {
     mapCompetitionReminder,
     mapProjectTopic,
     normalizeProjectTopicPayload,
+    canReadProjectTopic,
     logMatchEvent,
     recomputeCompetitionMatches,
     recomputeProjectTopicMatches
   } = deps;
+
+  function canEditProjectTopic(user, topic) {
+    if (!user || !topic) return false;
+    if (String(user.role || '').toLowerCase() === 'admin') return true;
+    return String(user.role || '').toLowerCase() === 'teacher'
+      && Number(topic.created_by || topic.createdBy || 0) === Number(user.id || 0);
+  }
 
   const slugParamsSchema = {
     type: 'object',
@@ -1153,14 +1161,18 @@ function registerPortalRoutes(fastify, deps) {
   fastify.get(`${API_PREFIX}/admin/project-topics`, async (request, reply) => {
     if (!requireRole(request, reply, ['teacher', 'judge'])) return;
     return {
-      topics: db.all('SELECT * FROM project_topics ORDER BY updated_at DESC').map(mapProjectTopic)
+      topics: db.all('SELECT * FROM project_topics ORDER BY updated_at DESC')
+        .map(mapProjectTopic)
+        .filter(topic => canReadProjectTopic(request.user, topic))
     };
   });
 
   fastify.get(`${API_PREFIX}/teacher/project-topics`, async (request, reply) => {
     if (!requireRole(request, reply, ['teacher', 'judge'])) return;
     return {
-      topics: db.all('SELECT * FROM project_topics ORDER BY updated_at DESC').map(mapProjectTopic)
+      topics: db.all('SELECT * FROM project_topics ORDER BY updated_at DESC')
+        .map(mapProjectTopic)
+        .filter(topic => canReadProjectTopic(request.user, topic))
     };
   });
 
@@ -1191,6 +1203,10 @@ function registerPortalRoutes(fastify, deps) {
           deliverables: { type: 'string', maxLength: 2000 },
           relatedCourseId: { type: 'string', maxLength: 120 },
           relatedCompetitionSlug: { type: 'string', maxLength: 120 },
+          visibility: { type: 'string', maxLength: 40 },
+          visibleToRoles: { type: 'array', items: { type: 'string', maxLength: 40 } },
+          visibleToUserIds: { type: 'array', items: { type: 'integer' } },
+          visibleToClassNames: { type: 'array', items: { type: 'string', maxLength: 120 } },
           status: { type: 'string', maxLength: 80 }
         },
         additionalProperties: true
@@ -1205,8 +1221,8 @@ function registerPortalRoutes(fastify, deps) {
     }
     const createdAt = now();
     const info = db.run(
-      `INSERT INTO project_topics (title, description, background, goals, difficulty, tags, required_skills, estimated_hours, suggested_team_size, deliverables, related_course_id, related_competition_slug, status, created_by, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO project_topics (title, description, background, goals, difficulty, tags, required_skills, estimated_hours, suggested_team_size, deliverables, related_course_id, related_competition_slug, visibility, visible_to_roles, visible_to_user_ids, visible_to_class_names, status, created_by, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         payload.title,
         payload.description,
@@ -1220,6 +1236,10 @@ function registerPortalRoutes(fastify, deps) {
         payload.deliverables,
         payload.relatedCourseId,
         payload.relatedCompetitionSlug,
+        payload.visibility,
+        payload.visibleToRoles,
+        payload.visibleToUserIds,
+        payload.visibleToClassNames,
         payload.status,
         request.user.id,
         createdAt,
@@ -1272,6 +1292,10 @@ function registerPortalRoutes(fastify, deps) {
           deliverables: { type: 'string', maxLength: 2000 },
           relatedCourseId: { type: 'string', maxLength: 120 },
           relatedCompetitionSlug: { type: 'string', maxLength: 120 },
+          visibility: { type: 'string', maxLength: 40 },
+          visibleToRoles: { type: 'array', items: { type: 'string', maxLength: 40 } },
+          visibleToUserIds: { type: 'array', items: { type: 'integer' } },
+          visibleToClassNames: { type: 'array', items: { type: 'string', maxLength: 120 } },
           status: { type: 'string', maxLength: 80 }
         },
         additionalProperties: true
@@ -1286,8 +1310,8 @@ function registerPortalRoutes(fastify, deps) {
     }
     const createdAt = now();
     const info = db.run(
-      `INSERT INTO project_topics (title, description, background, goals, difficulty, tags, required_skills, estimated_hours, suggested_team_size, deliverables, related_course_id, related_competition_slug, status, created_by, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO project_topics (title, description, background, goals, difficulty, tags, required_skills, estimated_hours, suggested_team_size, deliverables, related_course_id, related_competition_slug, visibility, visible_to_roles, visible_to_user_ids, visible_to_class_names, status, created_by, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         payload.title,
         payload.description,
@@ -1301,6 +1325,10 @@ function registerPortalRoutes(fastify, deps) {
         payload.deliverables,
         payload.relatedCourseId,
         payload.relatedCompetitionSlug,
+        payload.visibility,
+        payload.visibleToRoles,
+        payload.visibleToUserIds,
+        payload.visibleToClassNames,
         payload.status,
         request.user.id,
         createdAt,
@@ -1353,6 +1381,10 @@ function registerPortalRoutes(fastify, deps) {
           deliverables: { type: 'string', maxLength: 2000 },
           relatedCourseId: { type: 'string', maxLength: 120 },
           relatedCompetitionSlug: { type: 'string', maxLength: 120 },
+          visibility: { type: 'string', maxLength: 40 },
+          visibleToRoles: { type: 'array', items: { type: 'string', maxLength: 40 } },
+          visibleToUserIds: { type: 'array', items: { type: 'integer' } },
+          visibleToClassNames: { type: 'array', items: { type: 'string', maxLength: 120 } },
           status: { type: 'string', maxLength: 80 }
         },
         additionalProperties: true
@@ -1370,6 +1402,10 @@ function registerPortalRoutes(fastify, deps) {
       reply.code(404);
       return { error: '项目题目不存在' };
     }
+    if (!canEditProjectTopic(request.user, existing)) {
+      reply.code(403);
+      return { error: '无权限编辑该项目题目' };
+    }
     const payload = normalizeProjectTopicPayload(request.body || {}, existing);
     if (!payload.title) {
       reply.code(400);
@@ -1377,7 +1413,7 @@ function registerPortalRoutes(fastify, deps) {
     }
     db.run(
       `UPDATE project_topics
-       SET title = ?, description = ?, background = ?, goals = ?, difficulty = ?, tags = ?, required_skills = ?, estimated_hours = ?, suggested_team_size = ?, deliverables = ?, related_course_id = ?, related_competition_slug = ?, status = ?, updated_at = ?
+       SET title = ?, description = ?, background = ?, goals = ?, difficulty = ?, tags = ?, required_skills = ?, estimated_hours = ?, suggested_team_size = ?, deliverables = ?, related_course_id = ?, related_competition_slug = ?, visibility = ?, visible_to_roles = ?, visible_to_user_ids = ?, visible_to_class_names = ?, status = ?, updated_at = ?
        WHERE id = ?`,
       [
         payload.title,
@@ -1392,6 +1428,10 @@ function registerPortalRoutes(fastify, deps) {
         payload.deliverables,
         payload.relatedCourseId,
         payload.relatedCompetitionSlug,
+        payload.visibility,
+        payload.visibleToRoles,
+        payload.visibleToUserIds,
+        payload.visibleToClassNames,
         payload.status,
         now(),
         topicId
@@ -1442,6 +1482,10 @@ function registerPortalRoutes(fastify, deps) {
           deliverables: { type: 'string', maxLength: 2000 },
           relatedCourseId: { type: 'string', maxLength: 120 },
           relatedCompetitionSlug: { type: 'string', maxLength: 120 },
+          visibility: { type: 'string', maxLength: 40 },
+          visibleToRoles: { type: 'array', items: { type: 'string', maxLength: 40 } },
+          visibleToUserIds: { type: 'array', items: { type: 'integer' } },
+          visibleToClassNames: { type: 'array', items: { type: 'string', maxLength: 120 } },
           status: { type: 'string', maxLength: 80 }
         },
         additionalProperties: true
@@ -1459,6 +1503,10 @@ function registerPortalRoutes(fastify, deps) {
       reply.code(404);
       return { error: '项目题目不存在' };
     }
+    if (!canEditProjectTopic(request.user, existing)) {
+      reply.code(403);
+      return { error: '无权限编辑该项目题目' };
+    }
     const payload = normalizeProjectTopicPayload(request.body || {}, existing);
     if (!payload.title) {
       reply.code(400);
@@ -1466,7 +1514,7 @@ function registerPortalRoutes(fastify, deps) {
     }
     db.run(
       `UPDATE project_topics
-       SET title = ?, description = ?, background = ?, goals = ?, difficulty = ?, tags = ?, required_skills = ?, estimated_hours = ?, suggested_team_size = ?, deliverables = ?, related_course_id = ?, related_competition_slug = ?, status = ?, updated_at = ?
+       SET title = ?, description = ?, background = ?, goals = ?, difficulty = ?, tags = ?, required_skills = ?, estimated_hours = ?, suggested_team_size = ?, deliverables = ?, related_course_id = ?, related_competition_slug = ?, visibility = ?, visible_to_roles = ?, visible_to_user_ids = ?, visible_to_class_names = ?, status = ?, updated_at = ?
        WHERE id = ?`,
       [
         payload.title,
@@ -1481,6 +1529,10 @@ function registerPortalRoutes(fastify, deps) {
         payload.deliverables,
         payload.relatedCourseId,
         payload.relatedCompetitionSlug,
+        payload.visibility,
+        payload.visibleToRoles,
+        payload.visibleToUserIds,
+        payload.visibleToClassNames,
         payload.status,
         now(),
         topicId
@@ -1504,9 +1556,11 @@ function registerPortalRoutes(fastify, deps) {
     return { topic: mapProjectTopic(row) };
   });
 
-  fastify.get(`${API_PREFIX}/project-topics`, async () => {
+  fastify.get(`${API_PREFIX}/project-topics`, async (request) => {
     return {
-      topics: db.all('SELECT * FROM project_topics WHERE status = ? ORDER BY updated_at DESC', ['published']).map(mapProjectTopic)
+      topics: db.all('SELECT * FROM project_topics WHERE status = ? ORDER BY updated_at DESC', ['published'])
+        .map(mapProjectTopic)
+        .filter(topic => canReadProjectTopic(request.user || null, topic))
     };
   });
 }

@@ -21,7 +21,8 @@ function registerCollaborationRoutes(fastify, deps) {
     logAudit,
     collectMultipart,
     cleanupTempFiles,
-    moveTempFiles
+    moveTempFiles,
+    resolveUnder
   } = deps;
 
   const idParamsSchema = {
@@ -184,6 +185,13 @@ function registerCollaborationRoutes(fastify, deps) {
   fastify.post(`${API_PREFIX}/projects/:id/submissions`, {
     schema: {
       params: idParamsSchema
+    },
+    config: {
+      rateLimit: {
+        max: 20,
+        timeWindow: '1 hour',
+        keyGenerator: request => request.user?.id ? `user:${request.user.id}` : request.ip
+      }
     }
   }, async (request, reply) => {
     const projectId = parseProjectId(request.params.id);
@@ -200,6 +208,15 @@ function registerCollaborationRoutes(fastify, deps) {
       reply.code(400);
       return { error: '项目已归档，无法提交' };
     }
+    if (!request.user) {
+      reply.code(401);
+      return { error: '未登录' };
+    }
+    if (!['student', 'teacher'].includes(request.user.role) && request.user.role !== 'admin') {
+      reply.code(403);
+      return { error: '权限不足' };
+    }
+    if (!requireProjectAccess(request, reply, project, 'write')) return;
 
     let fields;
     let tempFiles;
@@ -214,23 +231,6 @@ function registerCollaborationRoutes(fastify, deps) {
     }
 
     const type = String(fields.type || '').trim();
-    if (type !== 'showcase') {
-      if (!request.user) {
-        cleanupTempFiles(tempFiles);
-        reply.code(401);
-        return { error: '未登录' };
-      }
-      if (!['student', 'teacher'].includes(request.user.role)) {
-        cleanupTempFiles(tempFiles);
-        reply.code(403);
-        return { error: '权限不足' };
-      }
-      if (!requireProjectAccess(request, reply, project, 'write')) {
-        cleanupTempFiles(tempFiles);
-        return;
-      }
-    }
-
     if (!SUBMISSION_TYPES.has(type)) {
       cleanupTempFiles(tempFiles);
       reply.code(400);
@@ -240,13 +240,6 @@ function registerCollaborationRoutes(fastify, deps) {
     const title = String(fields.title || '').trim();
     const content = String(fields.content || '').trim();
     let details = safeParseJson(fields.details) || {};
-
-    if (type === 'showcase' && !request.user) {
-      const studentName = String(fields.studentName || '').trim();
-      if (studentName) {
-        details.studentName = studentName;
-      }
-    }
 
     const detailError = validateSubmissionDetails(type, details);
     if (detailError) {
@@ -347,11 +340,18 @@ function registerCollaborationRoutes(fastify, deps) {
       return { error: '反馈状态无效' };
     }
 
-    const submission = db.get('SELECT * FROM submissions WHERE id = ?', [submissionId]);
+    const submission = db.get(
+      `SELECT s.*, p.*
+       FROM submissions s
+       JOIN projects p ON p.id = s.project_id AND p.deleted_at IS NULL
+       WHERE s.id = ?`,
+      [submissionId]
+    );
     if (!submission) {
       reply.code(404);
       return { error: '提交记录不存在' };
     }
+    if (!requireProjectAccess(request, reply, submission, 'supervise')) return;
 
     const reviewedAt = now();
     db.run(
@@ -387,7 +387,7 @@ function registerCollaborationRoutes(fastify, deps) {
     const submission = db.get(
       `SELECT s.id, s.project_id, s.type, p.created_by
        FROM submissions s
-       JOIN projects p ON p.id = s.project_id
+       JOIN projects p ON p.id = s.project_id AND p.deleted_at IS NULL
        WHERE s.id = ?`,
       [submissionId]
     );
@@ -426,11 +426,18 @@ function registerCollaborationRoutes(fastify, deps) {
       return { error: '提交ID无效' };
     }
 
-    const submission = db.get('SELECT id, type FROM submissions WHERE id = ?', [submissionId]);
+    const submission = db.get(
+      `SELECT s.id, s.type, s.project_id, p.*
+       FROM submissions s
+       JOIN projects p ON p.id = s.project_id AND p.deleted_at IS NULL
+       WHERE s.id = ?`,
+      [submissionId]
+    );
     if (!submission) {
       reply.code(404);
       return { error: '提交记录不存在' };
     }
+    if (!requireProjectAccess(request, reply, submission, 'supervise')) return;
 
     const payload = request.body || {};
     const rawScores = payload.scores && typeof payload.scores === 'object' ? payload.scores : {};
@@ -687,6 +694,13 @@ function registerCollaborationRoutes(fastify, deps) {
       response: {
         200: assessmentUploadResponseSchema
       }
+    },
+    config: {
+      rateLimit: {
+        max: 20,
+        timeWindow: '1 hour',
+        keyGenerator: request => request.user?.id ? `user:${request.user.id}` : request.ip
+      }
     }
   }, async (request, reply) => {
     if (!requireRole(request, reply, ['teacher'])) return;
@@ -733,7 +747,9 @@ function registerCollaborationRoutes(fastify, deps) {
       cleanupTempFiles(tempFiles || []);
       try {
         fs.unlinkSync(finalPath);
-      } catch (err) {}
+      } catch (err) {
+        if (err.code !== 'ENOENT') fastify.log.debug({ err }, 'assessment cleanup failed');
+      }
       reply.code(400);
       return { error: '标题长度不能超过 200 个字符' };
     }
@@ -772,8 +788,10 @@ function registerCollaborationRoutes(fastify, deps) {
       reply.code(404);
       return { error: '文件不存在' };
     }
-    const absolutePath = path.join(ASSESSMENT_DIR, row.file_path);
-    if (!absolutePath.startsWith(ASSESSMENT_DIR)) {
+    const absolutePath = typeof resolveUnder === 'function'
+      ? resolveUnder(ASSESSMENT_DIR, row.file_path)
+      : path.resolve(ASSESSMENT_DIR, row.file_path);
+    if (!absolutePath) {
       reply.code(403);
       return { error: 'Access denied' };
     }

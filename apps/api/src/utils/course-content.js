@@ -14,7 +14,8 @@ function createCourseContentService(options) {
     courseStatuses,
     courseMaterialSections,
     apiPrefix,
-    toUrlPath
+    toUrlPath,
+    sanitizeLessonContent = (value) => value
   } = options;
 
   function normalizeCourseId(value) {
@@ -34,6 +35,14 @@ function createCourseContentService(options) {
       .split('/')
       .filter(part => part && part !== '.' && part !== '..')
       .join('/');
+  }
+
+  function resolveUnder(root, ...segments) {
+    const absoluteRoot = path.resolve(root);
+    const target = path.resolve(absoluteRoot, ...segments);
+    const relative = path.relative(absoluteRoot, target);
+    if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) return null;
+    return target;
   }
 
   function courseFilePath(courseId) {
@@ -60,6 +69,29 @@ function createCourseContentService(options) {
     );
   }
 
+  function normalizeVisibility(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    return ['public', 'assigned', 'private'].includes(raw) ? raw : 'public';
+  }
+
+  function normalizeStringList(value) {
+    if (Array.isArray(value)) {
+      return Array.from(new Set(value.map(item => String(item || '').trim()).filter(Boolean)));
+    }
+    return String(value || '')
+      .split(/[,\n，、]+/)
+      .map(item => item.trim())
+      .filter(Boolean)
+      .filter((item, index, list) => list.indexOf(item) === index);
+  }
+
+  function normalizeIdList(value) {
+    return normalizeStringList(value)
+      .map(item => Number.parseInt(item, 10))
+      .filter(item => Number.isInteger(item) && item > 0)
+      .filter((item, index, list) => list.indexOf(item) === index);
+  }
+
   function loadCourseCatalog() {
     const catalog = readJsonFile(courseCatalogPath, []);
     if (!Array.isArray(catalog)) return [];
@@ -84,7 +116,11 @@ function createCourseContentService(options) {
       tags: Array.isArray(course.tags) ? course.tags : [],
       skillOutcomes: Array.isArray(course.skillOutcomes) ? course.skillOutcomes : [],
       difficultyPath: course.difficultyPath || '',
-      createdBy: course.createdBy || course.created_by || null
+      createdBy: course.createdBy || course.created_by || null,
+      visibility: normalizeVisibility(course.visibility),
+      visibleToRoles: normalizeStringList(course.visibleToRoles || course.visible_to_roles),
+      visibleToUserIds: normalizeIdList(course.visibleToUserIds || course.visible_to_user_ids),
+      visibleToClassNames: normalizeStringList(course.visibleToClassNames || course.visible_to_class_names)
     };
   }
 
@@ -103,13 +139,17 @@ function createCourseContentService(options) {
       skillOutcomes: Array.isArray(course.skillOutcomes) ? course.skillOutcomes : [],
       difficultyPath: String(course.difficultyPath || '').trim(),
       materials: Array.isArray(course.materials) ? course.materials : [],
-      createdBy: course.createdBy || course.created_by || null
+      createdBy: course.createdBy || course.created_by || null,
+      visibility: normalizeVisibility(course.visibility),
+      visibleToRoles: normalizeStringList(course.visibleToRoles || course.visible_to_roles),
+      visibleToUserIds: normalizeIdList(course.visibleToUserIds || course.visible_to_user_ids),
+      visibleToClassNames: normalizeStringList(course.visibleToClassNames || course.visible_to_class_names)
     };
   }
 
   function listCourseLessons(course) {
-    const lessonsDir = path.join(materialsDir, course.materialsRoot, 'lessons');
-    if (!lessonsDir.startsWith(materialsDir) || !fs.existsSync(lessonsDir)) {
+    const lessonsDir = resolveUnder(materialsDir, course.materialsRoot, 'lessons');
+    if (!lessonsDir || !fs.existsSync(lessonsDir)) {
       return [];
     }
 
@@ -118,7 +158,7 @@ function createCourseContentService(options) {
       .sort((a, b) => lessonSortValue(a) - lessonSortValue(b))
       .map(fileName => {
         const lessonId = fileName.replace(/\.json$/i, '');
-        const data = readJsonFile(path.join(lessonsDir, fileName), {});
+        const data = sanitizeLessonContent(readJsonFile(resolveUnder(lessonsDir, fileName) || '', {}));
         return {
           id: lessonId,
           courseId: course.id,
@@ -174,7 +214,7 @@ function createCourseContentService(options) {
       .map((item, index) => {
         const relativePath = normalizeRelativePath(item.path || '');
         const absolutePath = relativePath
-          ? path.join(materialsDir, course.materialsRoot, relativePath)
+          ? resolveUnder(materialsDir, course.materialsRoot, relativePath)
           : '';
         const exists = absolutePath ? fs.existsSync(absolutePath) : false;
         return {
@@ -229,7 +269,7 @@ function createCourseContentService(options) {
       ? normalizeCourseMaterialList(input.materials, fallbackId)
       : (Array.isArray(existingCourse.materials) ? existingCourse.materials : []);
 
-    return {
+    const course = {
       id: fallbackId,
       title: String(input.title || existingCourse.title || '').trim(),
       direction: courseDirections.has(direction) ? direction : 'foundation',
@@ -249,8 +289,13 @@ function createCourseContentService(options) {
       guidePath: normalizeRelativePath(input.guidePath || existingCourse.guidePath || ''),
       learningObjectives,
       materials,
-      createdBy: input.createdBy || input.created_by || existingCourse.createdBy || existingCourse.created_by || null
+      createdBy: input.createdBy || input.created_by || existingCourse.createdBy || existingCourse.created_by || null,
+      visibility: normalizeVisibility(input.visibility || existingCourse.visibility),
+      visibleToRoles: normalizeStringList(input.visibleToRoles ?? input.visible_to_roles ?? existingCourse.visibleToRoles ?? existingCourse.visible_to_roles),
+      visibleToUserIds: normalizeIdList(input.visibleToUserIds ?? input.visible_to_user_ids ?? existingCourse.visibleToUserIds ?? existingCourse.visible_to_user_ids),
+      visibleToClassNames: normalizeStringList(input.visibleToClassNames ?? input.visible_to_class_names ?? existingCourse.visibleToClassNames ?? existingCourse.visible_to_class_names)
     };
+    return course;
   }
 
   function saveCourseDetail(course) {
@@ -292,7 +337,7 @@ function createCourseContentService(options) {
         }))
         .filter(item => item.title || item.path);
     };
-    return {
+    const lesson = {
       id: String(input.id || existingLesson.id || `${courseId}-${normalizedId}`).trim(),
       project: input.project || existingLesson.project || courseId,
       title: String(input.title || existingLesson.title || normalizedId).trim(),
@@ -313,6 +358,7 @@ function createCourseContentService(options) {
       units: Array.isArray(input.units) ? input.units : (Array.isArray(existingLesson.units) ? existingLesson.units : []),
       phases: Array.isArray(input.phases) ? input.phases : (Array.isArray(existingLesson.phases) ? existingLesson.phases : [])
     };
+    return sanitizeLessonContent(lesson);
   }
 
   return {
@@ -327,6 +373,8 @@ function createCourseContentService(options) {
     normalizeCoursePayload,
     normalizeLessonPayload,
     normalizeRelativePath,
+    normalizeVisibility,
+    resolveUnder,
     saveCourseDetail,
     toCatalogEntry
   };

@@ -7,6 +7,7 @@ function registerProjectOpsRoutes(fastify, deps) {
     requireAuth,
     requireRole,
     requireProjectAccess,
+    canReadProject,
     parseProjectId,
     normalizeToolKey,
     now,
@@ -31,7 +32,8 @@ function registerProjectOpsRoutes(fastify, deps) {
     sanitizeName,
     appendFileSafe,
     streamZip,
-    fastifyLog
+    fastifyLog,
+    resolveUnder
   } = deps;
 
   const projectIdParamsSchema = {
@@ -319,6 +321,7 @@ function registerProjectOpsRoutes(fastify, deps) {
       reply.code(404);
       return { error: '项目不存在' };
     }
+    if (!requireProjectAccess(request, reply, project, 'read')) return;
 
     const rows = db.all(
       `SELECT a.file_name, a.file_path, s.type AS submission_type, s.id AS submission_id
@@ -336,7 +339,13 @@ function registerProjectOpsRoutes(fastify, deps) {
         const safeType = sanitizeName(row.submission_type || 'submission');
         const safeName = sanitizeName(row.file_name || 'file');
         const archivePath = `project-${projectId}/${safeType}/${row.submission_id}_${safeName}`;
-        const absolutePath = path.join(UPLOAD_DIR, row.file_path);
+        const absolutePath = typeof resolveUnder === 'function'
+          ? resolveUnder(UPLOAD_DIR, row.file_path)
+          : path.resolve(UPLOAD_DIR, row.file_path);
+        if (!absolutePath) {
+          missing.push(archivePath);
+          return;
+        }
         appendFileSafe(archive, absolutePath, archivePath, missing);
       });
       if (missing.length) {
@@ -357,6 +366,7 @@ function registerProjectOpsRoutes(fastify, deps) {
       reply.code(404);
       return { error: '项目不存在' };
     }
+    if (!requireProjectAccess(request, reply, detail.project, 'read')) return;
 
     const comments = getProjectComments(projectId);
     const scores = getProjectScores(projectId);
@@ -383,7 +393,13 @@ function registerProjectOpsRoutes(fastify, deps) {
         const safeType = sanitizeName(row.submission_type || 'submission');
         const safeName = sanitizeName(row.file_name || 'file');
         const archivePath = `attachments/${safeType}/${row.submission_id}_${safeName}`;
-        const absolutePath = path.join(UPLOAD_DIR, row.file_path);
+        const absolutePath = typeof resolveUnder === 'function'
+          ? resolveUnder(UPLOAD_DIR, row.file_path)
+          : path.resolve(UPLOAD_DIR, row.file_path);
+        if (!absolutePath) {
+          missing.push(archivePath);
+          return;
+        }
         appendFileSafe(archive, absolutePath, archivePath, missing);
       });
 
@@ -420,6 +436,7 @@ function registerProjectOpsRoutes(fastify, deps) {
       reply.code(404);
       return { error: '项目不存在' };
     }
+    if (!requireProjectAccess(request, reply, project, 'supervise')) return;
     const transitionError = validateStatusTransition(project.status, nextStatus);
     if (transitionError) {
       reply.code(400);
@@ -507,7 +524,7 @@ function registerProjectOpsRoutes(fastify, deps) {
       reply.code(404);
       return { error: '项目不存在' };
     }
-    if (!requireProjectAccess(request, reply, project, 'write')) return;
+    if (!requireProjectAccess(request, reply, project, 'supervise')) return;
     const payload = request.body || {};
     const type = String(payload.type || 'hardware');
     const itemName = String(payload.item_name || '').trim();
@@ -544,6 +561,17 @@ function registerProjectOpsRoutes(fastify, deps) {
       reply.code(400);
       return { error: '状态无效' };
     }
+    const resource = db.get('SELECT * FROM resource_requests WHERE id = ?', [requestId]);
+    if (!resource) {
+      reply.code(404);
+      return { error: '资源申请不存在' };
+    }
+    const project = getProject(resource.project_id);
+    if (!project) {
+      reply.code(404);
+      return { error: '项目不存在' };
+    }
+    if (!requireProjectAccess(request, reply, project, 'supervise')) return;
 
     db.run(
       'UPDATE resource_requests SET status = ?, reply = ?, updated_at = ? WHERE id = ?',
@@ -643,14 +671,18 @@ function registerProjectOpsRoutes(fastify, deps) {
     let sql = `SELECT r.*, u.name AS requester_name, p.title AS project_title
                FROM resource_requests r
                JOIN users u ON u.id = r.requester_id
-               JOIN projects p ON p.id = r.project_id`;
+               JOIN projects p ON p.id = r.project_id AND p.deleted_at IS NULL`;
     const params = [];
     if (status) {
       sql += ' WHERE r.status = ?';
       params.push(status);
     }
     sql += ' ORDER BY r.created_at DESC';
-    return { requests: db.all(sql, params) };
+    return {
+      requests: db.all(sql, params).filter(row => (
+        typeof canReadProject !== 'function' || canReadProject(request.user, getProject(row.project_id))
+      ))
+    };
   });
 
   fastify.get(`${API_PREFIX}/teacher/resources`, async (request, reply) => {
@@ -659,14 +691,18 @@ function registerProjectOpsRoutes(fastify, deps) {
     let sql = `SELECT r.*, u.name AS requester_name, p.title AS project_title
                FROM resource_requests r
                JOIN users u ON u.id = r.requester_id
-               JOIN projects p ON p.id = r.project_id`;
+               JOIN projects p ON p.id = r.project_id AND p.deleted_at IS NULL`;
     const params = [];
     if (status) {
       sql += ' WHERE r.status = ?';
       params.push(status);
     }
     sql += ' ORDER BY r.created_at DESC';
-    return { requests: db.all(sql, params) };
+    return {
+      requests: db.all(sql, params).filter(row => (
+        typeof canReadProject !== 'function' || canReadProject(request.user, getProject(row.project_id))
+      ))
+    };
   });
 
   fastify.get(`${API_PREFIX}/projects/:id/milestones`, async (request, reply) => {

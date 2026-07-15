@@ -2,11 +2,17 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const crypto = require('crypto');
+const NODE_ENV = String(process.env.NODE_ENV || 'development').trim().toLowerCase();
+const TRUST_PROXY_ENV = String(process.env.TRUST_PROXY || '').trim().toLowerCase();
+const TRUST_PROXY = TRUST_PROXY_ENV === 'true'
+  ? true
+  : (/^\d+$/.test(TRUST_PROXY_ENV) ? Number(TRUST_PROXY_ENV) : false);
 const archiver = require('archiver');
 const fastify = require('fastify')({
   logger: true,
   requestTimeout: 30000,
-  connectionTimeout: 10000
+  connectionTimeout: 10000,
+  trustProxy: TRUST_PROXY
 });
 const { pipeline } = require('stream');
 const util = require('util');
@@ -31,13 +37,20 @@ const { createCourseContentService } = require('./src/utils/course-content');
 const { createFileHelpers } = require('./src/utils/file-helpers');
 const { createKnowledgeContentService } = require('./src/utils/knowledge-content');
 const { createPortalContentService } = require('./src/utils/portal-content');
+const { sanitizeLessonContent } = require('./src/utils/html-sanitizer');
 
 const PORT = Number.parseInt(process.env.PORT || '8090', 10);
 const HOST = process.env.HOST || '0.0.0.0';
 const DB_PATH = process.env.DB_PATH || DEFAULT_DB_PATH;
-const UPLOAD_DIR = path.join(__dirname, '../../storage/uploads');
-const LOG_DIR = path.join(__dirname, '../../storage/logs');
-const ASSESSMENT_DIR = path.join(__dirname, '../../storage/assessments');
+const UPLOAD_DIR = process.env.UPLOAD_DIR
+  ? path.resolve(process.env.UPLOAD_DIR)
+  : path.join(__dirname, '../../storage/uploads');
+const LOG_DIR = process.env.LOG_DIR
+  ? path.resolve(process.env.LOG_DIR)
+  : path.join(__dirname, '../../storage/logs');
+const ASSESSMENT_DIR = process.env.ASSESSMENT_DIR
+  ? path.resolve(process.env.ASSESSMENT_DIR)
+  : path.join(__dirname, '../../storage/assessments');
 const DEFAULT_WEB_ROOT = path.join(__dirname, '../web-vue/dist');
 const WEB_ROOT = process.env.WEB_ROOT
   ? path.resolve(process.env.WEB_ROOT)
@@ -47,10 +60,20 @@ const WEB_SPA = WEB_SPA_ENV
   ? WEB_SPA_ENV === 'true'
   : fs.existsSync(path.join(WEB_ROOT, 'index.html')) || fs.existsSync(path.join(DEFAULT_WEB_ROOT, 'index.html'));
 const AUDIT_LOG_PATH = path.join(LOG_DIR, 'audit.log');
-const UPLOAD_MAX_MB = Number.parseInt(process.env.UPLOAD_MAX_FILE_SIZE_MB || '200', 10);
+const UPLOAD_MAX_MB = Number.parseInt(process.env.UPLOAD_MAX_FILE_SIZE_MB || '100', 10);
 const UPLOAD_MAX_BYTES = Math.max(1, UPLOAD_MAX_MB) * 1024 * 1024;
 const API_PREFIX = process.env.API_PREFIX || '/api/v1';
-const AUTH_SECRET = process.env.AUTH_SECRET || 'change-me-in-production';
+const CORS_ALLOWED_ORIGINS = new Set(
+  String(process.env.CORS_ALLOWED_ORIGINS || '')
+    .split(',')
+    .map(origin => origin.trim())
+    .filter(Boolean)
+);
+if (NODE_ENV === 'development' || NODE_ENV === 'test') {
+  CORS_ALLOWED_ORIGINS.add('http://localhost:5173');
+}
+const AUTH_SECRET = String(process.env.AUTH_SECRET || '').trim();
+const IS_TEST_ENV = NODE_ENV === 'test';
 const AUTH_TOKEN_TTL_HOURS = Number.parseInt(process.env.AUTH_TOKEN_TTL_HOURS || '168', 10);
 const TEACHER_INVITE_CODE = String(process.env.TEACHER_INVITE_CODE || '').trim();
 const JUDGE_INVITE_CODE = String(process.env.JUDGE_INVITE_CODE || '').trim();
@@ -61,14 +84,18 @@ const GITEA_PRIVATE_REPO = String(process.env.GITEA_PRIVATE_REPO || 'true').trim
 const AI_API_BASE = String(process.env.AI_API_BASE || '').trim();
 const AI_MODEL = String(process.env.AI_MODEL || '').trim();
 const AI_TIMEOUT_MS = Number.parseInt(process.env.AI_TIMEOUT_MS || '20000', 10);
-const COURSES_DIR = path.join(__dirname, '../../content/courses');
+const COURSES_DIR = process.env.COURSES_DIR
+  ? path.resolve(process.env.COURSES_DIR)
+  : path.join(__dirname, '../../content/courses');
 const COURSE_CATALOG_PATH = path.join(COURSES_DIR, 'catalog.json');
-const DISCIPLINE_DATA_PATH = path.join(__dirname, '../../content/courses/disciplines/index.json');
-const DISCIPLINE_LEARNING_UNITS_PATH = path.join(__dirname, '../../content/courses/disciplines/learning-units.json');
-const CRASH_COURSE_SERIES_PATH = path.join(__dirname, '../../content/courses/disciplines/crash-course-series.json');
-const CRASH_COURSE_VIDEOS_PATH = path.join(__dirname, '../../content/courses/disciplines/crash-course-videos.json');
+const DISCIPLINE_DATA_PATH = path.join(COURSES_DIR, 'disciplines/index.json');
+const DISCIPLINE_LEARNING_UNITS_PATH = path.join(COURSES_DIR, 'disciplines/learning-units.json');
+const CRASH_COURSE_SERIES_PATH = path.join(COURSES_DIR, 'disciplines/crash-course-series.json');
+const CRASH_COURSE_VIDEOS_PATH = path.join(COURSES_DIR, 'disciplines/crash-course-videos.json');
 const BILIBILI_SERIES_VIDEOS_PATH = path.join(__dirname, '../web-vue/src/data/bilibiliSeriesVideos.json');
-const MATERIALS_DIR = path.join(__dirname, '../../content/materials');
+const MATERIALS_DIR = process.env.MATERIALS_DIR
+  ? path.resolve(process.env.MATERIALS_DIR)
+  : path.join(__dirname, '../../content/materials');
 const PORTAL_DIR = process.env.PORTAL_DIR
   ? path.resolve(process.env.PORTAL_DIR)
   : path.join(__dirname, '../../content/portal');
@@ -95,12 +122,13 @@ const ALLOWED_EXTENSIONS = new Set([
   '.txt',
   '.md',
   '.csv',
+  '.py',
+  '.ipynb',
   '.png',
   '.jpg',
   '.jpeg',
   '.gif',
-  '.webp',
-  '.svg'
+  '.webp'
 ]);
 const ALLOWED_MIME_TYPES = new Set([
   'application/pdf',
@@ -118,12 +146,14 @@ const ALLOWED_MIME_TYPES = new Set([
   'text/plain',
   'text/markdown',
   'text/csv',
+  'text/x-python',
+  'text/x-script.python',
+  'application/json',
+  'application/x-ipynb+json',
   'image/png',
   'image/jpeg',
   'image/gif',
-  'image/webp',
-  'image/svg+xml',
-  'application/octet-stream'
+  'image/webp'
 ]);
 const EXTENSION_MIME_MAP = {
   '.pdf': ['application/pdf'],
@@ -137,14 +167,17 @@ const EXTENSION_MIME_MAP = {
   '.rar': ['application/vnd.rar', 'application/x-rar-compressed'],
   '.7z': ['application/x-7z-compressed'],
   '.txt': ['text/plain'],
+  '.html': ['text/html; charset=utf-8', 'text/html'],
   '.md': ['text/markdown', 'text/plain'],
   '.csv': ['text/csv', 'application/vnd.ms-excel'],
+  '.py': ['text/x-python', 'text/x-script.python', 'text/plain'],
+  '.ipynb': ['application/json', 'application/x-ipynb+json', 'text/plain'],
   '.png': ['image/png'],
   '.jpg': ['image/jpeg'],
   '.jpeg': ['image/jpeg'],
   '.gif': ['image/gif'],
   '.webp': ['image/webp'],
-  '.svg': ['image/svg+xml']
+  '.plist': ['application/xml', 'text/xml']
 };
 
 const PROJECT_STATUSES = new Set([
@@ -273,6 +306,14 @@ function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
 }
 
+function assertRuntimeConfig() {
+  if (IS_TEST_ENV) return;
+  const publicDefaults = new Set(['', 'change-me-in-production', 'secret', 'password', 'development-secret']);
+  if (publicDefaults.has(AUTH_SECRET) || Buffer.byteLength(AUTH_SECRET, 'utf8') < 32) {
+    throw new Error('AUTH_SECRET must be explicitly configured with at least 32 bytes outside test environments');
+  }
+}
+
 function now() {
   return new Date().toISOString();
 }
@@ -334,24 +375,224 @@ function normalizeToolKey(value) {
     .replace(/^_+|_+$/g, '');
 }
 
-function canReadProject(user, project) {
+function constantTimeEqual(left, right) {
+  const a = Buffer.from(String(left || ''), 'utf8');
+  const b = Buffer.from(String(right || ''), 'utf8');
+  return a.length === b.length && a.length > 0 && crypto.timingSafeEqual(a, b);
+}
+
+function normalizeVisibility(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  return ['public', 'assigned', 'private'].includes(raw) ? raw : 'public';
+}
+
+function parseAccessStringList(value) {
+  if (Array.isArray(value)) {
+    return Array.from(new Set(value.map(item => String(item || '').trim()).filter(Boolean)));
+  }
+  if (value === null || value === undefined) return [];
+  const raw = String(value || '').trim();
+  if (!raw) return [];
+  const parsed = raw.startsWith('[') ? safeParseJson(raw) : null;
+  if (Array.isArray(parsed)) {
+    return Array.from(new Set(parsed.map(item => String(item || '').trim()).filter(Boolean)));
+  }
+  return Array.from(new Set(
+    raw
+      .split(/[,\n，、]+/)
+      .map(item => item.trim())
+      .filter(Boolean)
+  ));
+}
+
+function parseAccessIdList(value) {
+  return parseAccessStringList(value)
+    .map(item => Number.parseInt(String(item), 10))
+    .filter(item => Number.isInteger(item) && item > 0)
+    .filter((item, index, list) => list.indexOf(item) === index);
+}
+
+function readAccessConfig(resource = {}) {
+  return {
+    visibility: normalizeVisibility(resource.visibility),
+    roles: parseAccessStringList(resource.visibleToRoles ?? resource.visible_to_roles)
+      .map(item => item.toLowerCase()),
+    userIds: parseAccessIdList(resource.visibleToUserIds ?? resource.visible_to_user_ids),
+    classNames: parseAccessStringList(resource.visibleToClassNames ?? resource.visible_to_class_names)
+  };
+}
+
+function getStudentClassName(userId) {
+  if (!db || !userId) return '';
+  const row = db.get('SELECT class_name FROM student_profiles WHERE user_id = ?', [userId]);
+  return String(row?.class_name || '').trim();
+}
+
+function hasTeacherLinkToStudents(teacherId, studentIds = []) {
+  const normalizedIds = Array.from(new Set(
+    studentIds.map(id => Number(id)).filter(id => Number.isFinite(id) && id > 0)
+  ));
+  if (!db || !teacherId || !normalizedIds.length) return false;
+  const placeholders = normalizedIds.map(() => '?').join(',');
+  const row = db.get(
+    `SELECT 1 AS ok FROM teacher_student_links
+     WHERE teacher_id = ? AND student_id IN (${placeholders})
+     LIMIT 1`,
+    [teacherId, ...normalizedIds]
+  );
+  return Boolean(row);
+}
+
+function hasTeacherLinkToClasses(teacherId, classNames = []) {
+  const normalizedClasses = Array.from(new Set(
+    classNames.map(item => String(item || '').trim()).filter(Boolean)
+  ));
+  if (!db || !teacherId || !normalizedClasses.length) return false;
+  const placeholders = normalizedClasses.map(() => '?').join(',');
+  const row = db.get(
+    `SELECT 1 AS ok
+     FROM teacher_student_links tsl
+     JOIN student_profiles sp ON sp.user_id = tsl.student_id
+     WHERE tsl.teacher_id = ? AND sp.class_name IN (${placeholders})
+     LIMIT 1`,
+    [teacherId, ...normalizedClasses]
+  );
+  return Boolean(row);
+}
+
+function accessGrantMatchesUser(user, config) {
+  if (!user) return false;
+  const role = String(user.role || '').trim().toLowerCase();
+  const userId = Number(user.id || 0);
+  if (config.roles.includes(role)) return true;
+  if (config.userIds.includes(userId)) return true;
+  if ((role === 'teacher' || role === 'judge') && hasTeacherLinkToStudents(userId, config.userIds)) {
+    return true;
+  }
+  if (config.classNames.length) {
+    if (role === 'student' && config.classNames.includes(getStudentClassName(userId))) {
+      return true;
+    }
+    if ((role === 'teacher' || role === 'judge') && hasTeacherLinkToClasses(userId, config.classNames)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function getProjectParticipantIds(project) {
+  if (!db || !project?.id) return [];
+  const ids = [];
+  const ownerId = Number(project.created_by || 0);
+  if (ownerId > 0) ids.push(ownerId);
+  db.all('SELECT user_id FROM project_members WHERE project_id = ?', [project.id])
+    .forEach(row => {
+      const id = Number(row.user_id || 0);
+      if (id > 0) ids.push(id);
+    });
+  return Array.from(new Set(ids));
+}
+
+function isProjectMemberOrOwner(user, project) {
   if (!user || !project) return false;
-  if (user.role === 'teacher' || user.role === 'judge' || user.role === 'admin') return true;
-  if (Number(project.created_by) === Number(user.id)) return true;
-  return Boolean(projectRepository.getMembership(project.id, user.id));
+  const userId = Number(user.id || 0);
+  if (!userId) return false;
+  if (Number(project.created_by || 0) === userId) return true;
+  const row = db?.get(
+    'SELECT id FROM project_members WHERE project_id = ? AND user_id = ?',
+    [project.id, userId]
+  );
+  return Boolean(row);
+}
+
+function canReadCourse(user, course) {
+  if (!course) return false;
+  const status = String(course.status || '').trim().toLowerCase();
+  if (status !== 'published') {
+    if (!user) return false;
+    const role = String(user.role || '').trim().toLowerCase();
+    if (role === 'admin') return true;
+    if (Number(course.createdBy || course.created_by || 0) === Number(user.id || 0)) return true;
+    return false;
+  }
+  const config = readAccessConfig(course);
+  if (config.visibility === 'public') return true;
+  if (!user) return false;
+  if (user.role === 'admin') return true;
+  if (Number(course.createdBy || course.created_by || 0) === Number(user.id || 0)) return true;
+  return accessGrantMatchesUser(user, config);
+}
+
+function canEditCourse(user, course) {
+  if (!user || !course) return false;
+  const role = String(user.role || '').trim().toLowerCase();
+  if (role === 'admin') return true;
+  return role === 'teacher'
+    && Number(course.createdBy || course.created_by || 0) === Number(user.id || 0);
+}
+
+function canReadAssignmentSubmission(user, submission = {}) {
+  if (!user || !submission) return false;
+  const role = String(user.role || '').trim().toLowerCase();
+  if (role === 'admin') return true;
+  if (role === 'student') return Number(submission.student_id) === Number(user.id);
+  if (role !== 'teacher') return false;
+  return Number(submission.assignment_created_by || 0) === Number(user.id || 0)
+    && hasTeacherLinkToStudents(Number(user.id || 0), [submission.student_id]);
+}
+
+function canReadProjectTopic(user, topic) {
+  if (!topic) return false;
+  const config = readAccessConfig(topic);
+  if (config.visibility === 'public') return true;
+  if (!user) return false;
+  if (user.role === 'admin') return true;
+  if (Number(topic.createdBy || topic.created_by || 0) === Number(user.id || 0)) return true;
+  return accessGrantMatchesUser(user, config);
+}
+
+function canReadProject(user, project) {
+  if (!project) return false;
+  const config = readAccessConfig(project);
+  if (!user) return config.visibility === 'public';
+  const role = String(user.role || '').trim().toLowerCase();
+  if (role === 'admin') return true;
+  if (isProjectMemberOrOwner(user, project)) return true;
+  if (config.visibility === 'public') {
+    return role === 'teacher' || role === 'judge';
+  }
+  if (accessGrantMatchesUser(user, config)) return true;
+  if (config.visibility === 'assigned' && (role === 'teacher' || role === 'judge')) {
+    return hasTeacherLinkToStudents(Number(user.id || 0), getProjectParticipantIds(project));
+  }
+  return false;
 }
 
 function canWriteProject(user, project) {
   if (!user || !project) return false;
-  if (user.role === 'teacher' || user.role === 'judge' || user.role === 'admin') return true;
-  if (Number(project.created_by) === Number(user.id)) return true;
-  return Boolean(projectRepository.getMembership(project.id, user.id));
+  const config = readAccessConfig(project);
+  const role = String(user.role || '').trim().toLowerCase();
+  if (role === 'admin') return true;
+  if (isProjectMemberOrOwner(user, project)) return true;
+  return false;
+}
+
+function canSuperviseProject(user, project) {
+  if (!user || !project) return false;
+  const role = String(user.role || '').trim().toLowerCase();
+  if (role === 'admin' || isProjectMemberOrOwner(user, project)) return true;
+  if (role !== 'teacher' && role !== 'judge') return false;
+  if (!canReadProject(user, project)) return false;
+  return accessGrantMatchesUser(user, readAccessConfig(project))
+    || hasTeacherLinkToStudents(Number(user.id || 0), getProjectParticipantIds(project));
 }
 
 function requireProjectAccess(request, reply, project, mode = 'read') {
   const allowed = mode === 'write'
     ? canWriteProject(request.user, project)
-    : canReadProject(request.user, project);
+    : mode === 'supervise'
+      ? canSuperviseProject(request.user, project)
+      : canReadProject(request.user, project);
   if (!allowed) {
     reply.code(403);
     reply.send({ error: mode === 'write' ? '无权限操作该项目' : '无权限访问该项目' });
@@ -561,6 +802,7 @@ const {
   cleanupTempFiles,
   collectMultipart,
   moveTempFiles,
+  resolveUnder,
   sanitizeName,
   streamZip,
   toCsvLine
@@ -582,13 +824,27 @@ const {
 ensureDir(UPLOAD_DIR);
 ensureDir(LOG_DIR);
 ensureDir(ASSESSMENT_DIR);
-if (AUTH_SECRET === 'change-me-in-production') {
-  fastify.log.warn('AUTH_SECRET 未设置，建议在生产环境中设置安全密钥。');
-}
 
-fastify.register(require('@fastify/cors'), { origin: true });
+fastify.register(require('@fastify/cors'), {
+  origin(origin, callback) {
+    if (!origin || CORS_ALLOWED_ORIGINS.has(origin)) {
+      callback(null, true);
+      return;
+    }
+    callback(null, false);
+  }
+});
+fastify.register(require('@fastify/rate-limit'), {
+  global: true,
+  max: 300,
+  timeWindow: '1 minute',
+  errorResponseBuilder: (_request, context) => ({
+    error: '请求过于频繁，请稍后再试',
+    retryAfter: Math.ceil(Number(context.ttl || 60000) / 1000)
+  })
+});
 fastify.register(require('@fastify/multipart'), {
-  limits: { fileSize: UPLOAD_MAX_BYTES }
+  limits: { fileSize: UPLOAD_MAX_BYTES, files: 10 }
 });
 const effectiveWebRoot = fs.existsSync(WEB_ROOT) ? WEB_ROOT : DEFAULT_WEB_ROOT;
 if (WEB_SPA) {
@@ -641,12 +897,6 @@ fastify.register(require('@fastify/static'), {
   prefix: '/assessment/',
   decorateReply: false
 });
-fastify.register(require('@fastify/static'), {
-  root: UPLOAD_DIR,
-  prefix: '/uploads/',
-  decorateReply: false
-});
-
 fastify.get('/favicon.ico', (request, reply) => {
   reply.code(204).send();
 });
@@ -688,6 +938,51 @@ fastify.addHook('preHandler', (request, reply, done) => {
   done();
 });
 
+const rateLimitBuckets = new Map();
+function rateLimitPolicy(request) {
+  const route = String(request.routeOptions?.url || request.routerPath || request.url || '').split('?')[0];
+  const ip = String(request.ip || request.socket?.remoteAddress || 'unknown');
+  if (route.endsWith('/auth/login')) {
+    return { max: 10, windowMs: 15 * 60 * 1000, key: `login:${ip}:${normalizeEmail(request.body?.email || request.body?.username || '')}` };
+  }
+  if (route.endsWith('/auth/register')) {
+    return { max: 5, windowMs: 60 * 60 * 1000, key: `register:${ip}` };
+  }
+  if (/\/assignments\/\d+\/submissions$/.test(route)
+    || /\/projects\/\d+\/submissions$/.test(route)
+    || route.endsWith('/assessments')) {
+    return { max: 20, windowMs: 60 * 60 * 1000, key: `upload:${request.user?.id ? `user:${request.user.id}` : `ip:${ip}`}` };
+  }
+  return { max: 300, windowMs: 60 * 1000, key: `global:${ip}` };
+}
+
+fastify.addHook('preHandler', (request, reply, done) => {
+  if (!request.url.startsWith(API_PREFIX)) return done();
+  const policy = rateLimitPolicy(request);
+  const nowMs = Date.now();
+  const current = rateLimitBuckets.get(policy.key);
+  const bucket = current && current.expiresAt > nowMs
+    ? current
+    : { count: 0, expiresAt: nowMs + policy.windowMs };
+  bucket.count += 1;
+  rateLimitBuckets.set(policy.key, bucket);
+  if (rateLimitBuckets.size > 10000) {
+    for (const [key, value] of rateLimitBuckets) {
+      if (value.expiresAt <= nowMs) rateLimitBuckets.delete(key);
+      if (rateLimitBuckets.size <= 5000) break;
+    }
+  }
+  const retryAfter = Math.max(1, Math.ceil((bucket.expiresAt - nowMs) / 1000));
+  reply.header('X-RateLimit-Limit', policy.max);
+  reply.header('X-RateLimit-Remaining', Math.max(0, policy.max - bucket.count));
+  if (bucket.count > policy.max) {
+    reply.header('Retry-After', retryAfter);
+    reply.code(429).send({ error: '请求过于频繁，请稍后再试', retryAfter });
+    return;
+  }
+  done();
+});
+
 fastify.setErrorHandler((error, request, reply) => {
   const statusCode = Number(error?.statusCode) || 500;
   const message = statusCode >= 500 ? '服务器内部错误' : (error.message || '请求失败');
@@ -714,20 +1009,27 @@ function getProjectDetail(projectId) {
 
 function getSubmissionAttachments(submissionId, fallback) {
   const rows = db.all(
-    'SELECT file_name, file_path, file_size FROM attachments WHERE submission_id = ?',
+    `SELECT a.id, a.file_name, a.file_path, a.file_size, s.type AS submission_type, s.status AS submission_status, p.visibility AS project_visibility
+     FROM attachments a
+     JOIN submissions s ON s.id = a.submission_id
+     JOIN projects p ON p.id = s.project_id
+     WHERE a.submission_id = ? ORDER BY a.id ASC`,
     [submissionId]
   );
   if (rows.length) {
     return rows.map(row => ({
+      id: row.id,
       name: row.file_name,
       path: row.file_path,
       size: row.file_size,
-      url: `/uploads/${toUrlPath(row.file_path)}`
+      url: row.submission_type === 'showcase' && row.submission_status === 'approved' && row.project_visibility === 'public'
+        ? `/api/v1/showcase-attachments/${row.id}/download`
+        : `/api/v1/project-attachments/${row.id}/download`
     }));
   }
   return parseAttachmentList(fallback).map(att => ({
     ...att,
-    url: `/uploads/${toUrlPath(att.path)}`
+    url: ''
   }));
 }
 
@@ -1443,8 +1745,23 @@ const {
   courseStatuses: COURSE_STATUSES,
   courseMaterialSections: COURSE_MATERIAL_SECTIONS,
   apiPrefix: API_PREFIX,
-  toUrlPath
+  toUrlPath,
+  sanitizeLessonContent
 });
+
+function findCourseByMaterialsRoot(materialsRoot) {
+  const target = String(materialsRoot || '').trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+  if (!target) return null;
+  const catalog = loadCourseCatalog();
+  for (const item of catalog) {
+    const course = loadCourseDetail(item.id);
+    if (!course) continue;
+    if (course.id === target || String(course.materialsRoot || '').trim() === target) {
+      return course;
+    }
+  }
+  return null;
+}
 
 const {
   dbJson,
@@ -1814,7 +2131,12 @@ function getCanonicalProfileForMatching(profileRow) {
 }
 
 function listStudentUsers() {
-  return db.all('SELECT id, name, email FROM users WHERE role = ? ORDER BY id ASC', ['student']);
+  return db.all('SELECT id, name, email, role FROM users WHERE role = ? ORDER BY id ASC', ['student']);
+}
+
+function getUserForAccess(userId) {
+  if (!db || !userId) return null;
+  return db.get('SELECT id, name, email, role FROM users WHERE id = ?', [userId]) || null;
 }
 
 function getStudentCollaborationContext(studentIds = []) {
@@ -1857,8 +2179,9 @@ function getStudentCollaborationContext(studentIds = []) {
 
   const projectRows = db.all(
     `SELECT id, created_by, team_id FROM projects
-     WHERE created_by IN (${placeholders})
-        OR id IN (SELECT project_id FROM project_members WHERE user_id IN (${placeholders}))`,
+     WHERE deleted_at IS NULL
+       AND (created_by IN (${placeholders})
+        OR id IN (SELECT project_id FROM project_members WHERE user_id IN (${placeholders})))`,
     [...normalizedIds, ...normalizedIds]
   );
   const projectMemberRows = db.all(
@@ -1939,11 +2262,13 @@ function estimateCompetitionDeadline(competition) {
   return parseDeadlineDate(target?.date || '');
 }
 
-function listPublishedProjectTopics() {
-  return db.all(
+function listPublishedProjectTopics(user = null, options = {}) {
+  const topics = db.all(
     'SELECT * FROM project_topics WHERE status = ? ORDER BY updated_at DESC, id DESC',
     ['published']
   ).map(mapProjectTopic);
+  if (options.includeRestricted) return topics;
+  return topics.filter(topic => canReadProjectTopic(user, topic));
 }
 
 function inferCourseMatchSignals(course = {}) {
@@ -2899,6 +3224,12 @@ async function createMatchReminders({ targetType, targetKey, title, body, candid
       .filter(item => item.candidateBucket === candidateBucket)
       .map(item => Number(item.userId))
       .filter(id => Number.isFinite(id) && id > 0);
+  } else if (normalizedStudentIds.length && ['project_topic', 'course'].includes(config.targetType)) {
+    const candidates = await config.listCandidates({ actor, aiKey });
+    const allowedStudentIds = new Set(
+      candidates.map(item => Number(item.userId)).filter(id => Number.isFinite(id) && id > 0)
+    );
+    normalizedStudentIds = normalizedStudentIds.filter(id => allowedStudentIds.has(id));
   }
   normalizedStudentIds = Array.from(new Set(normalizedStudentIds));
   if (!normalizedStudentIds.length) {
@@ -3047,16 +3378,18 @@ async function recomputeProjectTopicMatches({ userIds = [], actor = null, projec
   const normalizedUserIds = Array.from(new Set(userIds.map(id => Number(id)).filter(id => Number.isFinite(id) && id > 0)));
   if (!normalizedUserIds.length) return [];
   const courseMap = buildCoursePreviewMap();
-  const topics = listPublishedProjectTopics()
+  const allTopics = listPublishedProjectTopics(null, { includeRestricted: true })
     .filter(item => !projectTopicIds.length || projectTopicIds.includes(Number(item.id)));
-  const projectTopicMap = topics.reduce((acc, item) => {
-    acc[String(item.id)] = item;
-    return acc;
-  }, {});
 
   const items = [];
   for (const userId of normalizedUserIds) {
     seedStudentProfile(userId);
+    const accessUser = getUserForAccess(userId);
+    const topics = allTopics.filter(topic => canReadProjectTopic(accessUser, topic));
+    const projectTopicMap = topics.reduce((acc, item) => {
+      acc[String(item.id)] = item;
+      return acc;
+    }, {});
     const cachedRows = preferCached && !forceRefresh
       ? db.all('SELECT * FROM match_results WHERE user_id = ? AND target_type = ? ORDER BY score DESC, updated_at DESC', [userId, 'project_topic'])
       : [];
@@ -3107,17 +3440,19 @@ async function recomputeProjectTopicMatches({ userIds = [], actor = null, projec
 async function recomputeCourseMatches({ userIds = [], actor = null, courseIds = [], aiKey = '', preferCached = false, forceRefresh = false } = {}) {
   const normalizedUserIds = Array.from(new Set(userIds.map(id => Number(id)).filter(id => Number.isFinite(id) && id > 0)));
   if (!normalizedUserIds.length) return [];
-  const courses = loadCourseCatalog()
+  const allCourses = loadCourseCatalog()
     .filter(item => item.status === 'published')
     .filter(item => !courseIds.length || courseIds.includes(String(item.id)));
-  const courseMap = courses.reduce((acc, item) => {
-    acc[String(item.id)] = item;
-    return acc;
-  }, {});
 
   const items = [];
   for (const userId of normalizedUserIds) {
     seedStudentProfile(userId);
+    const accessUser = getUserForAccess(userId);
+    const courses = allCourses.filter(course => canReadCourse(accessUser, course));
+    const courseMap = courses.reduce((acc, item) => {
+      acc[String(item.id)] = item;
+      return acc;
+    }, {});
     const cachedRows = preferCached && !forceRefresh
       ? db.all('SELECT * FROM match_results WHERE user_id = ? AND target_type = ? ORDER BY score DESC, updated_at DESC', [userId, 'course'])
       : [];
@@ -3304,6 +3639,8 @@ async function getTeamCandidateMatchDetail({ userId, candidateId, actor, aiKey }
 }
 
 async function listProjectTopicCandidates({ topicId, actor, aiKey }) {
+  const topic = mapProjectTopic(db.get('SELECT * FROM project_topics WHERE id = ?', [Number(topicId)]));
+  if (!topic || !canReadProjectTopic(actor, topic)) return [];
   const studentRows = db.all('SELECT id, name, email FROM users WHERE role = ?', ['student']);
   const matches = await recomputeProjectTopicMatches({
     userIds: studentRows.map(row => Number(row.id)),
@@ -3334,6 +3671,8 @@ async function listProjectTopicCandidates({ topicId, actor, aiKey }) {
 }
 
 async function listCourseCandidates({ courseId, actor, aiKey }) {
+  const course = loadCourseDetail(courseId) || loadCourseCatalog().find(item => String(item.id) === String(courseId));
+  if (!course || !canReadCourse(actor, course)) return [];
   const studentRows = db.all('SELECT id, name, email FROM users WHERE role = ?', ['student']);
   const matches = await recomputeCourseMatches({
     userIds: studentRows.map(row => Number(row.id)),
@@ -3503,7 +3842,7 @@ async function listAdminMatchCandidates({ actor, aiKey, targetType = '', candida
   }
 
   if (!normalizedTargetType || normalizedTargetType === 'project_topic') {
-    const topics = listPublishedProjectTopics();
+    const topics = listPublishedProjectTopics(actor);
     for (const topic of topics) {
       const candidateItems = await listProjectTopicCandidates({
         topicId: Number(topic.id),
@@ -3520,7 +3859,9 @@ async function listAdminMatchCandidates({ actor, aiKey, targetType = '', candida
   }
 
   if (!normalizedTargetType || normalizedTargetType === 'course') {
-    const courses = loadCourseCatalog().filter(item => item.status === 'published');
+    const courses = loadCourseCatalog()
+      .filter(item => item.status === 'published')
+      .filter(item => canReadCourse(actor, item));
     for (const course of courses) {
       const candidateItems = await listCourseCandidates({
         courseId: String(course.id),
@@ -3779,6 +4120,21 @@ function normalizeAssignmentPayload(input = {}, existing = {}) {
 
 function mapAssignmentSubmission(row) {
   if (!row) return null;
+  const attachments = parseAttachmentList(row.attachments)
+    .map((attachment) => {
+      const source = typeof attachment === 'string' ? { path: attachment } : attachment;
+      const relativePath = String(source?.path || '').trim().replace(/\\/g, '/');
+      if (!relativePath) return null;
+      const size = Number(source?.size);
+      return {
+        id: source?.id || null,
+        name: String(source?.name || relativePath.split('/').pop() || '附件').trim(),
+        path: relativePath,
+        size: Number.isFinite(size) && size >= 0 ? size : 0,
+        url: source?.id ? `/api/v1/assignment-attachments/${source.id}/download` : ''
+      };
+    })
+    .filter(Boolean);
   return {
     id: row.id,
     assignmentId: row.assignment_id,
@@ -3788,6 +4144,7 @@ function mapAssignmentSubmission(row) {
     content: row.content || '',
     link: row.link || '',
     attachmentNote: row.attachment_note || '',
+    attachments,
     status: row.status,
     score: row.score === null || row.score === undefined ? null : Number(row.score),
     feedback: row.feedback || '',
@@ -3867,6 +4224,10 @@ function mapProjectTopic(row) {
     deliverables: row.deliverables || '',
     relatedCourseId: row.related_course_id || '',
     relatedCompetitionSlug: row.related_competition_slug || '',
+    visibility: normalizeVisibility(row.visibility),
+    visibleToRoles: parseAccessStringList(row.visible_to_roles),
+    visibleToUserIds: parseAccessIdList(row.visible_to_user_ids),
+    visibleToClassNames: parseAccessStringList(row.visible_to_class_names),
     status: row.status,
     createdBy: row.created_by,
     createdAt: row.created_at,
@@ -3895,6 +4256,10 @@ function normalizeProjectTopicPayload(input = {}, existing = {}) {
     deliverables: String(input.deliverables || existing.deliverables || '').trim(),
     relatedCourseId: String(input.relatedCourseId || input.related_course_id || existing.related_course_id || '').trim(),
     relatedCompetitionSlug: String(input.relatedCompetitionSlug || input.related_competition_slug || existing.related_competition_slug || '').trim(),
+    visibility: normalizeVisibility(input.visibility || existing.visibility),
+    visibleToRoles: JSON.stringify(parseAccessStringList(input.visibleToRoles ?? input.visible_to_roles ?? existing.visible_to_roles)),
+    visibleToUserIds: JSON.stringify(parseAccessIdList(input.visibleToUserIds ?? input.visible_to_user_ids ?? existing.visible_to_user_ids)),
+    visibleToClassNames: JSON.stringify(parseAccessStringList(input.visibleToClassNames ?? input.visible_to_class_names ?? existing.visible_to_class_names)),
     status: PROJECT_TOPIC_STATUSES.has(status) ? status : 'draft'
   };
 }
@@ -3991,7 +4356,9 @@ registerCourseRoutes(fastify, {
   logMatchEvent,
   recomputeCourseMatches,
   db: routeDb,
-  now
+  now,
+  canReadCourse,
+  canEditCourse
 });
 
 function canAccessProject(user, project) {
@@ -4054,20 +4421,11 @@ function normalizeScoreTemplateCriteria(criteria) {
 }
 
 function canRegisterTeacher(inviteCode) {
-  const existing = db.get('SELECT id FROM users WHERE role = ?', ['teacher']);
-  if (!existing) return true;
-  if (!TEACHER_INVITE_CODE) return false;
-  return String(inviteCode || '').trim() === TEACHER_INVITE_CODE;
+  return Boolean(TEACHER_INVITE_CODE) && constantTimeEqual(inviteCode, TEACHER_INVITE_CODE);
 }
 
 function canRegisterJudge(inviteCode) {
-  if (JUDGE_INVITE_CODE) {
-    return String(inviteCode || '').trim() === JUDGE_INVITE_CODE;
-  }
-  if (TEACHER_INVITE_CODE) {
-    return String(inviteCode || '').trim() === TEACHER_INVITE_CODE;
-  }
-  return true;
+  return Boolean(JUDGE_INVITE_CODE) && constantTimeEqual(inviteCode, JUDGE_INVITE_CODE);
 }
 
 async function requestGitea(pathname, options = {}) {
@@ -4245,6 +4603,7 @@ registerPortalRoutes(fastify, {
   mapCompetitionReminder,
   mapProjectTopic,
   normalizeProjectTopicPayload,
+  canReadProjectTopic,
   logMatchEvent,
   recomputeCompetitionMatches,
   recomputeProjectTopicMatches
@@ -4304,6 +4663,9 @@ registerMatchingRoutes(fastify, {
 registerAssignmentRoutes(fastify, {
   API_PREFIX,
   db: routeDb,
+  fs,
+  path,
+  UPLOAD_DIR,
   now,
   requireRole,
   parseProjectId,
@@ -4312,9 +4674,28 @@ registerAssignmentRoutes(fastify, {
   mapAssignmentSubmission,
   loadCourseDetail,
   listCourseLessons,
+  canReadCourse,
+  canEditCourse,
   requestAiChat,
+  safeParseJson,
   logAudit,
-  ASSIGNMENT_SUBMISSION_STATUSES
+  ASSIGNMENT_SUBMISSION_STATUSES,
+  collectMultipart,
+  cleanupTempFiles,
+  moveTempFiles,
+  resolveUnder,
+  canReadAssignmentSubmission,
+  getAttachmentById: (attachmentId) => {
+    if (!db) return null;
+    return db.get(
+      `SELECT a.*, s.assignment_id, s.student_id, ass.course_id, ass.created_by AS assignment_created_by
+       FROM assignment_submission_attachments a
+       JOIN assignment_submissions s ON s.id = a.submission_id
+       JOIN assignments ass ON ass.id = s.assignment_id
+       WHERE a.id = ?`,
+      [attachmentId]
+    );
+  }
 });
 
 registerSystemRoutes(fastify, {
@@ -4351,7 +4732,11 @@ registerAssetRoutes(fastify, {
   EXTENSION_MIME_MAP,
   requireRole,
   buildProjectFilters,
-  logAudit
+  canReadProject,
+  canReadCourse,
+  findCourseByMaterialsRoot,
+  logAudit,
+  resolveUnder
 });
 
 registerReviewRoutes(fastify, {
@@ -4370,19 +4755,23 @@ registerReviewRoutes(fastify, {
     getProjectMilestones,
     getProjectResources,
     getProjectDevLogs,
-    buildProjectReviewMeta
+    buildProjectReviewMeta,
+    canReadProject
   }),
   showcaseRepository: createShowcaseRepository({
     db: routeDb,
     buildProjectFilters,
     safeParseJson,
-    getSubmissionAttachments
+    getSubmissionAttachments,
+    canReadProject
   }),
+  canReadProject,
   toCsvLine,
   sanitizeName,
   appendFileSafe,
   streamZip,
-  logAudit
+  logAudit,
+  resolveUnder
 });
 
 registerProjectRoutes(fastify, {
@@ -4406,6 +4795,7 @@ registerProjectOpsRoutes(fastify, {
   requireAuth,
   requireRole,
   requireProjectAccess,
+  canReadProject,
   parseProjectId,
   normalizeToolKey,
   now,
@@ -4430,7 +4820,8 @@ registerProjectOpsRoutes(fastify, {
   sanitizeName,
   appendFileSafe,
   streamZip,
-  fastifyLog: fastify.log
+  fastifyLog: fastify.log,
+  resolveUnder
 });
 
 registerCollaborationRoutes(fastify, {
@@ -4455,7 +4846,8 @@ registerCollaborationRoutes(fastify, {
   logAudit,
   collectMultipart,
   cleanupTempFiles,
-  moveTempFiles
+  moveTempFiles,
+  resolveUnder
 });
 
 registerKnowledgeRoutes(fastify, {
@@ -4492,7 +4884,8 @@ async function initDatabase(dbPath = DB_PATH) {
     safeParseJson,
     parseAttachmentList,
     toUrlPath,
-    buildProjectFilters
+    buildProjectFilters,
+    canReadProject
   });
   seedKnowledgeContent();
   syncLegacyAttachments();
@@ -4501,6 +4894,7 @@ async function initDatabase(dbPath = DB_PATH) {
 
 const start = async () => {
   try {
+    assertRuntimeConfig();
     await initDatabase(DB_PATH);
     await fastify.listen({ port: PORT, host: HOST });
     fastify.log.info(`Innovation platform running at http://localhost:${PORT}`);

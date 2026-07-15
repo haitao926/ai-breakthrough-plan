@@ -2,7 +2,7 @@ const courseBodySchema = {
   type: 'object',
   required: ['id', 'title'],
   properties: {
-    id: { type: 'string', minLength: 1, maxLength: 120 },
+    id: { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$' },
     title: { type: 'string', minLength: 1, maxLength: 200 },
     direction: { type: 'string', maxLength: 80 },
     teacherName: { type: 'string', maxLength: 120 },
@@ -11,13 +11,17 @@ const courseBodySchema = {
     audience: { type: 'string', maxLength: 400 },
     pace: { type: 'string', maxLength: 200 },
     status: { type: 'string', maxLength: 40 },
+    visibility: { type: 'string', enum: ['public', 'assigned', 'private'] },
     positioning: { type: 'string', maxLength: 400 },
     courseType: { type: 'string', maxLength: 120 },
     difficultyPath: { type: 'string', maxLength: 120 },
-    materialsRoot: { type: 'string', maxLength: 200 },
+    materialsRoot: { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$' },
     tags: { type: 'array', items: { type: 'string', maxLength: 80 } },
     skillOutcomes: { type: 'array', items: { type: 'string', maxLength: 120 } },
     learningObjectives: { type: 'array', items: { type: 'string', maxLength: 500 } },
+    visibleToRoles: { type: 'array', items: { type: 'string', maxLength: 40 } },
+    visibleToUserIds: { type: 'array', items: { type: 'integer' } },
+    visibleToClassNames: { type: 'array', items: { type: 'string', maxLength: 120 } },
     relatedProjects: { type: 'array' },
     materials: { type: 'array' }
   },
@@ -27,8 +31,8 @@ const courseBodySchema = {
 const lessonBodySchema = {
   type: 'object',
   properties: {
-    id: { type: 'string', maxLength: 120 },
-    lessonId: { type: 'string', maxLength: 120 },
+    id: { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$' },
+    lessonId: { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$' },
     title: { type: 'string', minLength: 1, maxLength: 200 },
     description: { type: 'string', maxLength: 4000 },
     duration: { anyOf: [{ type: 'number' }, { type: 'integer' }, { type: 'string', maxLength: 40 }] },
@@ -42,6 +46,40 @@ const lessonBodySchema = {
   },
   additionalProperties: true
 };
+
+const courseParamsSchema = {
+  type: 'object',
+  required: ['id'],
+  additionalProperties: false,
+  properties: {
+    id: { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$' }
+  }
+};
+
+const lessonParamsSchema = {
+  type: 'object',
+  required: ['id', 'lessonId'],
+  additionalProperties: false,
+  properties: {
+    id: { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$' },
+    lessonId: { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$' }
+  }
+};
+
+function isCourseLibraryPlaceholder(course) {
+  const id = String(course?.id || '').trim().toLowerCase();
+  const title = String(course?.title || '').trim();
+  const materialsRoot = String(course?.materialsRoot || '').trim().toLowerCase();
+  const placeholderPrefixes = [
+    'assignment-test-course',
+    'ai-vision-lab-test-',
+    'ai-vision-lab-live-',
+    'course-match-test-'
+  ];
+
+  return placeholderPrefixes.some(prefix => id.startsWith(prefix) || materialsRoot.startsWith(prefix))
+    || title === '作业测试课程';
+}
 
 function registerCourseRoutes(fastify, deps) {
   const {
@@ -63,37 +101,69 @@ function registerCourseRoutes(fastify, deps) {
     logMatchEvent,
     recomputeCourseMatches,
     db,
-    now
+    now,
+    requireAuth,
+    canReadCourse,
+    canEditCourse
   } = deps;
 
-  fastify.get(`${API_PREFIX}/courses`, async () => {
-    return { courses: loadCourseCatalog() };
+  function loadAccessibleCourse(courseId, user) {
+    const course = loadCourseDetail(courseId);
+    if (!course) return { course: null, allowed: false };
+    return { course, allowed: canReadCourse(user, course) };
+  }
+
+  function filterAccessibleCourses(courses, user) {
+    return (courses || [])
+      .filter(course => canReadCourse(user, course))
+      .filter(course => !isCourseLibraryPlaceholder(course));
+  }
+
+  function requireCourseRead(request, reply, course) {
+    if (canReadCourse(request.user, course)) return true;
+    reply.code(request.user ? 403 : 401);
+    reply.send({ error: request.user ? '无权限访问该课程' : '请登录后访问该课程' });
+    return false;
+  }
+
+  function requireCourseEdit(request, reply, course) {
+    if (typeof canEditCourse !== 'function' || canEditCourse(request.user, course)) return true;
+    reply.code(403);
+    reply.send({ error: '无权限编辑该课程' });
+    return false;
+  }
+
+  fastify.get(`${API_PREFIX}/courses`, async (request) => {
+    return { courses: filterAccessibleCourses(loadCourseCatalog(), request.user || null) };
   });
 
-  fastify.get(`${API_PREFIX}/courses/:id`, async (request, reply) => {
-    const course = loadCourseDetail(request.params.id);
+  fastify.get(`${API_PREFIX}/courses/:id`, { schema: { params: courseParamsSchema } }, async (request, reply) => {
+    const { course } = loadAccessibleCourse(request.params.id, request.user || null);
     if (!course) {
       reply.code(404);
       return { error: 'Course not found' };
     }
+    if (!requireCourseRead(request, reply, course)) return;
     return { course };
   });
 
-  fastify.get(`${API_PREFIX}/courses/:id/lessons`, async (request, reply) => {
-    const course = loadCourseDetail(request.params.id);
+  fastify.get(`${API_PREFIX}/courses/:id/lessons`, { schema: { params: courseParamsSchema } }, async (request, reply) => {
+    const { course } = loadAccessibleCourse(request.params.id, request.user || null);
     if (!course) {
       reply.code(404);
       return { error: 'Course not found' };
     }
+    if (!requireCourseRead(request, reply, course)) return;
     return { lessons: listCourseLessons(course) };
   });
 
-  fastify.get(`${API_PREFIX}/courses/:id/materials`, async (request, reply) => {
-    const course = loadCourseDetail(request.params.id);
+  fastify.get(`${API_PREFIX}/courses/:id/materials`, { schema: { params: courseParamsSchema } }, async (request, reply) => {
+    const { course } = loadAccessibleCourse(request.params.id, request.user || null);
     if (!course) {
       reply.code(404);
       return { error: 'Course not found' };
     }
+    if (!requireCourseRead(request, reply, course)) return;
     return { materials: listCourseMaterials(course) };
   });
 
@@ -102,7 +172,7 @@ function registerCourseRoutes(fastify, deps) {
       body: courseBodySchema
     }
   }, async (request, reply) => {
-    if (!requireRole(request, reply, ['teacher', 'judge'])) return;
+    if (!requireRole(request, reply, ['teacher'])) return;
     const payload = normalizeCoursePayload(request.body || {});
     payload.createdBy = request.user.id;
     if (!payload.id || !payload.title) {
@@ -133,15 +203,17 @@ function registerCourseRoutes(fastify, deps) {
 
   fastify.patch(`${API_PREFIX}/courses/:id`, {
     schema: {
+      params: courseParamsSchema,
       body: courseBodySchema
     }
   }, async (request, reply) => {
-    if (!requireRole(request, reply, ['teacher', 'judge'])) return;
+    if (!requireRole(request, reply, ['teacher'])) return;
     const current = loadCourseDetail(request.params.id);
     if (!current) {
       reply.code(404);
       return { error: 'Course not found' };
     }
+    if (!requireCourseEdit(request, reply, current)) return;
     const payload = normalizeCoursePayload(request.body || {}, current);
     payload.id = current.id;
     saveCourseDetail(payload);
@@ -163,21 +235,38 @@ function registerCourseRoutes(fastify, deps) {
 
   fastify.post(`${API_PREFIX}/courses/:id/lessons`, {
     schema: {
+      params: courseParamsSchema,
       body: lessonBodySchema
     }
   }, async (request, reply) => {
-    if (!requireRole(request, reply, ['teacher', 'judge'])) return;
+    if (!requireRole(request, reply, ['teacher'])) return;
     const course = loadCourseDetail(request.params.id);
     if (!course) {
       reply.code(404);
       return { error: 'Course not found' };
     }
+    if (!requireCourseEdit(request, reply, course)) return;
     const rawLessonId = String(request.body?.lessonId || request.body?.id || '').trim();
+    if (rawLessonId && !/^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(rawLessonId)) {
+      reply.code(400);
+      return { error: '课时ID格式无效' };
+    }
     const lessonId = rawLessonId || `lesson${listCourseLessons(course).length + 1}`;
-    const lessonsDir = path.join(MATERIALS_DIR, course.materialsRoot, 'lessons');
+    const materialsRoot = path.resolve(MATERIALS_DIR, course.materialsRoot);
+    const materialsRelative = path.relative(path.resolve(MATERIALS_DIR), materialsRoot);
+    if (!materialsRelative || materialsRelative.startsWith('..') || path.isAbsolute(materialsRelative)) {
+      reply.code(400);
+      return { error: '课程资料路径无效' };
+    }
+    const lessonsDir = path.resolve(materialsRoot, 'lessons');
     ensureDir(lessonsDir);
     const fileName = `${lessonId.replace(/\.json$/i, '')}.json`;
-    const targetPath = path.join(lessonsDir, fileName);
+    const targetPath = path.resolve(lessonsDir, fileName);
+    const relativeTarget = path.relative(path.resolve(lessonsDir), targetPath);
+    if (!relativeTarget || relativeTarget.startsWith('..') || path.isAbsolute(relativeTarget)) {
+      reply.code(400);
+      return { error: '课时路径无效' };
+    }
     if (fs.existsSync(targetPath)) {
       reply.code(409);
       return { error: 'Lesson already exists' };
@@ -190,17 +279,29 @@ function registerCourseRoutes(fastify, deps) {
 
   fastify.patch(`${API_PREFIX}/courses/:id/lessons/:lessonId`, {
     schema: {
+      params: lessonParamsSchema,
       body: lessonBodySchema
     }
   }, async (request, reply) => {
-    if (!requireRole(request, reply, ['teacher', 'judge'])) return;
+    if (!requireRole(request, reply, ['teacher'])) return;
     const course = loadCourseDetail(request.params.id);
     if (!course) {
       reply.code(404);
       return { error: 'Course not found' };
     }
+    if (!requireCourseEdit(request, reply, course)) return;
     const lessonId = String(request.params.lessonId || '').trim();
-    const targetPath = path.join(MATERIALS_DIR, course.materialsRoot, 'lessons', `${lessonId.replace(/\.json$/i, '')}.json`);
+    if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(lessonId)) {
+      reply.code(400);
+      return { error: '课时ID格式无效' };
+    }
+    const lessonsDir = path.resolve(MATERIALS_DIR, course.materialsRoot, 'lessons');
+    const targetPath = path.resolve(lessonsDir, `${lessonId}.json`);
+    const relativeTarget = path.relative(lessonsDir, targetPath);
+    if (!relativeTarget || relativeTarget.startsWith('..') || path.isAbsolute(relativeTarget)) {
+      reply.code(400);
+      return { error: '课时路径无效' };
+    }
     const existingLesson = readJsonFile(targetPath, null);
     if (!existingLesson) {
       reply.code(404);

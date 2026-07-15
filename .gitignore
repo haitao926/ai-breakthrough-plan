@@ -7,6 +7,19 @@ gitea/
 storage/db/*.sqlite
 storage/uploads/
 storage/logs/
+storage/assessments/
+storage/backups/
+
+apps/web-vue/dist/
+**/.vite/
+.omx/
+*.orig
+recover*.patch
+diff_output.txt
+test-error.js
+:memory:
+.claude/settings.local.json
+.impeccable.md
 
 services/gitea/data/
 services/gitea/log/

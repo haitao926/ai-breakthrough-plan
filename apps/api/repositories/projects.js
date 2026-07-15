@@ -4,8 +4,42 @@ function createProjectRepository({
   safeParseJson,
   parseAttachmentList,
   toUrlPath,
-  buildProjectFilters
+  buildProjectFilters,
+  canReadProject
 }) {
+  function normalizeVisibility(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    return ['public', 'assigned', 'private'].includes(raw) ? raw : 'public';
+  }
+
+  function normalizeStringList(value) {
+    if (Array.isArray(value)) {
+      return Array.from(new Set(value.map(item => String(item || '').trim()).filter(Boolean)));
+    }
+    const raw = String(value || '').trim();
+    if (!raw) return [];
+    if (raw.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          return Array.from(new Set(parsed.map(item => String(item || '').trim()).filter(Boolean)));
+        }
+      } catch (_err) {}
+    }
+    return raw
+      .split(/[,\n，、]+/)
+      .map(item => item.trim())
+      .filter(Boolean)
+      .filter((item, index, list) => list.indexOf(item) === index);
+  }
+
+  function normalizeIdList(value) {
+    return normalizeStringList(value)
+      .map(item => Number.parseInt(String(item), 10))
+      .filter(item => Number.isInteger(item) && item > 0)
+      .filter((item, index, list) => list.indexOf(item) === index);
+  }
+
   function getMembership(projectId, userId) {
     return db.get(
       'SELECT id, role FROM project_members WHERE project_id = ? AND user_id = ?',
@@ -15,24 +49,35 @@ function createProjectRepository({
 
   function parseSubmissionAttachments(submissionId, fallback) {
     const rows = db.all(
-      'SELECT file_name, file_path, file_size FROM attachments WHERE submission_id = ?',
+      `SELECT a.id, a.file_name, a.file_path, a.file_size, s.type AS submission_type, s.status AS submission_status, p.visibility AS project_visibility
+       FROM attachments a
+       JOIN submissions s ON s.id = a.submission_id
+       JOIN projects p ON p.id = s.project_id
+       WHERE a.submission_id = ? ORDER BY a.id ASC`,
       [submissionId]
     );
     if (rows.length) {
       return rows.map((row) => ({
+        id: row.id,
         name: row.file_name,
         path: row.file_path,
         size: row.file_size,
-        url: `/uploads/${toUrlPath(row.file_path)}`
+        url: row.submission_type === 'showcase' && row.submission_status === 'approved' && row.project_visibility === 'public'
+          ? `/api/v1/showcase-attachments/${row.id}/download`
+          : `/api/v1/project-attachments/${row.id}/download`
       }));
     }
     return parseAttachmentList(fallback).map((att) => ({
       ...att,
-      url: `/uploads/${toUrlPath(att.path)}`
+      url: ''
     }));
   }
 
   function getById(projectId) {
+    return db.get('SELECT * FROM projects WHERE id = ? AND deleted_at IS NULL', [projectId]);
+  }
+
+  function getByIdIncludingDeleted(projectId) {
     return db.get('SELECT * FROM projects WHERE id = ?', [projectId]);
   }
 
@@ -68,13 +113,21 @@ function createProjectRepository({
     className,
     giteaRepoUrl,
     memberIds,
-    createdBy
+    createdBy,
+    visibility,
+    visibleToRoles,
+    visibleToUserIds,
+    visibleToClassNames
   }) {
     const createdAt = now();
+    const normalizedVisibility = normalizeVisibility(visibility);
+    const visibleRolesJson = JSON.stringify(normalizeStringList(visibleToRoles));
+    const visibleUserIdsJson = JSON.stringify(normalizeIdList(visibleToUserIds));
+    const visibleClassNamesJson = JSON.stringify(normalizeStringList(visibleToClassNames));
     return db.transaction((trx) => {
       const info = trx.run(
-        `INSERT INTO projects (title, summary, team_members, class_name, status, created_at, updated_at, created_by, gitea_repo_url)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO projects (title, summary, team_members, class_name, status, created_at, updated_at, created_by, gitea_repo_url, visibility, visible_to_roles, visible_to_user_ids, visible_to_class_names)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           title,
           summary,
@@ -84,7 +137,11 @@ function createProjectRepository({
           createdAt,
           createdAt,
           createdBy,
-          giteaRepoUrl
+          giteaRepoUrl,
+          normalizedVisibility,
+          visibleRolesJson,
+          visibleUserIdsJson,
+          visibleClassNamesJson
         ]
       );
       const projectId = info.lastInsertRowid;
@@ -107,12 +164,16 @@ function createProjectRepository({
       params.push(user.id, user.id);
     }
 
+    conditions.unshift('deleted_at IS NULL');
     let sql = 'SELECT * FROM projects';
     if (conditions.length) {
       sql += ` WHERE ${conditions.join(' AND ')}`;
     }
     sql += ' ORDER BY updated_at DESC';
-    return db.all(sql, params);
+    const rows = db.all(sql, params);
+    return typeof canReadProject === 'function'
+      ? rows.filter(row => canReadProject(user, row))
+      : rows;
   }
 
   function insertLog(projectId, status, note = '') {
@@ -129,6 +190,27 @@ function createProjectRepository({
       projectId
     ]);
     insertLog(projectId, status, note || '');
+  }
+
+  function softDeleteProject(projectId, deletedBy, reason = '') {
+    const deletedAt = now();
+    const result = db.run(
+      `UPDATE projects
+       SET deleted_at = ?, deleted_by = ?, delete_reason = ?, updated_at = ?
+       WHERE id = ? AND deleted_at IS NULL`,
+      [deletedAt, deletedBy || null, String(reason || '').trim(), deletedAt, projectId]
+    );
+    return result.changes > 0;
+  }
+
+  function restoreProject(projectId) {
+    const result = db.run(
+      `UPDATE projects
+       SET deleted_at = NULL, deleted_by = NULL, delete_reason = NULL, updated_at = ?
+       WHERE id = ? AND deleted_at IS NOT NULL`,
+      [now(), projectId]
+    );
+    return result.changes > 0;
   }
 
   function listToolData(projectId) {
@@ -246,6 +328,7 @@ function createProjectRepository({
   return {
     getMembership,
     getById,
+    getByIdIncludingDeleted,
     createProject,
     listProjects,
     addMembers,
@@ -258,7 +341,9 @@ function createProjectRepository({
     getDetail,
     listMilestones,
     listResources,
-    listDevLogs
+    listDevLogs,
+    restoreProject,
+    softDeleteProject
   };
 }
 

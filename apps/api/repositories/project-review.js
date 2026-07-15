@@ -6,19 +6,23 @@ function createProjectReviewRepository(deps) {
     getProjectMilestones,
     getProjectResources,
     getProjectDevLogs,
-    buildProjectReviewMeta
+    buildProjectReviewMeta,
+    canReadProject
   } = deps;
 
   return {
-    listQueue(query = {}) {
+    listQueue(query = {}, user = null) {
       const { conditions, params } = buildProjectFilters(query, 'p');
+      conditions.unshift('p.deleted_at IS NULL');
       let sql = 'SELECT p.* FROM projects p';
       if (conditions.length) {
         sql += ` WHERE ${conditions.join(' AND ')}`;
       }
       sql += ' ORDER BY p.updated_at DESC';
 
-      return db.all(sql, params).map((project) => {
+      return db.all(sql, params)
+        .filter(project => typeof canReadProject !== 'function' || canReadProject(user, project))
+        .map((project) => {
         const detail = getProjectDetail(project.id);
         const milestones = getProjectMilestones(project.id);
         const resources = getProjectResources(project.id);

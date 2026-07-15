@@ -34,17 +34,6 @@ const assignmentBodySchema = {
   additionalProperties: true
 };
 
-const assignmentSubmissionBodySchema = {
-  type: 'object',
-  properties: {
-    content: { type: 'string', maxLength: 20000 },
-    link: { type: 'string', maxLength: 1000 },
-    attachmentNote: { type: 'string', maxLength: 4000 },
-    attachment_note: { type: 'string', maxLength: 4000 }
-  },
-  additionalProperties: true
-};
-
 const assignmentReviewBodySchema = {
   type: 'object',
   properties: {
@@ -66,6 +55,9 @@ function registerAssignmentRoutes(fastify, deps) {
   const {
     API_PREFIX,
     db,
+    fs,
+    path,
+    UPLOAD_DIR,
     now,
     requireRole,
     parseProjectId,
@@ -74,12 +66,77 @@ function registerAssignmentRoutes(fastify, deps) {
     mapAssignmentSubmission,
     loadCourseDetail,
     listCourseLessons,
+    canReadCourse,
+    canEditCourse,
+    canReadAssignmentSubmission,
+    getAttachmentById,
     getCompetitionRegistrationStats,
     requestAiChat,
+    safeParseJson,
     logAudit,
-    ASSIGNMENT_SUBMISSION_STATUSES
+    ASSIGNMENT_SUBMISSION_STATUSES,
+    collectMultipart,
+    cleanupTempFiles,
+    moveTempFiles,
+    resolveUnder
   } = deps;
   const assignmentRepository = createAssignmentRepository({ db, now });
+
+  function normalizeAttachments(value) {
+    if (!Array.isArray(value)) return [];
+    return value
+      .map((item) => {
+        if (!item || typeof item !== 'object') return null;
+        const name = String(item.name || '').trim();
+        const relativePath = String(item.path || '').trim().replace(/\\/g, '/');
+        if (!relativePath) return null;
+        const size = Number(item.size);
+        return {
+          name: name || relativePath.split('/').pop() || '附件',
+          path: relativePath,
+          size: Number.isFinite(size) && size >= 0 ? size : 0
+        };
+      })
+      .filter(Boolean);
+  }
+
+  function parseRetainedAttachmentPaths(rawValue, existingAttachments) {
+    if (rawValue === undefined) {
+      return existingAttachments.map(item => item.path);
+    }
+    const parsed = Array.isArray(rawValue) ? rawValue : safeParseJson(rawValue);
+    if (!Array.isArray(parsed)) return [];
+    const allowed = new Set(existingAttachments.map(item => item.path));
+    return parsed
+      .map(item => String(item || '').trim().replace(/\\/g, '/'))
+      .filter(item => item && allowed.has(item))
+      .filter((item, index, list) => list.indexOf(item) === index);
+  }
+
+  function removeStoredAttachment(relativePath) {
+    const normalized = String(relativePath || '').trim().replace(/\\/g, '/');
+    if (!normalized) return;
+    const absolutePath = typeof resolveUnder === 'function'
+      ? resolveUnder(UPLOAD_DIR, normalized)
+      : path.resolve(UPLOAD_DIR, normalized);
+    if (!absolutePath) {
+      return;
+    }
+    try {
+      fs.unlinkSync(absolutePath);
+    } catch (err) {
+      if (err.code !== 'ENOENT') fastify.log.debug({ err }, 'attachment cleanup failed');
+    }
+  }
+
+  function removeDiscardedAttachments(existingAttachments, retainedPaths) {
+    const retainedSet = new Set(retainedPaths);
+    existingAttachments.forEach((attachment) => {
+      if (!retainedSet.has(attachment.path)) {
+        removeStoredAttachment(attachment.path);
+      }
+    });
+  }
 
   function toTextList(value) {
     return Array.isArray(value) ? value.map(item => String(item || '').trim()).filter(Boolean) : [];
@@ -142,16 +199,47 @@ function registerAssignmentRoutes(fastify, deps) {
     return assignmentRepository.list({ courseId, lessonId, user });
   }
 
+  function requireCourseRead(request, reply, courseId) {
+    if (!courseId || typeof canReadCourse !== 'function') return true;
+    const course = loadCourseDetail(courseId);
+    if (!course) return true;
+    if (canReadCourse(request.user, course)) return true;
+    reply.code(request.user ? 403 : 401);
+    reply.send({ error: request.user ? '无权限访问该课程作业' : '请登录后访问该课程作业' });
+    return false;
+  }
+
+  function requireCourseEdit(request, reply, courseId) {
+    const course = loadCourseDetail(courseId);
+    if (!course || typeof canEditCourse !== 'function' || canEditCourse(request.user, course)) return true;
+    reply.code(403);
+    reply.send({ error: '无权限编辑该课程作业' });
+    return false;
+  }
+
+  function filterAssignmentsByCourseAccess(assignments, user) {
+    if (typeof canReadCourse !== 'function') return assignments;
+    const cache = new Map();
+    return assignments.filter((assignment) => {
+      const courseId = String(assignment.course_id || assignment.courseId || '').trim();
+      if (!courseId) return true;
+      if (!cache.has(courseId)) cache.set(courseId, loadCourseDetail(courseId));
+      const course = cache.get(courseId);
+      return !course || canReadCourse(user, course);
+    });
+  }
+
   fastify.get(`${API_PREFIX}/assignments`, async (request, reply) => {
-    if (!requireRole(request, reply, ['student', 'teacher', 'judge'])) return;
+    if (!requireRole(request, reply, ['student', 'teacher'])) return;
     const courseId = String(request.query?.courseId || '').trim();
     const lessonId = String(request.query?.lessonId || '').trim();
     const status = String(request.query?.status || '').trim();
+    if (courseId && !requireCourseRead(request, reply, courseId)) return;
     const assignments = (!status && courseId && lessonId)
       ? ensureLessonAssignment(courseId, lessonId, request.user)
       : assignmentRepository.list({ courseId, lessonId, status, user: request.user });
     return {
-      assignments: assignments.map((row) => mapAssignment(row))
+      assignments: filterAssignmentsByCourseAccess(assignments, request.user).map((row) => mapAssignment(row))
     };
   });
 
@@ -166,6 +254,7 @@ function registerAssignmentRoutes(fastify, deps) {
       reply.code(400);
       return { error: '课程与作业标题必填' };
     }
+    if (!requireCourseEdit(request, reply, payload.courseId)) return;
     const assignment = assignmentRepository.create(payload, request.user.id);
     logAudit('assignment.create', request, { assignmentId: assignment.id });
     reply.code(201);
@@ -194,6 +283,7 @@ function registerAssignmentRoutes(fastify, deps) {
       reply.code(400);
       return { error: '课程与作业标题必填' };
     }
+    if (!requireCourseEdit(request, reply, payload.courseId)) return;
     const assignment = assignmentRepository.update(assignmentId, payload);
     logAudit('assignment.update', request, { assignmentId });
     return { assignment: mapAssignment(assignment) };
@@ -211,16 +301,69 @@ function registerAssignmentRoutes(fastify, deps) {
       reply.code(404);
       return { error: '作业不存在' };
     }
+    if (!requireCourseRead(request, reply, assignment.course_id)) return;
+    const submissions = assignmentRepository.listSubmissions(assignmentId, request.user)
+      .filter((submission) => typeof canReadAssignmentSubmission !== 'function'
+        || canReadAssignmentSubmission(request.user, {
+          ...submission,
+          course_id: assignment.course_id,
+          assignment_created_by: assignment.created_by
+        }));
     return {
       assignment: mapAssignment(assignment),
-      submissions: assignmentRepository.listSubmissions(assignmentId, request.user).map(mapAssignmentSubmission)
+      submissions: submissions.map(mapAssignmentSubmission)
     };
+  });
+
+  fastify.get(`${API_PREFIX}/assignment-attachments/:id/download`, {
+    schema: {
+      params: {
+        type: 'object',
+        required: ['id'],
+        properties: { id: { type: 'integer', minimum: 1 } }
+      }
+    }
+  }, async (request, reply) => {
+    if (!requireRole(request, reply, ['student', 'teacher'])) return;
+    const attachment = typeof getAttachmentById === 'function'
+      ? getAttachmentById(parseProjectId(request.params.id))
+      : null;
+    if (!attachment || typeof canReadAssignmentSubmission !== 'function' || !canReadAssignmentSubmission(request.user, attachment)) {
+      reply.code(404);
+      return { error: '文件不存在' };
+    }
+    const relativePath = String(attachment.storage_key || '').trim().replace(/\\/g, '/');
+    const uploadRoot = path.resolve(UPLOAD_DIR);
+    const absolutePath = typeof resolveUnder === 'function'
+      ? resolveUnder(uploadRoot, relativePath)
+      : path.resolve(uploadRoot, relativePath);
+    const relative = absolutePath ? path.relative(uploadRoot, absolutePath) : '';
+    if (!absolutePath || !relative || relative.startsWith('..') || path.isAbsolute(relative)) {
+      reply.code(404);
+      return { error: '文件不存在' };
+    }
+    if (path.extname(attachment.original_name || relativePath).toLowerCase() === '.svg' || !fs.existsSync(absolutePath)) {
+      reply.code(404);
+      return { error: '文件不存在' };
+    }
+    reply
+      .header('Content-Type', 'application/octet-stream')
+      .header('Content-Disposition', `attachment; filename="${encodeURIComponent(path.basename(attachment.original_name || relativePath))}"`)
+      .header('X-Content-Type-Options', 'nosniff')
+      .header('Cache-Control', 'private, no-store');
+    return reply.send(fs.createReadStream(absolutePath));
   });
 
   fastify.post(`${API_PREFIX}/assignments/:id/submissions`, {
     schema: {
-      params: assignmentParamsSchema,
-      body: assignmentSubmissionBodySchema
+      params: assignmentParamsSchema
+    },
+    config: {
+      rateLimit: {
+        max: 20,
+        timeWindow: '1 hour',
+        keyGenerator: request => request.user?.id ? `user:${request.user.id}` : request.ip
+      }
     }
   }, async (request, reply) => {
     if (!requireRole(request, reply, ['student', 'teacher'])) return;
@@ -234,79 +377,122 @@ function registerAssignmentRoutes(fastify, deps) {
       reply.code(404);
       return { error: '作业不存在或未发布' };
     }
-    const payload = request.body || {};
-    const content = String(payload.content || '').trim();
-    const link = String(payload.link || '').trim();
-    const attachmentNote = String(payload.attachmentNote || payload.attachment_note || '').trim();
-    if (!content && !link && !attachmentNote) {
-      reply.code(400);
-      return { error: '提交内容、链接或附件说明至少填写一项' };
+    if (!requireCourseRead(request, reply, assignment.course_id)) return;
+    if (request.user.role !== 'student') {
+      reply.code(403);
+      return { error: '只有学生可以提交作业' };
     }
-    if (link && !/^https?:\/\//i.test(link)) {
-      reply.code(400);
-      return { error: '链接必须以 http(s) 开头' };
-    }
-    const submittedAt = now();
-    const headerKey = request.headers['x-model-key'];
-    const apiKey = String(headerKey || process.env.AI_API_KEY || '').trim();
 
-    let aiFeedback = '';
-    let status = 'submitted';
-    let reviewedBy = null;
-    let reviewedAt = null;
-    let score = null;
+    const existingSubmission = assignmentRepository.getSubmissionByAssignmentAndStudent(assignmentId, request.user.id);
+    const existingAttachments = normalizeAttachments(safeParseJson(existingSubmission?.attachments) || []);
 
-    if (apiKey) {
-      try {
-        const messages = [
-          {
-            role: 'system',
-            content: `你是一名温暖、亲切的初中（七年级）人工智能与科创课程的“AI助教小破”。
+    let payload = request.body || {};
+    let tempFiles = [];
+    let movedAttachments = [];
+
+    try {
+      if (typeof request.isMultipart === 'function' && request.isMultipart()) {
+        const collected = await collectMultipart(request);
+        payload = collected.fields || {};
+        tempFiles = collected.tempFiles || [];
+      }
+
+      const content = String(payload.content || '').trim();
+      const link = String(payload.link || '').trim();
+      const attachmentNote = String(payload.attachmentNote || payload.attachment_note || '').trim();
+      const retainedPaths = parseRetainedAttachmentPaths(payload.retainedAttachmentPaths, existingAttachments);
+      const retainedAttachments = existingAttachments.filter(item => retainedPaths.includes(item.path));
+      const newAttachments = tempFiles.length
+        ? moveTempFiles(tempFiles, `assignment-${assignmentId}`, `student-${request.user.id}`)
+        : [];
+      movedAttachments = newAttachments;
+      const attachments = [...retainedAttachments, ...newAttachments];
+
+      if (!content && !link && !attachmentNote && !attachments.length) {
+        movedAttachments.forEach(item => removeStoredAttachment(item.path));
+        reply.code(400);
+        return { error: '提交内容、链接、附件说明或上传文件至少填写一项' };
+      }
+
+      if (link && !/^https?:\/\//i.test(link)) {
+        movedAttachments.forEach(item => removeStoredAttachment(item.path));
+        reply.code(400);
+        return { error: '链接必须以 http(s) 开头' };
+      }
+
+      const submittedAt = now();
+      const headerKey = request.headers['x-model-key'];
+      const apiKey = String(headerKey || process.env.AI_API_KEY || '').trim();
+
+      let aiFeedback = '';
+      let status = 'submitted';
+      let reviewedBy = null;
+      let reviewedAt = null;
+      let score = null;
+
+      if (apiKey) {
+        try {
+          const attachmentSummary = attachments.length
+            ? attachments.map(item => item.name).join('、')
+            : '(未上传)';
+          const messages = [
+            {
+              role: 'system',
+              content: `你是一名温暖、亲切的初中（七年级）人工智能与科创课程的“AI助教小破”。
 你的任务是对学生的作业提交进行【即时评测与启发式反馈】。
 请用极其鼓励、通俗易懂且简短的语言（150字以内）进行评价：
 1. 肯定学生付出的努力（给出正面情感回馈，比如“哇！你已经迈出了关键的一步！”）。
 2. 用生活中的生动比喻或浅显逻辑点评他们的提交内容，指出亮点。
 3. 给出1个非常具体、有趣的下一步改进建议或思考题，引导他们继续探索。
 注意：保持亲和力，适合12岁左右的孩子，排版要清晰美观。`
-          },
-          {
-            role: 'user',
-            content: `【作业标题】：${assignment.title}
+            },
+            {
+              role: 'user',
+              content: `【作业标题】：${assignment.title}
 【作业要求】：${assignment.requirements || assignment.description || '无具体要求'}
 【学生提交内容】：
 - 作业文本/代码：${content || '(未填写)'}
-- 作品/项目链接：${link || '(未提供)'}
-- 附件说明：${attachmentNote || '(无)'}`
+- 补充链接：${link || '(未提供)'}
+- 已上传附件：${attachmentSummary}
+- 附件说明：${attachmentNote || '(无)'}`.trim()
+            }
+          ];
+
+          const result = await requestAiChat(messages, apiKey);
+          if (result && result.content) {
+            aiFeedback = result.content;
+            status = 'reviewed';
+            reviewedBy = 'AI_Assistant';
+            reviewedAt = submittedAt;
+            score = 100;
           }
-        ];
-
-        const result = await requestAiChat(messages, apiKey);
-        if (result && result.content) {
-          aiFeedback = result.content;
-          status = 'reviewed';
-          reviewedBy = 'AI_Assistant';
-          reviewedAt = submittedAt;
-          score = 100;
+        } catch (err) {
+          fastify.log.warn({ err }, 'AI assignment auto-review failed');
         }
-      } catch (err) {
-        console.error('AI Assignment Auto-Review failed:', err.message);
       }
-    }
 
-    const row = assignmentRepository.upsertSubmission({
-      assignmentId,
-      studentId: request.user.id,
-      content,
-      link,
-      attachmentNote,
-      status,
-      score,
-      feedback: aiFeedback,
-      reviewedBy,
-      reviewedAt
-    });
-    logAudit('assignment.submit', request, { assignmentId });
-    return { submission: mapAssignmentSubmission(row) };
+      const row = assignmentRepository.upsertSubmission({
+        assignmentId,
+        studentId: request.user.id,
+        content,
+        link,
+        attachmentNote,
+        attachments,
+        status,
+        score,
+        feedback: aiFeedback,
+        reviewedBy,
+        reviewedAt
+      });
+      removeDiscardedAttachments(existingAttachments, retainedPaths);
+      logAudit('assignment.submit', request, { assignmentId, attachmentCount: attachments.length });
+      return { submission: mapAssignmentSubmission(row) };
+    } catch (err) {
+      cleanupTempFiles(tempFiles || []);
+      movedAttachments.forEach(item => removeStoredAttachment(item.path));
+      reply.code(400);
+      return { error: err.message || '提交失败' };
+    }
   });
 
   fastify.patch(`${API_PREFIX}/assignments/:id/submissions/:submissionId`, {
@@ -357,13 +543,29 @@ function registerAssignmentRoutes(fastify, deps) {
       reply.code(400);
       return { error: '退回修改必须填写反馈' };
     }
+    const assignment = assignmentRepository.getById(assignmentId);
+    if (!assignment) {
+      reply.code(404);
+      return { error: '作业不存在' };
+    }
+    if (!requireCourseRead(request, reply, assignment.course_id)) return;
+    const submission = assignmentRepository.getSubmissionById(submissionId);
+    if (!submission || (typeof canReadAssignmentSubmission === 'function' && !canReadAssignmentSubmission(request.user, {
+      ...submission,
+      course_id: assignment.course_id,
+      assignment_created_by: assignment.created_by
+    }))) {
+      reply.code(404);
+      return { error: '提交不存在' };
+    }
     const row = assignmentRepository.reviewSubmission({
       assignmentId,
       submissionId,
       status,
       score,
       feedback,
-      reviewedBy: request.user.id
+      reviewedBy: request.user.id,
+      reviewerRole: request.user.role
     });
     if (!row) {
       reply.code(404);

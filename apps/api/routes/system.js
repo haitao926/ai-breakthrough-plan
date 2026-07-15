@@ -150,11 +150,11 @@ function registerSystemRoutes(fastify, deps) {
     }
   };
 
-  function listTeachers(db) {
+  function listAssignableTeachers(db) {
     return db.all(
       `SELECT id, name, username, email, role, created_at
        FROM users
-       WHERE role IN ('teacher', 'judge', 'admin')
+       WHERE role IN ('teacher', 'judge')
        ORDER BY created_at DESC, id DESC`
     );
   }
@@ -172,7 +172,7 @@ function registerSystemRoutes(fastify, deps) {
        FROM users u
        LEFT JOIN teacher_student_links tsl ON tsl.teacher_id = u.id
        LEFT JOIN student_profiles sp ON sp.user_id = tsl.student_id AND sp.class_name IS NOT NULL AND TRIM(sp.class_name) != ''
-       WHERE u.role IN ('teacher', 'judge', 'admin')
+       WHERE u.role IN ('teacher', 'judge')
        GROUP BY u.id
        ORDER BY student_count DESC, u.created_at DESC, u.id DESC`
     ).map(item => ({
@@ -180,10 +180,6 @@ function registerSystemRoutes(fastify, deps) {
       student_count: Number(item.student_count || 0),
       class_count: Number(item.class_count || 0)
     }));
-  }
-
-  function getTeacherMap(db) {
-    return new Map(listTeachers(db).map(item => [Number(item.id), item]));
   }
 
   function getTeacherLinksForStudents(db, studentIds) {
@@ -273,7 +269,7 @@ function registerSystemRoutes(fastify, deps) {
     const rows = db.all(
       `SELECT id
        FROM users
-       WHERE id IN (${placeholders}) AND role IN ('teacher', 'judge', 'admin')`,
+       WHERE id IN (${placeholders}) AND role IN ('teacher', 'judge')`,
       ids
     );
     const validIds = rows.map((row) => Number(row.id)).filter((id) => Number.isInteger(id) && id > 0);
@@ -308,7 +304,14 @@ function registerSystemRoutes(fastify, deps) {
   fastify.get(`${API_PREFIX}/health`, async () => ({ ok: true }));
 
   fastify.post(`${API_PREFIX}/auth/register`, {
-    schema: { body: authSchema }
+    schema: { body: authSchema },
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: '1 hour',
+        keyGenerator: request => request.ip
+      }
+    }
   }, async (request, reply) => {
     const payload = request.body || {};
     const name = String(payload.name || '').trim();
@@ -393,7 +396,14 @@ function registerSystemRoutes(fastify, deps) {
   });
 
   fastify.post(`${API_PREFIX}/auth/login`, {
-    schema: { body: authSchema }
+    schema: { body: authSchema },
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: '15 minutes',
+        keyGenerator: request => `${request.ip}:${normalizeEmail(request.body?.email || request.body?.username || '')}`
+      }
+    }
   }, async (request, reply) => {
     const payload = request.body || {};
     const identifier = String(payload.email || payload.username || '').trim();
@@ -571,15 +581,28 @@ function registerSystemRoutes(fastify, deps) {
     }
     sql += ' ORDER BY u.created_at DESC';
     const users = db.all(sql, params);
+
+    const classRows = db.all(
+      `SELECT class_name, COUNT(user_id) AS student_count
+       FROM student_profiles
+       WHERE class_name IS NOT NULL AND TRIM(class_name) != ''
+       GROUP BY class_name
+       ORDER BY student_count DESC, class_name ASC`
+    );
+    const classes = classRows.map(item => ({
+      className: item.class_name,
+      studentCount: Number(item.student_count || 0)
+    }));
+
     if (!users.length) {
-      return { users, teachers: listTeachers(db) };
+      return { users, classes, teachers: listAssignableTeachers(db) };
     }
     const links = getTeacherLinksForStudents(db, users.map(user => user.id));
     const enrichedUsers = users.map(user => ({
       ...user,
       teachers: links.get(Number(user.id)) || []
     }));
-    return { users: enrichedUsers, teachers: listTeachers(db) };
+    return { users: enrichedUsers, classes, teachers: listAssignableTeachers(db) };
   });
 
   fastify.get(`${API_PREFIX}/admin/overview`, async (request, reply) => {
@@ -615,6 +638,7 @@ function registerSystemRoutes(fastify, deps) {
     const projectRows = db.all(
       `SELECT status, COUNT(*) AS total
        FROM projects
+       WHERE deleted_at IS NULL
        GROUP BY status`
     );
     const projectCounts = projectRows.reduce((acc, row) => {
@@ -641,9 +665,15 @@ function registerSystemRoutes(fastify, deps) {
         unassignedStudents: unassignedStudentCount,
         giteaSyncedStudents: Number(syncedStudentCountRow?.total || 0),
         classes: classRows.length,
+        draftProjects: Number(projectCounts.draft || 0),
+        submittedProjects: Number(projectCounts.submitted || 0),
+        reviewingProjects: Number(projectCounts.reviewing || 0),
+        approvedProjects: Number(projectCounts.approved || 0),
+        rejectedProjects: Number(projectCounts.rejected || 0),
         activeProjects: Number(projectCounts.in_progress || 0),
-        pendingProjects: Number(projectCounts.pending || 0),
-        completedProjects: Number(projectCounts.completed || 0)
+        midtermReviewProjects: Number(projectCounts.midterm_review || 0),
+        finalReviewProjects: Number(projectCounts.final_review || 0),
+        archivedProjects: Number(projectCounts.archived || 0)
       },
       classes: classRows.map(item => ({
         className: item.class_name,
@@ -929,7 +959,7 @@ function registerSystemRoutes(fastify, deps) {
       body: giteaBulkUserSyncSchema
     }
   }, async (request, reply) => {
-    if (!requireRole(request, reply, ['teacher'])) return;
+    if (!requireRole(request, reply, ['admin'])) return;
     const db = getDb();
     const payload = request.body || {};
     const onlyUnsynced = payload.onlyUnsynced !== false;

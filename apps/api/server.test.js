@@ -6,8 +6,22 @@ const test = require('node:test');
 const crypto = require('node:crypto');
 
 const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'innovation-api-'));
+const repoRoot = path.join(__dirname, '../..');
+const fixtureCourses = path.join(tmpRoot, 'courses');
+const fixtureMaterials = path.join(tmpRoot, 'materials');
+fs.cpSync(path.join(repoRoot, 'content/courses'), fixtureCourses, { recursive: true });
+fs.cpSync(path.join(repoRoot, 'content/materials'), fixtureMaterials, { recursive: true });
+process.env.NODE_ENV = 'test';
+process.env.TRUST_PROXY = 'true';
+process.env.COURSES_DIR = fixtureCourses;
+process.env.MATERIALS_DIR = fixtureMaterials;
 process.env.PORTAL_DIR = path.join(tmpRoot, 'portal');
+process.env.UPLOAD_DIR = path.join(tmpRoot, 'uploads');
+process.env.LOG_DIR = path.join(tmpRoot, 'logs');
+process.env.ASSESSMENT_DIR = path.join(tmpRoot, 'assessments');
 process.env.AUTH_SECRET = 'test-secret';
+process.env.TEACHER_INVITE_CODE = 'teacher-test-invite';
+process.env.JUDGE_INVITE_CODE = 'judge-test-invite';
 process.env.GITEA_BASE_URL = '';
 process.env.GITEA_ADMIN_TOKEN = '';
 
@@ -30,6 +44,8 @@ function jsonHeaders(token) {
   };
 }
 
+let registrationIpCounter = 10;
+
 async function injectJson(method, url, token, payload) {
   return fastify.inject({
     method,
@@ -40,14 +56,45 @@ async function injectJson(method, url, token, payload) {
 }
 
 async function register(email, role = 'student') {
-  const res = await injectJson('POST', '/api/v1/auth/register', null, {
+  const registrationIp = `198.51.100.${registrationIpCounter++}`;
+  const res = await fastify.inject({
+    method: 'POST',
+    url: '/api/v1/auth/register',
+    headers: { ...jsonHeaders(null), 'x-forwarded-for': registrationIp },
+    payload: JSON.stringify({
     name: email.split('@')[0],
     email,
     password: 'secret123',
-    role
+    role,
+    ...(role === 'teacher' ? { inviteCode: process.env.TEACHER_INVITE_CODE } : {}),
+    ...(role === 'judge' ? { inviteCode: process.env.JUDGE_INVITE_CODE } : {})
+    })
   });
   assert.equal(res.statusCode, 200, res.body);
   return res.json();
+}
+
+function createManualUserToken(email, role = 'teacher') {
+  const createdAt = new Date().toISOString();
+  const username = `${role}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const info = dbHandle.run(
+    'INSERT INTO users (name, username, email, password_hash, role, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+    [email.split('@')[0], username, email, 'manual-test-hash', role, createdAt]
+  );
+  const authHelpers = createAuthHelpers({
+    crypto,
+    authSecret: process.env.AUTH_SECRET,
+    authTokenTtlHours: 168,
+    getUserById: (id) => dbHandle.get('SELECT id, name, username, email, role, avatar_url FROM users WHERE id = ?', [id]) || null
+  });
+  return {
+    id: info.lastInsertRowid,
+    token: authHelpers.createToken({
+      sub: info.lastInsertRowid,
+      role,
+      email
+    }).token
+  };
 }
 
 function multipartPayload(fields) {
@@ -102,8 +149,20 @@ test.before(async () => {
   assert.equal(Boolean(backfillMigration), true);
   const teacherStudentMigration = dbHandle.get('SELECT name FROM _migrations WHERE name = ?', ['004_teacher_student_links.sql']);
   assert.equal(Boolean(teacherStudentMigration), true);
+  const projectVisibilityMigration = dbHandle.get('SELECT name FROM _migrations WHERE name = ?', ['005_project_visibility.js']);
+  assert.equal(Boolean(projectVisibilityMigration), true);
+  const projectTopicVisibilityMigration = dbHandle.get('SELECT name FROM _migrations WHERE name = ?', ['006_project_topic_visibility.js']);
+  assert.equal(Boolean(projectTopicVisibilityMigration), true);
+  const assignmentAttachmentMigration = dbHandle.get('SELECT name FROM _migrations WHERE name = ?', ['007_assignment_submission_attachments.js']);
+  assert.equal(Boolean(assignmentAttachmentMigration), true);
+  assert.equal(Boolean(dbHandle.get('SELECT name FROM _migrations WHERE name = ?', ['008_project_soft_delete.js'])), true);
+  assert.equal(Boolean(dbHandle.get('SELECT name FROM _migrations WHERE name = ?', ['009_assignment_submission_attachments.js'])), true);
   const userColumns = dbHandle.all('PRAGMA table_info(users)');
   assert.equal(userColumns.some(column => column.name === 'avatar_url'), true);
+  const projectColumns = dbHandle.all('PRAGMA table_info(projects)');
+  assert.equal(projectColumns.some(column => column.name === 'visibility'), true);
+  const projectTopicColumns = dbHandle.all('PRAGMA table_info(project_topics)');
+  assert.equal(projectTopicColumns.some(column => column.name === 'visibility'), true);
   const owner = await register('owner@example.com');
   const member = await register('member@example.com');
   const candidate = await register('candidate@example.com');
@@ -370,6 +429,20 @@ test('admin can manage teacher-student links from admin endpoints', async () => 
   const teacherForbidden = await injectJson('GET', '/api/v1/admin/overview', teacherToken);
   assert.equal(teacherForbidden.statusCode, 403, teacherForbidden.body);
 
+  const teacherSummaries = await injectJson('GET', '/api/v1/admin/teachers', adminToken);
+  assert.equal(teacherSummaries.statusCode, 200, teacherSummaries.body);
+  assert.equal(teacherSummaries.json().teachers.some(user => user.role === 'admin'), false);
+
+  const studentListBeforeAssign = await injectJson('GET', '/api/v1/admin/users?role=student', adminToken);
+  assert.equal(studentListBeforeAssign.statusCode, 200, studentListBeforeAssign.body);
+  assert.equal(studentListBeforeAssign.json().teachers.some(user => user.role === 'admin'), false);
+
+  const adminAsTeacher = await injectJson('POST', '/api/v1/admin/student-teacher-links', adminToken, {
+    studentIds: [1],
+    teacherIds: [5]
+  });
+  assert.equal(adminAsTeacher.statusCode, 400, adminAsTeacher.body);
+
   const batchAssign = await injectJson('POST', '/api/v1/admin/student-teacher-links', adminToken, {
     studentIds: [1, 2],
     teacherIds: [4]
@@ -622,7 +695,7 @@ test('asset and mission routes expose stats, file listing, downloads, and projec
   assert.equal(typeof stats.json().total, 'number');
   assert.equal(Array.isArray(stats.json().byStatus), true);
 
-  const projectMaterialDir = path.join(__dirname, '../../content/materials/demo-project');
+  const projectMaterialDir = path.join(process.env.MATERIALS_DIR, 'demo-project');
   fs.mkdirSync(projectMaterialDir, { recursive: true });
   const filePath = path.join(projectMaterialDir, 'brief.txt');
   fs.writeFileSync(filePath, 'demo material');
@@ -640,6 +713,14 @@ test('asset and mission routes expose stats, file listing, downloads, and projec
   });
   assert.equal(download.statusCode, 200, download.body);
   assert.equal(download.headers['content-type'], 'text/plain');
+  assert.match(download.headers['content-disposition'] || '', /^attachment;/);
+
+  const inlineDownload = await fastify.inject({
+    method: 'GET',
+    url: '/api/v1/download/demo-project/brief.txt?inline=1'
+  });
+  assert.equal(inlineDownload.statusCode, 200, inlineDownload.body);
+  assert.match(inlineDownload.headers['content-disposition'] || '', /^inline;/);
 
   const missionProjects = await fastify.inject({
     method: 'GET',
@@ -660,6 +741,13 @@ test('assignment routes validate payloads and preserve teacher review flow', asy
     status: 'published'
   });
   assert.equal(createCourse.statusCode, 201, createCourse.body);
+  const teacherId = dbHandle.get('SELECT id FROM users WHERE email = ?', ['teacher@example.com']).id;
+  const ownerId = dbHandle.get('SELECT id FROM users WHERE email = ?', ['owner@example.com']).id;
+  dbHandle.run(
+    `INSERT OR IGNORE INTO teacher_student_links (teacher_id, student_id, created_at, updated_at)
+     VALUES (?, ?, ?, ?)`,
+    [teacherId, ownerId, new Date().toISOString(), new Date().toISOString()]
+  );
 
   const invalidAssignment = await injectJson('POST', '/api/v1/assignments', teacherToken, {
     courseId: assignmentCourseId
@@ -697,6 +785,29 @@ test('assignment routes validate payloads and preserve teacher review flow', asy
   assert.equal(createSubmission.statusCode, 200, createSubmission.body);
   assert.equal(createSubmission.json().submission.content, '这是我的作业提交内容');
 
+  const multipartSubmission = multipartFilePayload(
+    {
+      content: '补交了代码文件与说明',
+      attachmentNote: '附上 python 源码'
+    },
+    {
+      fieldName: 'files',
+      filename: 'solution.py',
+      contentType: 'text/x-python',
+      content: 'print(\"hello assignment\")\n'
+    }
+  );
+  const uploadSubmission = await fastify.inject({
+    method: 'POST',
+    url: `/api/v1/assignments/${assignmentId}/submissions`,
+    headers: { ...multipartSubmission.headers, authorization: `Bearer ${ownerToken}` },
+    payload: multipartSubmission.body
+  });
+  assert.equal(uploadSubmission.statusCode, 200, uploadSubmission.body);
+  assert.equal(uploadSubmission.json().submission.attachments.length, 1);
+  assert.equal(uploadSubmission.json().submission.attachments[0].name, 'solution.py');
+  assert.match(uploadSubmission.json().submission.attachments[0].url, /^\/api\/v1\/assignment-attachments\/\d+\/download$/);
+
   const invalidReview = await injectJson('POST', `/api/v1/assignments/${assignmentId}/submissions/${createSubmission.json().submission.id}/review`, teacherToken, {
     status: 'needs_changes',
     feedback: ''
@@ -715,17 +826,18 @@ test('assignment routes validate payloads and preserve teacher review flow', asy
   assert.equal(listSubmissions.statusCode, 200, listSubmissions.body);
   assert.equal(listSubmissions.json().submissions.length, 1);
   assert.equal(listSubmissions.json().submissions[0].status, 'reviewed');
+  assert.equal(listSubmissions.json().submissions[0].attachments.length, 1);
 });
 
 test('assignment list creates published lesson assignment from course homework', async () => {
-  const listAssignments = await injectJson('GET', '/api/v1/assignments?courseId=project1&lessonId=lesson4', ownerToken);
+  const listAssignments = await injectJson('GET', '/api/v1/assignments?courseId=ai-creator-mlp&lessonId=lesson1', ownerToken);
   assert.equal(listAssignments.statusCode, 200, listAssignments.body);
   assert.equal(listAssignments.json().assignments.length >= 1, true);
   const assignment = listAssignments.json().assignments[0];
-  assert.equal(assignment.courseId, 'project1');
-  assert.equal(assignment.lessonId, 'lesson4');
+  assert.equal(assignment.courseId, 'ai-creator-mlp');
+  assert.equal(assignment.lessonId, 'lesson1');
   assert.equal(assignment.status, 'published');
-  assert.match(assignment.requirements, /final_showcase\.html|提交作业|HTML/);
+  assert.match(assignment.requirements, /激活函数|实验|提交/);
 
   const submit = await injectJson('POST', `/api/v1/assignments/${assignment.id}/submissions`, ownerToken, {
     content: '我已经完成最终作品，并记录了挥手重开的测试过程。',
@@ -963,7 +1075,7 @@ test('project topic matches are computed and readable for students', async () =>
 });
 
 test('course matches are computed and readable for students', async () => {
-  const courseId = `ai-vision-lab-test-${Date.now()}`;
+  const courseId = `course-match-test-${Date.now()}`;
   matchedCourseId = courseId;
   const created = await injectJson('POST', '/api/v1/courses', teacherToken, {
     id: courseId,
@@ -1195,6 +1307,172 @@ test('project topic and course match reminders support teacher outreach and stud
 
   const courseRead = await injectJson('PATCH', `/api/v1/me/course-matches/${matchedCourseId}/reminders/${latestCourseReminder.id}/read`, ownerToken, {});
   assert.equal(courseRead.statusCode, 200, courseRead.body);
+});
+
+test('restricted courses are visible only to allowed students and linked teachers', async () => {
+  const className = '权限测试班';
+  await injectJson('PUT', '/api/v1/me/profile', ownerToken, { className });
+  await injectJson('PUT', '/api/v1/me/profile', candidateToken, { className: '未授权班' });
+
+  const courseId = `restricted-course-${Date.now()}`;
+  const created = await injectJson('POST', '/api/v1/courses', teacherToken, {
+    id: courseId,
+    title: '受限课程',
+    teacherName: '测试教师',
+    summary: '只开放给指定班级。',
+    status: 'published',
+    visibility: 'assigned',
+    visibleToClassNames: [className]
+  });
+  assert.equal(created.statusCode, 201, created.body);
+
+  const anonymousList = await fastify.inject('/api/v1/courses');
+  assert.equal(anonymousList.statusCode, 200, anonymousList.body);
+  assert.equal(anonymousList.json().courses.some(item => item.id === courseId), false);
+
+  const ownerList = await injectJson('GET', '/api/v1/courses', ownerToken);
+  assert.equal(ownerList.statusCode, 200, ownerList.body);
+  assert.equal(ownerList.json().courses.some(item => item.id === courseId), true);
+
+  const candidateList = await injectJson('GET', '/api/v1/courses', candidateToken);
+  assert.equal(candidateList.statusCode, 200, candidateList.body);
+  assert.equal(candidateList.json().courses.some(item => item.id === courseId), false);
+
+  const anonymousDetail = await fastify.inject(`/api/v1/courses/${courseId}`);
+  assert.equal(anonymousDetail.statusCode, 401, anonymousDetail.body);
+
+  const candidateDetail = await injectJson('GET', `/api/v1/courses/${courseId}`, candidateToken);
+  assert.equal(candidateDetail.statusCode, 403, candidateDetail.body);
+
+  dbHandle.run(
+    `INSERT OR IGNORE INTO teacher_student_links (teacher_id, student_id, created_at, updated_at)
+     VALUES (?, ?, ?, ?)`,
+    [4, 1, new Date().toISOString(), new Date().toISOString()]
+  );
+  const teacherDetail = await injectJson('GET', `/api/v1/courses/${courseId}`, teacherToken);
+  assert.equal(teacherDetail.statusCode, 200, teacherDetail.body);
+
+  const assignment = await injectJson('POST', '/api/v1/assignments', teacherToken, {
+    courseId,
+    title: '受限课程作业',
+    requirements: '提交课堂记录',
+    status: 'published'
+  });
+  assert.equal(assignment.statusCode, 201, assignment.body);
+
+  const ownerAssignments = await injectJson('GET', `/api/v1/assignments?courseId=${courseId}`, ownerToken);
+  assert.equal(ownerAssignments.statusCode, 200, ownerAssignments.body);
+  assert.equal(ownerAssignments.json().assignments.some(item => item.title === '受限课程作业'), true);
+
+  const candidateAssignments = await injectJson('GET', `/api/v1/assignments?courseId=${courseId}`, candidateToken);
+  assert.equal(candidateAssignments.statusCode, 403, candidateAssignments.body);
+});
+
+test('restricted project topics are hidden from public and unassigned teachers', async () => {
+  const className = '项目题目权限班';
+  await injectJson('PUT', '/api/v1/me/profile', ownerToken, { className });
+  await injectJson('PUT', '/api/v1/me/profile', candidateToken, { className: '项目题目未授权班' });
+  dbHandle.run(
+    `INSERT OR IGNORE INTO teacher_student_links (teacher_id, student_id, created_at, updated_at)
+     VALUES (?, ?, ?, ?)`,
+    [4, 1, new Date().toISOString(), new Date().toISOString()]
+  );
+  const otherTeacher = createManualUserToken(`topic-teacher-${Date.now()}@example.com`, 'teacher');
+
+  const created = await injectJson('POST', '/api/v1/teacher/project-topics', teacherToken, {
+    title: `受限题目 ${Date.now()}`,
+    description: '只开放给指定班级。',
+    status: 'published',
+    visibility: 'assigned',
+    visibleToClassNames: [className]
+  });
+  assert.equal(created.statusCode, 201, created.body);
+  const topicId = created.json().topic.id;
+
+  const publicTopics = await fastify.inject('/api/v1/project-topics');
+  assert.equal(publicTopics.statusCode, 200, publicTopics.body);
+  assert.equal(publicTopics.json().topics.some(item => item.id === topicId), false);
+
+  const ownerTopics = await injectJson('GET', '/api/v1/project-topics', ownerToken);
+  assert.equal(ownerTopics.statusCode, 200, ownerTopics.body);
+  assert.equal(ownerTopics.json().topics.some(item => item.id === topicId), true);
+
+  const candidateTopics = await injectJson('GET', '/api/v1/project-topics', candidateToken);
+  assert.equal(candidateTopics.statusCode, 200, candidateTopics.body);
+  assert.equal(candidateTopics.json().topics.some(item => item.id === topicId), false);
+
+  const teacherTopics = await injectJson('GET', '/api/v1/teacher/project-topics', teacherToken);
+  assert.equal(teacherTopics.statusCode, 200, teacherTopics.body);
+  assert.equal(teacherTopics.json().topics.some(item => item.id === topicId), true);
+
+  const otherTeacherTopics = await injectJson('GET', '/api/v1/teacher/project-topics', otherTeacher.token);
+  assert.equal(otherTeacherTopics.statusCode, 200, otherTeacherTopics.body);
+  assert.equal(otherTeacherTopics.json().topics.some(item => item.id === topicId), false);
+});
+
+test('draft courses stay hidden from public course library but remain visible to owner and admin', async () => {
+  const courseId = `draft-course-${Date.now()}`;
+  const created = await injectJson('POST', '/api/v1/courses', teacherToken, {
+    id: courseId,
+    title: '草稿课程',
+    teacherName: '测试教师',
+    summary: '不应出现在公开课程页。',
+    status: 'draft',
+    visibility: 'public'
+  });
+  assert.equal(created.statusCode, 201, created.body);
+
+  const anonymousList = await fastify.inject('/api/v1/courses');
+  assert.equal(anonymousList.statusCode, 200, anonymousList.body);
+  assert.equal(anonymousList.json().courses.some(item => item.id === courseId), false);
+
+  const teacherList = await injectJson('GET', '/api/v1/courses', teacherToken);
+  assert.equal(teacherList.statusCode, 200, teacherList.body);
+  assert.equal(teacherList.json().courses.some(item => item.id === courseId), true);
+
+  const adminList = await injectJson('GET', '/api/v1/courses', adminToken);
+  assert.equal(adminList.statusCode, 200, adminList.body);
+  assert.equal(adminList.json().courses.some(item => item.id === courseId), true);
+
+  const studentList = await injectJson('GET', '/api/v1/courses', ownerToken);
+  assert.equal(studentList.statusCode, 200, studentList.body);
+  assert.equal(studentList.json().courses.some(item => item.id === courseId), false);
+});
+
+test('restricted projects are removed from unassigned teacher project and review views', async () => {
+  const otherTeacher = createManualUserToken(`project-teacher-${Date.now()}@example.com`, 'teacher');
+  const created = await injectJson('POST', '/api/v1/projects', ownerToken, {
+    title: `受限项目 ${Date.now()}`,
+    summary: '只允许项目成员和绑定教师查看。',
+    visibility: 'assigned'
+  });
+  assert.equal(created.statusCode, 200, created.body);
+  const restrictedProjectId = created.json().project.id;
+
+  const candidateDetail = await injectJson('GET', `/api/v1/projects/${restrictedProjectId}`, candidateToken);
+  assert.equal(candidateDetail.statusCode, 403, candidateDetail.body);
+
+  const otherTeacherDetail = await injectJson('GET', `/api/v1/projects/${restrictedProjectId}`, otherTeacher.token);
+  assert.equal(otherTeacherDetail.statusCode, 403, otherTeacherDetail.body);
+
+  const otherTeacherQueue = await injectJson('GET', '/api/v1/teacher/project-review-queue', otherTeacher.token);
+  assert.equal(otherTeacherQueue.statusCode, 200, otherTeacherQueue.body);
+  assert.equal(otherTeacherQueue.json().projects.some(item => item.id === restrictedProjectId), false);
+
+  dbHandle.run(
+    `INSERT OR IGNORE INTO teacher_student_links (teacher_id, student_id, created_at, updated_at)
+     VALUES (?, ?, ?, ?)`,
+    [4, 1, new Date().toISOString(), new Date().toISOString()]
+  );
+  const linkedTeacherDetail = await injectJson('GET', `/api/v1/projects/${restrictedProjectId}`, teacherToken);
+  assert.equal(linkedTeacherDetail.statusCode, 200, linkedTeacherDetail.body);
+
+  const linkedTeacherQueue = await injectJson('GET', '/api/v1/teacher/project-review-queue', teacherToken);
+  assert.equal(linkedTeacherQueue.statusCode, 200, linkedTeacherQueue.body);
+  assert.equal(linkedTeacherQueue.json().projects.some(item => item.id === restrictedProjectId), true);
+
+  const adminDetail = await injectJson('GET', `/api/v1/projects/${restrictedProjectId}`, adminToken);
+  assert.equal(adminDetail.statusCode, 200, adminDetail.body);
 });
 
 test('match reminder inbox and admin match dashboard aggregate cross-target data', async () => {
@@ -1493,7 +1771,7 @@ test('review queue and export endpoints stay available to teachers', async () =>
   const queue = await injectJson('GET', '/api/v1/admin/project-review-queue', teacherToken);
   assert.equal(queue.statusCode, 200, queue.body);
   assert.equal(Array.isArray(queue.json().projects), true);
-  assert.equal(queue.json().projects[0].id, projectId);
+  assert.equal(queue.json().projects.some(item => item.id === projectId), true);
 
   const dossier = await injectJson('GET', `/api/v1/admin/projects/${projectId}/review-dossier`, teacherToken);
   assert.equal(dossier.statusCode, 200, dossier.body);
@@ -1571,4 +1849,29 @@ test('project ops routes handle logs resources tickets blueprint and status tran
   const detail = await injectJson('GET', `/api/v1/projects/${projectId}`, ownerToken);
   assert.equal(detail.statusCode, 200, detail.body);
   assert.equal(detail.json().project.status, 'reviewing');
+});
+
+test('soft-deleted projects disappear from every read path and admin can restore them', async () => {
+  const created = await injectJson('POST', '/api/v1/projects', ownerToken, { title: '待删除安全项目' });
+  assert.equal(created.statusCode, 200, created.body);
+  const deletedProjectId = created.json().project.id;
+
+  const deleted = await injectJson('DELETE', `/api/v1/projects/${deletedProjectId}`, ownerToken, { reason: '测试清理' });
+  assert.equal(deleted.statusCode, 200, deleted.body);
+  assert.deepEqual(deleted.json(), { success: true });
+  assert.equal((await injectJson('GET', `/api/v1/projects/${deletedProjectId}`, ownerToken)).statusCode, 404);
+  assert.equal((await injectJson('GET', `/api/v1/projects/${deletedProjectId}/logs`, ownerToken)).statusCode, 404);
+  assert.equal((await injectJson('DELETE', `/api/v1/projects/${deletedProjectId}`, ownerToken, {})).statusCode, 404);
+  assert.equal((await injectJson('POST', `/api/v1/admin/projects/${deletedProjectId}/restore`, ownerToken, {})).statusCode, 403);
+
+  const restored = await injectJson('POST', `/api/v1/admin/projects/${deletedProjectId}/restore`, adminToken, {});
+  assert.equal(restored.statusCode, 200, restored.body);
+  assert.equal((await injectJson('GET', `/api/v1/projects/${deletedProjectId}`, ownerToken)).statusCode, 200);
+  assert.equal((await injectJson('POST', `/api/v1/admin/projects/${deletedProjectId}/restore`, adminToken, {})).statusCode, 409);
+});
+
+test('resource paths reject malformed IDs and legacy public uploads are gone', async () => {
+  assert.equal((await fastify.inject('/api/v1/courses/not.valid.json')).statusCode, 400);
+  assert.equal((await fastify.inject('/api/v1/files/demo-project?path=../storage')).statusCode, 400);
+  assert.equal((await fastify.inject('/uploads/anything.txt')).statusCode, 404);
 });

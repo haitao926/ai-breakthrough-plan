@@ -20,17 +20,22 @@ function createFileHelpers(options) {
       .slice(0, 120);
   }
 
+  function resolveUnder(root, ...segments) {
+    const rootPath = path.resolve(root);
+    const candidate = path.resolve(rootPath, ...segments.map(segment => String(segment || '')));
+    const relative = path.relative(rootPath, candidate);
+    if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) return null;
+    return candidate;
+  }
+
   function validateFileType(fileName, mimeType) {
     const ext = path.extname(fileName || '').toLowerCase();
     if (!ext || !allowedExtensions.has(ext)) {
       return '不支持的文件类型';
     }
-    if (!mimeType) return null;
+    if (!mimeType) return '无法识别文件类型';
     if (!allowedMimeTypes.has(mimeType)) {
       return '不支持的文件类型';
-    }
-    if (mimeType === 'application/octet-stream') {
-      return null;
     }
     const allowed = extensionMimeMap[ext];
     if (Array.isArray(allowed) && allowed.length && !allowed.includes(mimeType)) {
@@ -130,7 +135,9 @@ function createFileHelpers(options) {
     tempFiles.forEach(file => {
       try {
         fs.unlinkSync(file.tmpPath);
-      } catch (err) {}
+      } catch (err) {
+        if (err.code !== 'ENOENT') return;
+      }
     });
   }
 
@@ -140,6 +147,7 @@ function createFileHelpers(options) {
     collectMultipart,
     moveTempFiles,
     sanitizeName,
+    resolveUnder,
     streamZip,
     toCsvLine,
     validateFileType
