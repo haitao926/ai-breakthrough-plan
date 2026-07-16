@@ -271,6 +271,15 @@ test('project create and member endpoints reject invalid payloads', async () => 
     memberIds: []
   });
   assert.equal(invalidMembers.statusCode, 400, invalidMembers.body);
+
+  const invalidVisibility = await injectJson('POST', '/api/v1/projects', ownerToken, {
+    title: '非法可见性项目',
+    visibility: 'everyone'
+  });
+  assert.equal(invalidVisibility.statusCode, 400, invalidVisibility.body);
+
+  const malformedProjectId = await injectJson('GET', `/api/v1/projects/${projectId}abc`, ownerToken);
+  assert.equal(malformedProjectId.statusCode, 400, malformedProjectId.body);
 });
 
 test('project tool data persists and is readable by project members', async () => {
@@ -422,6 +431,30 @@ test('student can login with short platform username', async () => {
   });
   assert.equal(login.statusCode, 200, login.body);
   assert.equal(login.json().user.username, '26-93-99');
+});
+
+test('login rate limit returns 429 with Retry-After', async () => {
+  const headers = {
+    ...jsonHeaders(null),
+    'x-forwarded-for': '203.0.113.201'
+  };
+  for (let index = 0; index < 10; index += 1) {
+    const response = await fastify.inject({
+      method: 'POST',
+      url: '/api/v1/auth/login',
+      headers,
+      payload: JSON.stringify({ email: 'rate-limit@example.com', password: 'wrong-password' })
+    });
+    assert.equal(response.statusCode, 401, response.body);
+  }
+  const limited = await fastify.inject({
+    method: 'POST',
+    url: '/api/v1/auth/login',
+    headers,
+    payload: JSON.stringify({ email: 'rate-limit@example.com', password: 'wrong-password' })
+  });
+  assert.equal(limited.statusCode, 429, limited.body);
+  assert.ok(Number(limited.headers['retry-after']) > 0);
 });
 
 test('teacher can bulk sync unsynced students to gitea users', async () => {
@@ -621,6 +654,38 @@ test('proposal submission and teacher feedback form a review loop', async () => 
     feedback: '补充风险说明'
   });
   assert.equal(feedback.statusCode, 200, feedback.body);
+
+  const showcaseProject = await injectJson('POST', '/api/v1/projects', ownerToken, {
+    title: `公开 Showcase 附件项目 ${Date.now()}`,
+    visibility: 'public'
+  });
+  assert.equal(showcaseProject.statusCode, 200, showcaseProject.body);
+  const showcaseForm = multipartFilePayload(
+    {
+      type: 'showcase',
+      title: '公开成果',
+      details: JSON.stringify({ showcaseSummary: '经审核后公开展示' })
+    },
+    { filename: 'showcase.txt', contentType: 'text/plain', content: 'public showcase attachment' }
+  );
+  const showcaseSubmit = await fastify.inject({
+    method: 'POST',
+    url: `/api/v1/projects/${showcaseProject.json().project.id}/submissions`,
+    headers: { ...showcaseForm.headers, authorization: `Bearer ${ownerToken}` },
+    payload: showcaseForm.body
+  });
+  assert.equal(showcaseSubmit.statusCode, 200, showcaseSubmit.body);
+  dbHandle.run('UPDATE submissions SET status = ? WHERE id = ?', ['approved', showcaseSubmit.json().submissionId]);
+  const showcaseAttachment = dbHandle.get(
+    'SELECT id FROM attachments WHERE submission_id = ? ORDER BY id DESC LIMIT 1',
+    [showcaseSubmit.json().submissionId]
+  );
+  assert.ok(showcaseAttachment?.id);
+  assert.equal((await fastify.inject(`/api/v1/project-attachments/${showcaseAttachment.id}/download`)).statusCode, 404);
+  const publicShowcaseAttachment = await fastify.inject(`/api/v1/showcase-attachments/${showcaseAttachment.id}/download`);
+  assert.equal(publicShowcaseAttachment.statusCode, 200, publicShowcaseAttachment.body);
+  assert.equal(publicShowcaseAttachment.body, 'public showcase attachment');
+  assert.equal(publicShowcaseAttachment.headers['cache-control'], 'private, no-store');
 });
 
 test('collaboration write schemas reject malformed payloads', async () => {
@@ -794,6 +859,9 @@ test('asset and mission routes expose stats, file listing, downloads, and projec
 });
 
 test('assignment routes validate payloads and preserve teacher review flow', async () => {
+  const invalidCourseQuery = await injectJson('GET', '/api/v1/assignments?courseId=../storage', ownerToken);
+  assert.equal(invalidCourseQuery.statusCode, 400, invalidCourseQuery.body);
+
   const assignmentCourseId = `assignment-test-course-${Date.now()}`;
   const createCourse = await injectJson('POST', '/api/v1/courses', teacherToken, {
     id: assignmentCourseId,
@@ -1611,12 +1679,21 @@ test('project permission matrix separates collaboration, supervision, and admini
   const judgeAssignedResponse = await injectJson('POST', '/api/v1/projects', ownerToken, {
     title: `矩阵评审项目 ${Date.now()}`,
     visibility: 'assigned',
-    visibleToRoles: ['judge']
+    visibleToRoles: ['judge'],
+    memberIds: [5]
   });
   assert.equal(judgeAssignedResponse.statusCode, 200, judgeAssignedResponse.body);
   const judgeAssignedId = judgeAssignedResponse.json().project.id;
   assert.equal((await injectJson('GET', `/api/v1/projects/${judgeAssignedId}`, judgeToken)).statusCode, 200);
   assert.equal((await injectJson('POST', `/api/v1/projects/${judgeAssignedId}/status`, judgeToken, { status: 'reviewing' })).statusCode, 403);
+
+  const judgeMemberOnlyResponse = await injectJson('POST', '/api/v1/projects', ownerToken, {
+    title: `矩阵非显式评审项目 ${Date.now()}`,
+    visibility: 'private',
+    memberIds: [5]
+  });
+  assert.equal(judgeMemberOnlyResponse.statusCode, 200, judgeMemberOnlyResponse.body);
+  assert.equal((await injectJson('GET', `/api/v1/projects/${judgeMemberOnlyResponse.json().project.id}`, judgeToken)).statusCode, 404);
 });
 
 test('match reminder inbox and admin match dashboard aggregate cross-target data', async () => {
@@ -1996,6 +2073,19 @@ test('project ops routes handle logs resources tickets blueprint and status tran
 });
 
 test('soft-deleted projects disappear from every read path and admin can restore them', async () => {
+  const adminDeleteTarget = await injectJson('POST', '/api/v1/projects', ownerToken, { title: '管理员删除非初始项目' });
+  assert.equal(adminDeleteTarget.statusCode, 200, adminDeleteTarget.body);
+  const adminDeleteProjectId = adminDeleteTarget.json().project.id;
+  const promoteForAdminDelete = await injectJson('POST', `/api/v1/projects/${adminDeleteProjectId}/status`, teacherToken, {
+    status: 'reviewing',
+    note: '进入审核后由管理员清理'
+  });
+  assert.equal(promoteForAdminDelete.statusCode, 200, promoteForAdminDelete.body);
+  const adminDeleted = await injectJson('DELETE', `/api/v1/projects/${adminDeleteProjectId}`, adminToken, { reason: '管理员清理' });
+  assert.equal(adminDeleted.statusCode, 200, adminDeleted.body);
+  assert.equal((await injectJson('GET', `/api/v1/projects/${adminDeleteProjectId}`, adminToken)).statusCode, 404);
+  assert.equal((await injectJson('POST', `/api/v1/admin/projects/${adminDeleteProjectId}/restore`, adminToken, {})).statusCode, 200);
+
   const created = await injectJson('POST', '/api/v1/projects', ownerToken, { title: '待删除安全项目' });
   assert.equal(created.statusCode, 200, created.body);
   const deletedProjectId = created.json().project.id;

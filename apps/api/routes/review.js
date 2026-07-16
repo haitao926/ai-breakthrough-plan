@@ -164,7 +164,7 @@ function registerReviewRoutes(fastify, deps) {
       SELECT a.file_name, a.file_path, s.type AS submission_type, s.id AS submission_id, s.project_id
       FROM attachments a
       JOIN submissions s ON s.id = a.submission_id
-      JOIN projects p ON p.id = s.project_id
+      JOIN projects p ON p.id = s.project_id AND p.deleted_at IS NULL
     `;
     if (conditions.length) {
       sql += ` WHERE ${conditions.join(' AND ')}`;

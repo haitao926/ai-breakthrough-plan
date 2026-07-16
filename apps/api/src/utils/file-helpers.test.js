@@ -35,6 +35,9 @@ test('file helpers sanitize names, validate types, and build csv lines', async (
   assert.equal(helpers.validateFileType('scores.csv', 'text/csv'), null);
   assert.match(helpers.validateFileType('scores.csv', 'text/plain'), /不匹配/);
   assert.equal(helpers.toCsvLine(['a', '1,2', '"q"']), 'a,"1,2","""q"""');
+  assert.ok(helpers.resolveUnder(uploadDir, 'project-1', 'notes.txt'));
+  assert.equal(helpers.resolveUnder(uploadDir, 'project-1', '..', 'outside.txt'), null);
+  assert.equal(helpers.resolveUnder(uploadDir, 'project-1/../outside.txt'), null);
 
   const sourcePath = path.join(tmpRoot, 'source.txt');
   fs.writeFileSync(sourcePath, 'demo', 'utf8');

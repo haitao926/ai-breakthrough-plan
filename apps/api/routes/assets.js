@@ -213,12 +213,10 @@ function registerAssetRoutes(fastify, deps) {
        WHERE a.id = ? AND p.deleted_at IS NULL`,
       [attachmentId]
     );
-    const isPublicShowcase = row
-      && row.visibility === 'public'
-      && row.submission_type === 'showcase'
-      && row.submission_status === 'approved';
-    const authorized = Boolean(row) && (isPublicShowcase
-      || (request.user && typeof canReadProject === 'function' && canReadProject(request.user, row)));
+    const authorized = Boolean(row)
+      && request.user
+      && typeof canReadProject === 'function'
+      && canReadProject(request.user, row);
     if (!authorized) {
       reply.code(404);
       return { error: '文件不存在' };
@@ -282,7 +280,7 @@ function registerAssetRoutes(fastify, deps) {
       .header('Content-Type', 'application/octet-stream')
       .header('Content-Disposition', `attachment; filename="${encodeURIComponent(path.basename(row.file_name || relativePath))}"`)
       .header('X-Content-Type-Options', 'nosniff')
-      .header('Cache-Control', 'public, max-age=300');
+      .header('Cache-Control', 'private, no-store');
     return reply.send(fs.createReadStream(absolutePath));
   });
 

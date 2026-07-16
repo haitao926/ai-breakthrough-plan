@@ -21,11 +21,20 @@ function createFileHelpers(options) {
   }
 
   function resolveUnder(root, ...segments) {
-    const rootPath = path.resolve(root);
-    const candidate = path.resolve(rootPath, ...segments.map(segment => String(segment || '')));
-    const relative = path.relative(rootPath, candidate);
-    if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) return null;
-    return candidate;
+    try {
+      const normalizedSegments = segments.map(segment => String(segment || '').replace(/\\/g, '/'));
+      const unsafeSegment = normalizedSegments
+        .flatMap(segment => segment.split('/'))
+        .some(part => !part || part === '.' || part === '..' || part.includes('\0'));
+      if (unsafeSegment) return null;
+      const rootPath = path.resolve(root);
+      const candidate = path.resolve(rootPath, ...normalizedSegments);
+      const relative = path.relative(rootPath, candidate);
+      if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) return null;
+      return candidate;
+    } catch (_error) {
+      return null;
+    }
   }
 
   function validateFileType(fileName, mimeType) {
@@ -170,7 +179,8 @@ function createFileHelpers(options) {
     tempFiles.forEach(file => {
       const safeName = sanitizeName(file.originalName) || 'upload';
       const finalName = `${Date.now()}_${safeName}`;
-      const finalPath = path.join(targetDir, finalName);
+      const finalPath = resolveUnder(targetDir, finalName);
+      if (!finalPath) throw new Error('上传文件名无效');
       fs.renameSync(file.tmpPath, finalPath);
       const stats = fs.statSync(finalPath);
       attachments.push({

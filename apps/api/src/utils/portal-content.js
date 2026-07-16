@@ -32,6 +32,23 @@ function createPortalContentService(options) {
     return Number.isFinite(num) ? num : fallback;
   }
 
+  function resolveUnder(root, ...segments) {
+    try {
+      const normalizedSegments = segments.map(segment => String(segment || '').replace(/\\/g, '/'));
+      const unsafeSegment = normalizedSegments
+        .flatMap(segment => segment.split('/'))
+        .some(part => !part || part === '.' || part === '..' || part.includes('\0'));
+      if (unsafeSegment) return null;
+      const rootPath = path.resolve(root);
+      const candidate = path.resolve(rootPath, ...normalizedSegments);
+      const relative = path.relative(rootPath, candidate);
+      if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) return null;
+      return candidate;
+    } catch (_error) {
+      return null;
+    }
+  }
+
   function normalizeBannerPageKey(value) {
     const pageKey = String(value || 'home').trim() || 'home';
     return pageKey === 'downloads' ? 'courses' : pageKey;
@@ -143,8 +160,9 @@ function createPortalContentService(options) {
 
   function loadPortalCompetitionDetail(slug) {
     const safeSlug = String(slug || '').trim();
-    if (!safeSlug) return null;
-    const detailPath = path.join(portalCompetitionDetailsDir, `${safeSlug}.json`);
+    if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$/.test(safeSlug)) return null;
+    const detailPath = resolveUnder(portalCompetitionDetailsDir, `${safeSlug}.json`);
+    if (!detailPath) return null;
     const detail = readJsonFile(detailPath, null);
     return detail && typeof detail === 'object' ? detail : null;
   }

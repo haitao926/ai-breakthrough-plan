@@ -44,7 +44,7 @@ function registerPortalRoutes(fastify, deps) {
     required: ['slug'],
     additionalProperties: false,
     properties: {
-      slug: { type: 'string', minLength: 1, maxLength: 120 }
+      slug: { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$' }
     }
   };
 
@@ -53,7 +53,7 @@ function registerPortalRoutes(fastify, deps) {
     required: ['slug', 'id'],
     additionalProperties: false,
     properties: {
-      slug: { type: 'string', minLength: 1, maxLength: 120 },
+      slug: { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$' },
       id: { type: 'integer', minimum: 1 }
     }
   };
@@ -63,7 +63,7 @@ function registerPortalRoutes(fastify, deps) {
     required: ['slug', 'id'],
     additionalProperties: false,
     properties: {
-      slug: { type: 'string', minLength: 1, maxLength: 120 },
+      slug: { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$' },
       id: { type: 'integer', minimum: 1 }
     }
   };
@@ -1203,7 +1203,7 @@ function registerPortalRoutes(fastify, deps) {
           deliverables: { type: 'string', maxLength: 2000 },
           relatedCourseId: { type: 'string', maxLength: 120 },
           relatedCompetitionSlug: { type: 'string', maxLength: 120 },
-          visibility: { type: 'string', maxLength: 40 },
+          visibility: { type: 'string', enum: ['public', 'assigned', 'private'] },
           visibleToRoles: { type: 'array', items: { type: 'string', maxLength: 40 } },
           visibleToUserIds: { type: 'array', items: { type: 'integer' } },
           visibleToClassNames: { type: 'array', items: { type: 'string', maxLength: 120 } },
@@ -1292,7 +1292,7 @@ function registerPortalRoutes(fastify, deps) {
           deliverables: { type: 'string', maxLength: 2000 },
           relatedCourseId: { type: 'string', maxLength: 120 },
           relatedCompetitionSlug: { type: 'string', maxLength: 120 },
-          visibility: { type: 'string', maxLength: 40 },
+          visibility: { type: 'string', enum: ['public', 'assigned', 'private'] },
           visibleToRoles: { type: 'array', items: { type: 'string', maxLength: 40 } },
           visibleToUserIds: { type: 'array', items: { type: 'integer' } },
           visibleToClassNames: { type: 'array', items: { type: 'string', maxLength: 120 } },
@@ -1381,7 +1381,7 @@ function registerPortalRoutes(fastify, deps) {
           deliverables: { type: 'string', maxLength: 2000 },
           relatedCourseId: { type: 'string', maxLength: 120 },
           relatedCompetitionSlug: { type: 'string', maxLength: 120 },
-          visibility: { type: 'string', maxLength: 40 },
+          visibility: { type: 'string', enum: ['public', 'assigned', 'private'] },
           visibleToRoles: { type: 'array', items: { type: 'string', maxLength: 40 } },
           visibleToUserIds: { type: 'array', items: { type: 'integer' } },
           visibleToClassNames: { type: 'array', items: { type: 'string', maxLength: 120 } },
@@ -1482,7 +1482,7 @@ function registerPortalRoutes(fastify, deps) {
           deliverables: { type: 'string', maxLength: 2000 },
           relatedCourseId: { type: 'string', maxLength: 120 },
           relatedCompetitionSlug: { type: 'string', maxLength: 120 },
-          visibility: { type: 'string', maxLength: 40 },
+          visibility: { type: 'string', enum: ['public', 'assigned', 'private'] },
           visibleToRoles: { type: 'array', items: { type: 'string', maxLength: 40 } },
           visibleToUserIds: { type: 'array', items: { type: 'integer' } },
           visibleToClassNames: { type: 'array', items: { type: 'string', maxLength: 120 } },

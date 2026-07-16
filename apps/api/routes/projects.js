@@ -23,7 +23,7 @@ function registerProjectRoutes(fastify, deps) {
       className: { type: 'string', maxLength: 80 },
       giteaRepoUrl: { type: 'string', maxLength: 500 },
       memberIds: { type: 'array', items: { type: 'integer' }, maxItems: 20 },
-      visibility: { type: 'string', maxLength: 40 },
+      visibility: { type: 'string', enum: ['public', 'assigned', 'private'] },
       visibleToRoles: { type: 'array', items: { type: 'string', maxLength: 40 }, maxItems: 20 },
       visibleToUserIds: { type: 'array', items: { type: 'integer' }, maxItems: 200 },
       visibleToClassNames: { type: 'array', items: { type: 'string', maxLength: 120 }, maxItems: 100 }
@@ -190,7 +190,7 @@ function registerProjectRoutes(fastify, deps) {
       reply.code(403);
       return { error: '只有项目创建者或管理员可以删除项目' };
     }
-    if (project.status !== 'submitted' && project.status !== 'draft') {
+    if (!isAdmin && project.status !== 'submitted' && project.status !== 'draft') {
       reply.code(403);
       return { error: '只能删除初始待立项的项目' };
     }

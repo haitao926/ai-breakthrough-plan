@@ -38,15 +38,24 @@ function createCourseContentService(options) {
   }
 
   function resolveUnder(root, ...segments) {
-    const absoluteRoot = path.resolve(root);
-    const target = path.resolve(absoluteRoot, ...segments);
-    const relative = path.relative(absoluteRoot, target);
-    if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) return null;
-    return target;
+    try {
+      const normalizedSegments = segments.map(segment => String(segment || '').replace(/\\/g, '/'));
+      const unsafeSegment = normalizedSegments
+        .flatMap(segment => segment.split('/'))
+        .some(part => !part || part === '.' || part === '..' || part.includes('\0'));
+      if (unsafeSegment) return null;
+      const absoluteRoot = path.resolve(root);
+      const target = path.resolve(absoluteRoot, ...normalizedSegments);
+      const relative = path.relative(absoluteRoot, target);
+      if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) return null;
+      return target;
+    } catch (_error) {
+      return null;
+    }
   }
 
   function courseFilePath(courseId) {
-    return path.join(coursesDir, courseId, 'course.json');
+    return resolveUnder(coursesDir, courseId, 'course.json') || '';
   }
 
   function lessonSortValue(value) {

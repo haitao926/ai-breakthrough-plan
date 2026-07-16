@@ -733,7 +733,14 @@ function registerCollaborationRoutes(fastify, deps) {
     }
     const safeName = String(file.originalName || '').replace(/[^\w.\-]+/g, '_') || 'assessment.csv';
     const finalName = `${Date.now()}_${safeName}`;
-    const finalPath = path.join(ASSESSMENT_DIR, finalName);
+    const finalPath = typeof resolveUnder === 'function'
+      ? resolveUnder(ASSESSMENT_DIR, finalName)
+      : path.resolve(ASSESSMENT_DIR, finalName);
+    if (!finalPath) {
+      cleanupTempFiles(tempFiles || []);
+      reply.code(400);
+      return { error: '保存路径无效' };
+    }
     try {
       fs.renameSync(file.tmpPath, finalPath);
     } catch (err) {

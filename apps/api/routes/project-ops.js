@@ -327,6 +327,7 @@ function registerProjectOpsRoutes(fastify, deps) {
       `SELECT a.file_name, a.file_path, s.type AS submission_type, s.id AS submission_id
        FROM attachments a
        JOIN submissions s ON s.id = a.submission_id
+       JOIN projects p ON p.id = s.project_id AND p.deleted_at IS NULL
        WHERE s.project_id = ?
        ORDER BY s.created_at DESC`,
       [projectId]
@@ -374,6 +375,7 @@ function registerProjectOpsRoutes(fastify, deps) {
       `SELECT a.file_name, a.file_path, s.type AS submission_type, s.id AS submission_id
        FROM attachments a
        JOIN submissions s ON s.id = a.submission_id
+       JOIN projects p ON p.id = s.project_id AND p.deleted_at IS NULL
        WHERE s.project_id = ?
        ORDER BY s.created_at DESC`,
       [projectId]
@@ -524,7 +526,7 @@ function registerProjectOpsRoutes(fastify, deps) {
       reply.code(404);
       return { error: '项目不存在' };
     }
-    if (!requireProjectAccess(request, reply, project, 'supervise')) return;
+    if (!requireProjectAccess(request, reply, project, 'write')) return;
     const payload = request.body || {};
     const type = String(payload.type || 'hardware');
     const itemName = String(payload.item_name || '').trim();

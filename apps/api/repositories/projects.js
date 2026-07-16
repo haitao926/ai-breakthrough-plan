@@ -52,25 +52,32 @@ function createProjectRepository({
       `SELECT a.id, a.file_name, a.file_path, a.file_size, s.type AS submission_type, s.status AS submission_status, p.visibility AS project_visibility
        FROM attachments a
        JOIN submissions s ON s.id = a.submission_id
-       JOIN projects p ON p.id = s.project_id
+       JOIN projects p ON p.id = s.project_id AND p.deleted_at IS NULL
        WHERE a.submission_id = ? ORDER BY a.id ASC`,
       [submissionId]
     );
     if (rows.length) {
-      return rows.map((row) => ({
-        id: row.id,
-        name: row.file_name,
-        path: row.file_path,
-        size: row.file_size,
-        url: row.submission_type === 'showcase' && row.submission_status === 'approved' && row.project_visibility === 'public'
-          ? `/api/v1/showcase-attachments/${row.id}/download`
-          : `/api/v1/project-attachments/${row.id}/download`
-      }));
+      return rows
+        .filter(row => isSafeStorageKey(row.file_path))
+        .map((row) => ({
+          id: row.id,
+          name: row.file_name,
+          path: row.file_path,
+          size: row.file_size,
+          url: row.submission_type === 'showcase' && row.submission_status === 'approved' && row.project_visibility === 'public'
+            ? `/api/v1/showcase-attachments/${row.id}/download`
+            : `/api/v1/project-attachments/${row.id}/download`
+        }));
     }
-    return parseAttachmentList(fallback).map((att) => ({
-      ...att,
-      url: ''
-    }));
+    return parseAttachmentList(fallback)
+      .filter(att => isSafeStorageKey(att?.path))
+      .map((att) => ({ ...att, url: '' }));
+  }
+
+  function isSafeStorageKey(value) {
+    const normalized = String(value || '').trim().replace(/\\/g, '/');
+    if (!normalized || normalized.startsWith('/') || /^[A-Za-z]:\//.test(normalized)) return false;
+    return normalized.split('/').every(part => part && part !== '.' && part !== '..' && !part.includes('\0'));
   }
 
   function getById(projectId) {

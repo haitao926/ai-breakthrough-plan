@@ -299,7 +299,14 @@ function ensureDir(dirPath) {
 
 function assertRuntimeConfig() {
   if (IS_TEST_ENV) return;
-  const publicDefaults = new Set(['', 'change-me-in-production', 'secret', 'password', 'development-secret']);
+  const publicDefaults = new Set([
+    '',
+    'change-me-in-production',
+    'replace-with-at-least-32-random-bytes',
+    'secret',
+    'password',
+    'development-secret'
+  ]);
   if (publicDefaults.has(AUTH_SECRET) || Buffer.byteLength(AUTH_SECRET, 'utf8') < 32) {
     throw new Error('AUTH_SECRET must be explicitly configured with at least 32 bytes outside test environments');
   }
@@ -339,7 +346,9 @@ function toUrlPath(filePath) {
 }
 
 function parseProjectId(value) {
-  const parsed = Number.parseInt(String(value || ''), 10);
+  const raw = String(value ?? '').trim();
+  if (!/^[1-9]\d*$/.test(raw)) return null;
+  const parsed = Number(raw);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
@@ -357,6 +366,12 @@ function parseAttachmentList(value) {
   return Array.isArray(parsed) ? parsed : [];
 }
 
+function isSafeStorageKey(value) {
+  const normalized = String(value || '').trim().replace(/\\/g, '/');
+  if (!normalized || normalized.startsWith('/') || /^[A-Za-z]:\//.test(normalized)) return false;
+  return normalized.split('/').every(part => part && part !== '.' && part !== '..' && !part.includes('\0'));
+}
+
 function normalizeToolKey(value) {
   return String(value || '')
     .trim()
@@ -367,9 +382,9 @@ function normalizeToolKey(value) {
 }
 
 function constantTimeEqual(left, right) {
-  const a = Buffer.from(String(left || ''), 'utf8');
-  const b = Buffer.from(String(right || ''), 'utf8');
-  return a.length === b.length && a.length > 0 && crypto.timingSafeEqual(a, b);
+  const a = crypto.createHash('sha256').update(String(left || ''), 'utf8').digest();
+  const b = crypto.createHash('sha256').update(String(right || ''), 'utf8').digest();
+  return crypto.timingSafeEqual(a, b) && String(left || '').length > 0;
 }
 
 function normalizeVisibility(value) {
@@ -548,12 +563,15 @@ function canReadProject(user, project) {
   if (!user) return config.visibility === 'public';
   const role = String(user.role || '').trim().toLowerCase();
   if (role === 'admin') return true;
+  if (role === 'judge') {
+    // Judge access is always an explicit assignment; membership or public
+    // visibility must not silently grant project access.
+    return accessGrantMatchesUser(user, config);
+  }
   if (isProjectMemberOrOwner(user, project)) return true;
   if (config.visibility === 'public') {
     if (role === 'teacher') return true;
-    // Judges may only see projects explicitly assigned to them. Public
-    // visibility is not an implicit judge assignment.
-    return role === 'judge' && accessGrantMatchesUser(user, config);
+    return false;
   }
   if (accessGrantMatchesUser(user, config)) return true;
   if (config.visibility === 'assigned' && (role === 'teacher' || role === 'judge')) {
@@ -564,7 +582,6 @@ function canReadProject(user, project) {
 
 function canWriteProject(user, project) {
   if (!user || !project) return false;
-  const config = readAccessConfig(project);
   const role = String(user.role || '').trim().toLowerCase();
   if (role === 'admin') return true;
   if (isProjectMemberOrOwner(user, project)) return true;
@@ -574,8 +591,10 @@ function canWriteProject(user, project) {
 function canSuperviseProject(user, project) {
   if (!user || !project) return false;
   const role = String(user.role || '').trim().toLowerCase();
-  if (role === 'admin' || isProjectMemberOrOwner(user, project)) return true;
-  if (role !== 'teacher' && role !== 'judge') return false;
+  if (role === 'admin') return true;
+  if (role === 'judge') return canReadProject(user, project) && accessGrantMatchesUser(user, readAccessConfig(project));
+  if (role === 'teacher' && isProjectMemberOrOwner(user, project)) return true;
+  if (role !== 'teacher') return false;
   if (!canReadProject(user, project)) return false;
   const config = readAccessConfig(project);
   if (role === 'teacher' && config.visibility === 'public') return true;
@@ -1010,7 +1029,7 @@ function getSubmissionAttachments(submissionId, fallback) {
     `SELECT a.id, a.file_name, a.file_path, a.file_size, s.type AS submission_type, s.status AS submission_status, p.visibility AS project_visibility
      FROM attachments a
      JOIN submissions s ON s.id = a.submission_id
-     JOIN projects p ON p.id = s.project_id
+     JOIN projects p ON p.id = s.project_id AND p.deleted_at IS NULL
      WHERE a.submission_id = ? ORDER BY a.id ASC`,
     [submissionId]
   );
@@ -1025,10 +1044,9 @@ function getSubmissionAttachments(submissionId, fallback) {
         : `/api/v1/project-attachments/${row.id}/download`
     }));
   }
-  return parseAttachmentList(fallback).map(att => ({
-    ...att,
-    url: ''
-  }));
+  return parseAttachmentList(fallback)
+    .filter(att => isSafeStorageKey(att?.path))
+    .map(att => ({ ...att, url: '' }));
 }
 
 function getProjectMilestones(projectId) {
@@ -1118,6 +1136,7 @@ function getProjectComments(projectId) {
     `SELECT c.id, c.content, c.created_at, u.id AS user_id, u.name, u.email, u.role, u.avatar_url
      FROM comments c
      JOIN users u ON c.user_id = u.id
+     JOIN projects p ON p.id = c.project_id AND p.deleted_at IS NULL
      WHERE c.project_id = ?
      ORDER BY c.created_at ASC`,
     [projectId]
@@ -1130,6 +1149,7 @@ function getProjectScores(projectId) {
             rs.comment, rs.created_at, rs.updated_at, u.name AS reviewer_name, u.email AS reviewer_email
      FROM review_scores rs
      JOIN submissions s ON s.id = rs.submission_id
+     JOIN projects p ON p.id = s.project_id AND p.deleted_at IS NULL
      JOIN users u ON u.id = rs.reviewer_id
      WHERE s.project_id = ?
      ORDER BY rs.updated_at DESC`,
@@ -4376,6 +4396,7 @@ function syncLegacyAttachments() {
   submissions.forEach(submission => {
     const attachments = parseAttachmentList(submission.attachments);
     attachments.forEach(att => {
+      if (!isSafeStorageKey(att?.path)) return;
       const key = `${submission.id}:${att.path}`;
       if (existing.has(key)) return;
       db.run(
@@ -4420,11 +4441,17 @@ function normalizeScoreTemplateCriteria(criteria) {
 }
 
 function canRegisterTeacher(inviteCode) {
-  return Boolean(TEACHER_INVITE_CODE) && constantTimeEqual(inviteCode, TEACHER_INVITE_CODE);
+  const publicDefault = new Set(['replace-teacher-invite', 'change-me-in-production']);
+  return Boolean(TEACHER_INVITE_CODE)
+    && !publicDefault.has(TEACHER_INVITE_CODE)
+    && constantTimeEqual(inviteCode, TEACHER_INVITE_CODE);
 }
 
 function canRegisterJudge(inviteCode) {
-  return Boolean(JUDGE_INVITE_CODE) && constantTimeEqual(inviteCode, JUDGE_INVITE_CODE);
+  const publicDefault = new Set(['replace-judge-invite', 'change-me-in-production']);
+  return Boolean(JUDGE_INVITE_CODE)
+    && !publicDefault.has(JUDGE_INVITE_CODE)
+    && constantTimeEqual(inviteCode, JUDGE_INVITE_CODE);
 }
 
 async function requestGitea(pathname, options = {}) {

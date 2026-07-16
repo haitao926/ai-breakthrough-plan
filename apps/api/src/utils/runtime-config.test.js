@@ -34,6 +34,7 @@ function runConfigCheck(secret) {
 test('production runtime rejects missing and short auth secrets', () => {
   assert.notEqual(runConfigCheck('').status, 0);
   assert.notEqual(runConfigCheck('too-short').status, 0);
+  assert.notEqual(runConfigCheck('replace-with-at-least-32-random-bytes').status, 0);
   assert.equal(runConfigCheck('a'.repeat(32)).status, 0);
 });
 
@@ -66,6 +67,8 @@ function runInviteCheck(role, configuredCode, suppliedCode) {
 test('teacher and judge registration stay closed without configured invite codes', () => {
   assert.equal(runInviteCheck('Teacher', '', 'anything'), 'false');
   assert.equal(runInviteCheck('Judge', '', 'anything'), 'false');
+  assert.equal(runInviteCheck('Teacher', 'replace-teacher-invite', 'replace-teacher-invite'), 'false');
+  assert.equal(runInviteCheck('Judge', 'replace-judge-invite', 'replace-judge-invite'), 'false');
   assert.equal(runInviteCheck('Teacher', 'teacher-code', 'teacher-code'), 'true');
   assert.equal(runInviteCheck('Judge', 'judge-code', 'judge-code'), 'true');
 });

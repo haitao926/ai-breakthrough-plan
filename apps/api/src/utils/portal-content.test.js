@@ -96,6 +96,7 @@ test('portal content service normalizes portal content and enriches competition/
 
   const detail = service.loadPortalCompetitionDetail('robotics-open');
   assert.equal(detail.whyJoin, '锻炼实战能力');
+  assert.equal(service.loadPortalCompetitionDetail('../outside'), null);
 
   const stories = service.loadPortalStories();
   assert.equal(stories[0].featured, true);

@@ -21,8 +21,8 @@ const assignmentBodySchema = {
   type: 'object',
   required: ['courseId', 'title'],
   properties: {
-    courseId: { type: 'string', minLength: 1, maxLength: 120 },
-    lessonId: { type: 'string', maxLength: 120 },
+    courseId: { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$' },
+    lessonId: { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$' },
     title: { type: 'string', minLength: 1, maxLength: 200 },
     description: { type: 'string', maxLength: 4000 },
     requirements: { type: 'string', maxLength: 8000 },
@@ -32,6 +32,16 @@ const assignmentBodySchema = {
     status: { type: 'string', maxLength: 40 }
   },
   additionalProperties: true
+};
+
+const assignmentQuerySchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    courseId: { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$' },
+    lessonId: { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$' },
+    status: { type: 'string', maxLength: 40 }
+  }
 };
 
 const assignmentReviewBodySchema = {
@@ -89,7 +99,10 @@ function registerAssignmentRoutes(fastify, deps) {
         if (!item || typeof item !== 'object') return null;
         const name = String(item.name || '').trim();
         const relativePath = String(item.path || '').trim().replace(/\\/g, '/');
-        if (!relativePath) return null;
+        if (!relativePath
+          || relativePath.startsWith('/')
+          || /^[A-Za-z]:\//.test(relativePath)
+          || relativePath.split('/').some(part => !part || part === '.' || part === '..' || part.includes('\0'))) return null;
         const size = Number(item.size);
         return {
           name: name || relativePath.split('/').pop() || '附件',
@@ -229,7 +242,9 @@ function registerAssignmentRoutes(fastify, deps) {
     });
   }
 
-  fastify.get(`${API_PREFIX}/assignments`, async (request, reply) => {
+  fastify.get(`${API_PREFIX}/assignments`, {
+    schema: { querystring: assignmentQuerySchema }
+  }, async (request, reply) => {
     if (!requireRole(request, reply, ['student', 'teacher'])) return;
     const courseId = String(request.query?.courseId || '').trim();
     const lessonId = String(request.query?.lessonId || '').trim();
